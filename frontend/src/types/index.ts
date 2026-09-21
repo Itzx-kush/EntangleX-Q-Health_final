@@ -1,5 +1,5 @@
 export type JsonRecord = Record<string, unknown>;
-export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc';
+export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc' | 'qnn';
 export interface PipelineConfig {
   imputer: 'median' | 'mean' | 'most_frequent'; scaler: 'standard' | 'minmax' | 'robust' | 'none';
   outlier_strategy: 'none' | 'clip_quantiles'; lower_quantile: number; upper_quantile: number;

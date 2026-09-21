@@ -2,13 +2,13 @@
 
 **Verification date:** 2026-09-21  
 **Repository:** `Itzx-kush/EntangleX-Q-Health_final`  
-**Scope:** existing classical ML models, VQC, QSVC, preprocessing-to-quantum flow, circuit generation, artifact persistence, API smoke coverage, deterministic test behavior, and regression testing.
+**Scope:** existing classical ML models, VQC, QSVC, QNN, preprocessing-to-quantum flow, circuit generation, artifact persistence, API smoke coverage, deterministic test behavior, and regression testing.
 
-This task verifies the existing implementation. It does not add QNN, replace VQC/QSVC, change the ML methodology, redesign the frontend, or claim clinical validity or quantum advantage.
+Task 1 established the existing implementation; Task 2 adds QNN without replacing VQC/QSVC, changing the ML methodology, redesigning the frontend, or claiming clinical validity or quantum advantage.
 
 ## Current closure status
 
-The bounded ML/quantum results in this record remain current and were included in the final Task 1 native regression: `67 backend tests passed` with quantum tests enabled. The final live API smoke additionally passed classical training, model retrieval, prediction, report, comparison, rerun, and dataset-retention checks. Docker was not executed because the final environment lacked the Docker CLI/daemon.
+The Task 1 statements in this record are historical baseline evidence. Task 2 adds QNN verification in [task2_qnn_verification](task2_qnn_verification.md): the focused QNN suite passed 12 tests and the complete backend suite passed 79 tests with quantum tests enabled. Docker was not executed because the final environment lacked the Docker CLI/daemon.
 
 ## Scope
 
@@ -18,6 +18,7 @@ The audit covered:
 - shared training-only preprocessing, feature selection, PCA, and angle scaling
 - classical training, evaluation, artifact persistence, reload, and prediction
 - VQC and QSVC adapters
+- QNN `SamplerQNN` and `NeuralNetworkClassifier` adapter
 - statevector and Aer simulator backends
 - circuit description and capability endpoints
 - experiment/job persistence and API-level quantum training
@@ -33,12 +34,13 @@ The repository currently implements:
 - Random Forest
 - VQC using Qiskit Machine Learning
 - QSVC using `FidelityQuantumKernel` and `ComputeUncompute`
+- QNN using `SamplerQNN` with parity-aggregated two-class probabilities
 
 The quantum path is a hybrid quantum-classical research prototype: classical preprocessing, sklearn-compatible orchestration, and local simulator-backed Qiskit execution. No real quantum hardware is used.
 
 - **VQC is preserved.**
 - **QSVC is preserved.**
-- **QNN is not implemented in Task 1.**
+- **QNN is implemented additively in Task 2.**
 
 ## Quantum Dependencies
 
@@ -86,6 +88,22 @@ Both models were trained on a four-row deterministic binary dataset with two fea
 - Aer execution with bounded 128 shots
 - dill artifact persistence and reload
 
+### QNN
+
+QNN was trained through the same shared preprocessing and registry path using the installed Qiskit Machine Learning 0.9.1 APIs. Verification covered:
+
+- `SamplerQNN` and `NeuralNetworkClassifier` construction
+- existing ZZ feature map and real-amplitudes ansatz reuse
+- bounded COBYLA/SPSA-compatible optimizer configuration
+- deterministic initial weights and fixed seed behavior
+- binary prediction and normalized parity-aggregated class probabilities
+- decision-score semantics
+- statevector execution and bounded Aer compatibility
+- circuit metadata, persistence/reload, prediction and API integration
+- experiment comparison and report inclusion
+
+QNN is treated as a quantum model in comparison and explainability routing. No QNN metrics are hardcoded or presented in this document.
+
 ### Shared preprocessing and quantum pipeline
 
 Both VQC and QSVC were trained through the existing preprocessing path using a small deterministic fixture:
@@ -113,7 +131,7 @@ Verified:
 ### Determinism and bounded execution
 
 - The same circuit configuration and seed produced identical circuit descriptions.
-- The final quantum test file was run twice consecutively; both runs passed all 13 quantum tests.
+- The Task 1 quantum test file remained passing, and the new QNN suite passed 12 focused tests.
 - Tests use two qubits, four-row or 30-row datasets, five optimizer iterations, and 128 Aer shots where applicable.
 - The tests do not claim bit-for-bit identical stochastic simulator outputs beyond the deterministic circuit and fixed-seed checks.
 
@@ -180,4 +198,4 @@ No dependency upgrade or production behavior change was made to remove warnings.
 - The VQC implementation still emits a documented upstream deprecation warning for the `num_qubits` compatibility argument.
 - Frontend verification is recorded in `docs/frontend_verification.md`; Docker build/runtime was not executed in final closure because Docker was unavailable. Cross-browser coverage remains outside this task.
 
-No ML or quantum implementation defect required a source-code change. The only code change in this task was focused regression coverage in `backend/tests/test_quantum_optional.py`.
+Task 2 source changes are limited to the additive QNN adapter/integration, focused QNN regression coverage, minimal model-selector/circuit UI additions, and verification documentation. No Docker change or unrelated UI redesign was made.

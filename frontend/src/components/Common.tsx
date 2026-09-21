@@ -23,7 +23,7 @@ export function DatasetPicker() {
 export function useActiveDataset() {const {draft} = useDraft(); return useLoad<Dataset | null>(() => draft.dataset_id ? api.get(`/datasets/${draft.dataset_id}`) : Promise.resolve(null), [draft.dataset_id]);}
 export function ModelPicker({value, onChange, quantumOnly = false}: {value: string; onChange: (id: string) => void; quantumOnly?: boolean}) {
   const {data, error} = useLoad(() => api.get<ModelRecord[]>('/models'));
-  const available = data?.filter(m => m.status === 'ready' && (!quantumOnly || ['vqc', 'qsvc'].includes(m.model_type)));
+  const available = data?.filter(m => m.status === 'ready' && (!quantumOnly || ['vqc', 'qsvc', 'qnn'].includes(m.model_type)));
   useEffect(() => {if (!value && available?.length) onChange(available[0].id);}, [data, value, quantumOnly]);
   return <><Field label="Registered model"><select value={value} onChange={e => onChange(e.target.value)}><option value="">Choose a completed model</option>{available?.map(m => <option value={m.id} key={m.id}>{modelLabels[m.model_type]} / {shortId(m.id)} / experiment {shortId(m.experiment_id)}</option>)}</select></Field><ErrorNotice message={error}/>{available?.length === 0 && <Empty>No completed models. <Link to="/training">Run an experiment first.</Link></Empty>}</>;
 }

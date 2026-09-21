@@ -9,7 +9,7 @@ export default function Explainability() {
   const [id, setId] = useState(''); const [method, setMethod] = useState('permutation'); const [samples, setSamples] = useState(8); const [repeats, setRepeats] = useState(3); const [maxFeatures, setMaxFeatures] = useState(30);
   const action = useAction(); const model = useLoad<ModelRecord | null>(() => id ? api.get(`/models/${id}`) : Promise.resolve(null), [id]);
   const explanations = useLoad<Explanation[]>(() => id ? api.get(`/models/${id}/explanations`) : Promise.resolve([]), [id]);
-  const [selected, setSelected] = useState<Explanation>(); const quantum = ['vqc', 'qsvc'].includes(model.data?.model_type || ''); const activeMethod = quantum ? 'perturbation' : method;
+  const [selected, setSelected] = useState<Explanation>(); const quantum = ['vqc', 'qsvc', 'qnn'].includes(model.data?.model_type || ''); const activeMethod = quantum ? 'perturbation' : method;
   const current = selected?.model_id === id ? selected : explanations.data?.[0];
   async function run() {const value = await action.run(() => api.post<Explanation>(`/models/${id}/explain`, {method: activeMethod, max_samples: samples, repeats, max_features: maxFeatures})); if (value) {setSelected(value); explanations.reload();}}
   return <><PageHeader eyebrow="09 / Model feature influence" title="Explain influence, not medical cause." description="Compute bounded post-hoc explanations for a frozen model. Explanations do not feed back into training or justify clinical decisions."/><ModelPicker value={id} onChange={setId}/><ErrorNotice message={action.error || model.error || explanations.error}/>

@@ -13,7 +13,7 @@ from ..utils.serialization import clean_json
 
 def explain(identity: str, request: ExplanationRequest):
     record, bundle = get_bundle(identity)
-    if record.model_type in {"vqc", "qsvc"} and request.method != "perturbation":
+    if record.model_type in {"vqc", "qsvc", "qnn"} and request.method != "perturbation":
         raise AppError("quantum_explanation_method", "Quantum models use feature perturbation / sensitivity analysis.")
     background, frame = background_for(bundle)
     config = bundle["config"]

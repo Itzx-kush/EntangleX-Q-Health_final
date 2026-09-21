@@ -48,7 +48,7 @@ class TrainingManager:
         if self.executor is None:
             raise AppError("worker_unavailable", "Training worker is not started.", 503)
         data = prepare_data(config)  # Preflight validation, not model fitting.
-        if {"vqc", "qsvc"}.intersection(config.models):
+        if {"vqc", "qsvc", "qnn"}.intersection(config.models):
             require_quantum()
         with self.lock:
             with session_scope() as session:

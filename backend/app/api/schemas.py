@@ -53,7 +53,7 @@ class ModelParameters(Schema):
 class TrainingConfig(Schema):
     dataset_id: UUID
     features: list[str] | None = Field(default=None, max_length=200)
-    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=5)
+    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=6)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     quantum: QuantumConfig = Field(default_factory=QuantumConfig)
     parameters: ModelParameters = Field(default_factory=ModelParameters)
@@ -71,13 +71,14 @@ class TrainingConfig(Schema):
             raise ValueError("Choose each model only once.")
         if self.features is not None and (not self.features or len(set(self.features)) != len(self.features)):
             raise ValueError("Features must be a nonempty unique list.")
-        if {"vqc", "qsvc"}.intersection(self.models):
+        quantum_models = {"vqc", "qsvc", "qnn"}
+        if quantum_models.intersection(self.models):
             if self.pipeline.pca_components != self.quantum.qubits or not self.pipeline.angle_scaling:
                 raise ValueError("Quantum comparisons require shared PCA components equal to qubits and shared angle scaling.")
             if self.calibration != "none":
                 raise ValueError("Calibration is currently implemented for classical-only experiments. Quantum calibration is not enabled.")
             if self.parameters.class_weight is not None:
-                raise ValueError("VQC does not implement class weights; use none for a fair shared experiment.")
+                raise ValueError("Quantum classifiers do not implement class weights; use none for a fair shared experiment.")
         return self
 
 class DatasetUploadMetadata(Schema):
@@ -209,7 +210,7 @@ class PreviewOut(Schema):
 
 class CircuitRequest(Schema):
     quantum: QuantumConfig = Field(default_factory=QuantumConfig)
-    model_type: Literal["vqc", "qsvc"] = "vqc"
+    model_type: Literal["vqc", "qsvc", "qnn"] = "vqc"
     seed: int = Field(default=42, ge=0)
 
 class CircuitOut(Schema):

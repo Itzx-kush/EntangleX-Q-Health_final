@@ -12,6 +12,10 @@ This repository contains generated application source, configuration, tests, and
 
 The source-generation statement above is historical. Post-generation Task 1 verification subsequently established the pinned Python/Node dependency baseline, backend startup and API workflows, frontend typecheck/tests/build/runtime checks, classical ML, bounded VQC/QSVC and circuit execution, model persistence/reload, security/storage hardening, and the final native regression. The bounded live API smoke also covered demo registration, provenance, training, prediction, reports, comparison, rerun, and referenced-dataset retention. Docker build/runtime could not be executed in the final closure environment because the Docker CLI/daemon was unavailable; see [Task 1 final verification](docs/task1_final_verification.md).
 
+## Current Task 2 verification status
+
+Task 2 adds genuine QNN support under the existing model, training, registry, persistence, API, comparison, report and frontend selector architecture. Logistic Regression, SVM, Random Forest, VQC and QSVC remain available. The focused QNN suite passed 12 tests; the complete backend regression with quantum tests enabled passed 79 tests; frontend typecheck, tests and production build passed; and a bounded live QNN API smoke passed. QNN uses local simulation and does not establish quantum advantage or clinical validation. See [Task 2 QNN verification](docs/task2_qnn_verification.md).
+
 ## 1. Overview and problem statement
 
 Biomedical classification research needs traceable data, isolated evaluation, clear positive-class definitions, and comparisons that do not presume quantum superiority. EntangleX Q-Health implements that workflow as a local research prototype: validate data, configure a shared training pipeline, compare classical and quantum models, explain frozen predictions, and preserve experiment provenance.
@@ -126,7 +130,7 @@ Open `http://127.0.0.1:8080`. Both published ports are loopback-bound. Docker st
 1. Open **Datasets** and select **Load Wisconsin benchmark**. Registration reads scikit-learn's packaged public dataset; it does not download arbitrary URLs. Verify source, hash, class counts, and the configured positive label **malignant**.
 2. Open **Data quality**, then **Preprocessing**, **Feature selection**, and **PCA / dimensions**. Inspect descriptive quality and training-only previews. Defaults use 12 ANOVA-selected encoded features, four PCA components, and angle scaling shared by every model.
 3. Open **Training**. Start with Logistic Regression, SVM and Random Forest. The default 160-sample stratified budget applies to every selected model, not just quantum models. A completed model's metrics appear only after actual fitting and held-out evaluation.
-4. For a separate comparison, select classical baselines together with VQC and/or QSVC. Quantum selection requires shared PCA dimensions equal to qubits, shared angle scaling, no class weighting, and no calibration. Start with four qubits and modest optimizer iterations. Jobs expose state, partial failures, and cooperative cancellation.
+4. For a separate comparison, select classical baselines together with VQC, QSVC and/or QNN. Quantum selection requires shared PCA dimensions equal to qubits, shared angle scaling, no class weighting, and no calibration. Start with four qubits and modest optimizer iterations. Jobs expose state, partial failures, and cooperative cancellation.
 5. Inspect **Model comparison**, **Quantum circuit**, and **Explainability**. In **Research prediction**, enter anonymous features or explicitly load one public demo sample. In **Experiments**, open a record and export its HTML or JSON report.
 
 Optional CLI demonstration against an already-running server:
@@ -154,7 +158,7 @@ Selection supports ANOVA, mutual information, variance threshold, or none. PCA a
 
 ## 12. Classical and quantum ML
 
-Classical models are Logistic Regression, SVM and Random Forest. Quantum models are VQC and QSVC behind a common sklearn-compatible adapter. VQC uses a ZZ feature map, real-amplitudes ansatz and COBYLA or SPSA. QSVC uses fidelity-kernel compute-uncompute. Backends are exact local statevector simulation or finite-shot Aer simulation with optional illustrative depolarizing noise.
+Classical models are Logistic Regression, SVM and Random Forest. Quantum models are VQC, QSVC and QNN behind the existing sklearn-compatible adapter architecture. VQC and QNN use the existing ZZ feature map and real-amplitudes ansatz; QNN uses Qiskit Machine Learning `SamplerQNN` with a bounded `NeuralNetworkClassifier` optimizer. QSVC uses fidelity-kernel compute-uncompute. Backends are exact local statevector simulation or finite-shot Aer simulation with optional illustrative depolarizing noise.
 
 **Quantum model** describes the estimator. **Hybrid quantum-classical method** describes classical preprocessing/optimization with quantum circuit evaluation. **Quantum simulation** executes locally on classical hardware. **Real quantum hardware** is not implemented or implied. The circuit view displays parameterized logical structure, not proof of hardware execution. See [quantum pipeline](docs/quantum_pipeline.md).
 
@@ -178,7 +182,7 @@ The API reference is [docs/api.md](docs/api.md). Public reachability is `GET /ap
 
 ## 16. Tests and source checks
 
-Executable tests cover dataset/provenance, target quality, leakage boundaries, preprocessing, metrics, classical training, prediction schemas, security, API registries and report/rerun workflows. Quantum execution tests are deliberately opt-in. **During source generation these tests were not run; post-generation Task 1 verification ran the complete backend suite with quantum tests enabled and the frontend suite.** See [testing](docs/testing.md) and [Task 1 final verification](docs/task1_final_verification.md).
+Executable tests cover dataset/provenance, target quality, leakage boundaries, preprocessing, metrics, classical training, prediction schemas, security, API registries and report/rerun workflows. Quantum execution tests are deliberately opt-in, including focused QNN coverage in `backend/tests/test_qnn.py`. **During source generation these tests were not run; post-generation Task 1 and Task 2 verification ran the backend suite with quantum tests enabled and the frontend suite.** See [testing](docs/testing.md), [Task 1 final verification](docs/task1_final_verification.md) and [Task 2 QNN verification](docs/task2_qnn_verification.md).
 
 ```powershell
 # From project root: static inspection only; does not import or execute the app.
@@ -217,6 +221,6 @@ See [limitations](docs/limitations.md) for unsupported grouped/time-series valid
 
 ## 19. Documentation map and dataset attribution
 
-[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md)
+[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md) | [Task 2 QNN verification](docs/task2_qnn_verification.md)
 
 The WDBC source is UCI Machine Learning Repository, DOI **10.24432/C5DW2B**, attributed to Wolberg, Mangasarian, Street and Street (1993), under **CC BY 4.0** as described by UCI. The actual application copy is reconstructed from the installed scikit-learn dataset and hashed at registration; the sklearn version and transformation are recorded. Original supplied specifications are retained under `docs/specifications/`.

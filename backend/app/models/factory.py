@@ -17,7 +17,7 @@ def build_estimator(kind: str, config: TrainingConfig, features: list[str], nume
         model = SVC(C=p.svm_c, kernel=p.svm_kernel, probability=False, random_state=config.seed, class_weight=p.class_weight)
     elif kind == "random_forest":
         model = RandomForestClassifier(n_estimators=p.forest_trees, max_depth=p.forest_max_depth, n_jobs=1, random_state=config.seed, class_weight=p.class_weight)
-    elif kind in {"vqc", "qsvc"}:
+    elif kind in {"vqc", "qsvc", "qnn"}:
         model = QuantumClassifier(kind=kind, quantum=config.quantum.model_dump(), seed=config.seed, c=p.svm_c)
     else:
         raise ValueError("Unsupported model type.")

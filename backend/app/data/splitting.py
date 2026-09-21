@@ -54,7 +54,7 @@ def prepare_data(config: TrainingConfig) -> PreparedData:
             raise AppError("sampling_not_feasible", "The requested common sample budget does not support stratified sampling for both classes.") from exc
         excluded = len(indices) - len(chosen)
         indices = np.sort(chosen)
-    if {"vqc", "qsvc"}.intersection(config.models) and len(indices) > get_settings().quantum_max_samples:
+    if {"vqc", "qsvc", "qnn"}.intersection(config.models) and len(indices) > get_settings().quantum_max_samples:
         raise AppError("quantum_budget", "Selected benchmark exceeds the quantum sample budget. Set max_samples for ALL compared models.")
     try:
         train, test = train_test_split(indices, test_size=config.test_size, stratify=y[indices], random_state=config.seed)

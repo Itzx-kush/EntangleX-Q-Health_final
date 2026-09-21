@@ -104,7 +104,8 @@
     ],
     "quantum_models": [
       "vqc",
-      "qsvc"
+      "qsvc",
+      "qnn"
     ],
     "quantum_test_file": {
       "passed": 13,
@@ -123,6 +124,41 @@
     "artifact_persistence_reload": "PASS",
     "quantum_api_smoke": "PASS",
     "record": "docs/ml_quantum_verification.md"
+  },
+  "task2_qnn_verification": {
+    "date": "2026-09-21",
+    "starting_baseline": "67da36d6092740dacde27e8fd60dfda97b3540e1",
+    "qnn_identifier": "qnn",
+    "focused_tests": {
+      "file": "backend/tests/test_qnn.py",
+      "passed": 12,
+      "failed": 0,
+      "warnings": 7
+    },
+    "full_backend_regression": {
+      "passed": 79,
+      "failed": 0,
+      "warnings": 16
+    },
+    "frontend": {
+      "typecheck": "PASS",
+      "tests": "PASS: 3 files, 6 tests",
+      "production_build": "PASS"
+    },
+    "live_api_smoke": "PASS: health/openapi/capabilities/demo/QNN training/ready registry model/circuit/comparison/report",
+    "persistence_reload": "PASS",
+    "classical_models_preserved": [
+      "logistic_regression",
+      "svm",
+      "random_forest"
+    ],
+    "quantum_models_preserved": [
+      "vqc",
+      "qsvc"
+    ],
+    "docker": "NOT PERFORMED: Docker unavailable",
+    "scientific_boundary": "QNN is local simulation only and is not evidence of quantum advantage, clinical validation or diagnosis.",
+    "record": "docs/task2_qnn_verification.md"
   },
   "security_storage_verification": {
     "date": "2026-09-21",

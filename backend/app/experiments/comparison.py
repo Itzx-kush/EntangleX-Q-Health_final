@@ -11,8 +11,8 @@ def comparison(identity: str) -> dict:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity).order_by(ModelRecord.created_at)))
     ready = [m for m in models if m.status == "ready"]
-    classical = [m for m in ready if m.model_type not in {"vqc", "qsvc"}]
-    quantum = [m for m in ready if m.model_type in {"vqc", "qsvc"}]
+    classical = [m for m in ready if m.model_type not in {"vqc", "qsvc", "qnn"}]
+    quantum = [m for m in ready if m.model_type in {"vqc", "qsvc", "qnn"}]
     pairs = []
     for q in quantum:
         for c in classical:

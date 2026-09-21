@@ -39,7 +39,7 @@ def html_report(identity: str) -> str:
         metrics = model["metrics"]
         sections.append("<h3>Evaluation: held-out test</h3>" + pre(metrics.get("test", "Not computed")))
         sections.append("<h3>Generalization: training and validation</h3>" + pre({"training_resubstitution": metrics.get("training"), "cross_validation": metrics.get("validation")}))
-        sections.append("<h3>Computational measurements</h3>" + pre({"timing": metrics.get("timing"), "quantum": model["details"].get("quantum")}))
+        sections.append("<h3>Computational measurements and quantum training metadata</h3>" + pre({"timing": metrics.get("timing"), "quantum": model["details"].get("quantum"), "optimization_objective": model["details"].get("optimization_objective"), "probability_status": model["details"].get("probability_status")}))
         sections.append("<h3>Probability calibration diagnostics</h3>" + pre(metrics.get("calibration", "Not computed")))
         sections.append("<h3>Limitations and warnings</h3>" + pre({"limitations": model["details"].get("limitations", []), "warnings": model["details"].get("warnings", []), "error": model["details"].get("error")}))
     sections.append("<h2>Interpretation: model feature influence / quantum perturbation</h2>" + pre(data["interpretation"] or "Not computed; request an explanation for a trained model."))
