@@ -3,7 +3,7 @@
   "generated_on": "2026-09-10",
   "source_generated": true,
   "delivery": "ENTANGLEX-Q-HEALTH.zip containing the entanglex-q-health folder",
-  "verification_statement": "On 2026-09-21, the pinned backend and frontend environments were verified. The backend started and passed its documented tests and HTTP workflow; the frontend passed type checking, all Vitest tests, production build, development-server checks, production preview checks, and direct route rendering; classical, VQC, QSVC, circuit, persistence, quantum API, security, storage, upload-validation, privacy, and robustness paths passed bounded tests. Docker, cross-browser coverage, full-scale quantum training, and clinical validity remain unverified.",
+  "verification_statement": "On 2026-09-21, post-generation Task 1 verification established the pinned dependency baseline, backend startup/API workflows, frontend typecheck/tests/build/runtime checks, classical ML, bounded VQC, QSVC and circuit execution, persistence/reload, security/storage hardening, and final native regression. The isolated live API smoke passed demo, provenance, bounded training, prediction, report, comparison, rerun and retention workflows. Docker build/runtime was not performed because the Docker CLI/daemon was unavailable. Cross-browser coverage, full-scale quantum training, hardware execution, clinical validity and public-production security remain unverified/ outside scope.",
   "static_inspection": {
     "python_ast_parsing": "Performed without importing application modules; no syntax errors found.",
     "python_files_parsed": 56,
@@ -18,10 +18,11 @@
     "runtime_artifact_scan": "No database, trained model, credential-bearing .env, installed node_modules, execution result or bytecode bundle is shipped."
   },
   "not_performed": [
-    "Docker build or execution",
+    "Docker build or execution (Docker CLI/daemon unavailable in final closure environment)",
     "Full-scale quantum training or hardware execution beyond bounded local simulator verification",
     "Cross-browser compatibility matrix",
-    "Clinical validation, external cohort validation or quantum advantage experimentation"
+    "Clinical validation, external cohort validation or quantum advantage experimentation",
+    "Public-production security/compliance deployment"
   ],
   "source_documents": [
     {
@@ -146,5 +147,23 @@
     "bounded_request_handling": "PASS",
     "concurrency_guards": "PASS",
     "record": "docs/security_storage_verification.md"
+  },
+  "current_task1_verification": {
+    "date": "2026-09-21",
+    "task1_commits": {
+      "1.1": "b0558eaa22d0c782e45d471ffc57aac6f6aa5ce8",
+      "1.2": "025ad569aa3c20b2e31d2d0ba8ee3454509f971a",
+      "1.3": "90bbcc79f444a1e71d1912097bc2a33a39507fc7",
+      "1.4": "bd89c0e1fe580abd6f6a324a86c355cda8165c99",
+      "1.5": "a2e173f7216e6c6990fc9a25107f17352b804dc3"
+    },
+    "backend_regression": "PASS: 67 passed, 0 failed, 11 warnings",
+    "targeted_security_storage_data_quality": "PASS: 32 passed, 0 failed, 2 warnings",
+    "live_backend_smoke": "PASS: health/openapi/docs/summary/demo/provenance/validation/training/prediction/report/comparison/rerun/retention",
+    "frontend_regression": "PASS: npm ci, typecheck, 3 files/6 tests, production build",
+    "docker": "NOT PERFORMED: Docker unavailable",
+    "configuration_consistency": "PASS: API/proxy/ports/storage/Node/lockfile reviewed",
+    "scientific_integrity": "PASS: no fabricated runtime metrics, predictions, clinical claims, or quantum-advantage claims",
+    "record": "docs/task1_final_verification.md"
   }
 }

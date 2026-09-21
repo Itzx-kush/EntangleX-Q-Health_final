@@ -4,13 +4,13 @@
 
 The generated configuration targets one workstation, one backend process, one SQLite database and one bounded worker. It is not a shared clinical service. Keep bindings at loopback and use the frontend's `/api` proxy. Backend storage is resolved against the repository root; do not rely on the shell working directory.
 
-Native installation commands are in the root README. CPython 3.11 and Node 22.12.0 in the Node 22.x line are assumed. The normal full install includes quantum, SHAP and test dependencies; a classical-only path is also documented. The direct dependency set and frontend lockfile have been installed and import-checked in a clean environment; see `docs/verified_environment.md`. This does not verify application runtime or Docker execution.
+Native installation commands are in the root README. CPython 3.11 and Node 22.12.0 in the Node 22.x line are assumed. The normal full install includes quantum, SHAP and test dependencies; a classical-only path is also documented. The direct dependency set and frontend lockfile have been installed and import-checked in a clean environment; see `docs/verified_environment.md`. Native application/runtime verification is recorded in `docs/task1_final_verification.md`. Docker execution was not possible in final closure because the Docker CLI/daemon was unavailable.
 
 ## Docker structure
 
-`backend/Dockerfile` uses Python 3.11.16 slim, installs backend manifests and runs as nonroot UID 10001. It creates an owned `/runtime` tree for SQLite and artifacts. `frontend/Dockerfile` builds with Node 22.12.0 and the committed `package-lock.json` via `npm ci`, then serves static files through unprivileged Nginx on 8080. Docker images/configuration remain unexecuted in this task; immutable image digests are still a deployment-hardening consideration.
+`backend/Dockerfile` uses Python 3.11.16 slim, installs backend manifests and runs as nonroot UID 10001. It creates an owned `/runtime` tree for SQLite and artifacts. `frontend/Dockerfile` builds with Node 22.12.0 and the committed `package-lock.json` via `npm ci`, then serves static files through unprivileged Nginx on 8080. The Dockerfiles and compose configuration passed static consistency review; image/runtime execution remains unverified because Docker was unavailable. Immutable image digests are still a deployment-hardening consideration.
 
-Compose publishes only `127.0.0.1:8000` and `127.0.0.1:8080`. The frontend waits for the backend HTTP healthcheck, which verifies reachability only. Nginx proxies `/api/`, applies a same-origin content-security policy, limits upload bodies and disables access logs. The backend independently enforces body size and authorization. `.env` is excluded from the Docker build context and supplied at runtime. Docker execution was not performed in this task.
+Compose publishes only `127.0.0.1:8000` and `127.0.0.1:8080`. The frontend waits for the backend HTTP healthcheck, which verifies reachability only. Nginx proxies `/api/`, applies a same-origin content-security policy, limits upload bodies and disables access logs. The backend independently enforces body size and authorization. `.env` is excluded from the Docker build context and supplied at runtime. Compose validation/build/startup/proxy checks were not executed because Docker was unavailable.
 
 ```bash
 # From project root, after creating .env

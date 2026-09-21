@@ -8,6 +8,10 @@
 
 This repository contains generated application source, configuration, tests, and documentation. **The application, dependency installation, frontend/backend integration, Docker, automated tests, and quantum execution were not run or independently verified during generation.** Static source checks, when recorded in `docs/generation_status.json`, are not runtime tests. No model, benchmark result, performance screenshot, or fabricated prediction is bundled.
 
+## Current Task 1 verification status
+
+The source-generation statement above is historical. Post-generation Task 1 verification subsequently established the pinned Python/Node dependency baseline, backend startup and API workflows, frontend typecheck/tests/build/runtime checks, classical ML, bounded VQC/QSVC and circuit execution, model persistence/reload, security/storage hardening, and the final native regression. The bounded live API smoke also covered demo registration, provenance, training, prediction, reports, comparison, rerun, and referenced-dataset retention. Docker build/runtime could not be executed in the final closure environment because the Docker CLI/daemon was unavailable; see [Task 1 final verification](docs/task1_final_verification.md).
+
 ## 1. Overview and problem statement
 
 Biomedical classification research needs traceable data, isolated evaluation, clear positive-class definitions, and comparisons that do not presume quantum superiority. EntangleX Q-Health implements that workflow as a local research prototype: validate data, configure a shared training pipeline, compare classical and quantum models, explain frozen predictions, and preserve experiment provenance.
@@ -174,7 +178,7 @@ The API reference is [docs/api.md](docs/api.md). Public reachability is `GET /ap
 
 ## 16. Tests and source checks
 
-Executable tests cover dataset/provenance, target quality, leakage boundaries, preprocessing, metrics, classical training, prediction schemas, security, API registries and report/rerun workflows. Quantum execution tests are deliberately opt-in. **These tests were generated and not run.**
+Executable tests cover dataset/provenance, target quality, leakage boundaries, preprocessing, metrics, classical training, prediction schemas, security, API registries and report/rerun workflows. Quantum execution tests are deliberately opt-in. **During source generation these tests were not run; post-generation Task 1 verification ran the complete backend suite with quantum tests enabled and the frontend suite.** See [testing](docs/testing.md) and [Task 1 final verification](docs/task1_final_verification.md).
 
 ```powershell
 # From project root: static inspection only; does not import or execute the app.
@@ -209,10 +213,10 @@ Upload validation, path safety, artifact integrity, deletion consistency, privac
 - **Slow quantum fit/cancellation:** lower the *shared* sample budget and optimizer iterations. Cancellation takes effect at safe boundaries, not in the middle of a simulator call. Do not start multiple backend workers.
 - **Dependency/build failures:** compare the installed environment with [verified environment](docs/verified_environment.md). The recorded pins and lockfile cover dependency resolution, not Docker runtime or complete application execution.
 
-See [limitations](docs/limitations.md) for unsupported grouped/time-series validation, privacy limitations, external validation gaps, unverified runtime behavior and finite-shot variability. No benchmark score establishes clinical validity, utility, regulatory approval or general quantum advantage.
+See [limitations](docs/limitations.md) for unsupported grouped/time-series validation, privacy limitations, external validation gaps, remaining runtime/deployment limits and finite-shot variability. No benchmark score establishes clinical validity, utility, regulatory approval or general quantum advantage.
 
 ## 19. Documentation map and dataset attribution
 
-[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json)
+[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md)
 
 The WDBC source is UCI Machine Learning Repository, DOI **10.24432/C5DW2B**, attributed to Wolberg, Mangasarian, Street and Street (1993), under **CC BY 4.0** as described by UCI. The actual application copy is reconstructed from the installed scikit-learn dataset and hashed at registration; the sklearn version and transformation are recorded. Original supplied specifications are retained under `docs/specifications/`.

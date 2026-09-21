@@ -1,5 +1,9 @@
 # Reproducibility and scientific integrity
 
+## Current Task 1 status
+
+Post-generation Task 1 verification ran the pinned Python regression and bounded simulator checks, the frontend lockfile workflow, and an isolated live API smoke with temporary storage. The final native regression passed. Docker reproducibility was not verified because the final environment had no Docker CLI/daemon. Clinical, external-cohort, cross-browser, hardware-quantum, and full-scale quantum reproducibility remain outside this closure.
+
 ## What is preserved
 
 Each experiment records the source dataset UUID/SHA-256, source URL/name/version, sample/feature counts, class distribution, explicit positive label, full pipeline/model/quantum configuration, seed, holdout fraction, CV folds, common subset size, removed duplicates, evaluated sample counts, split fingerprint, software versions, measured results and limitations. Models additionally record their artifact hash and link to the experiment/source dataset.
@@ -28,4 +32,4 @@ Fold standard deviation is not a confidence interval. A benchmark label is not p
 
 ## Scientific result status
 
-Generated source != tested code. Implemented pipeline != runtime-verified pipeline. Measured benchmark != clinically validated system. Simulation != real quantum hardware. The application retains those distinctions in its interface, reports and documentation.
+During source generation, generated source != tested code. Post-generation Task 1 verification now covers the native application paths described above, but does not convert measured benchmark results into clinical validation. Simulation != real quantum hardware. The application retains those distinctions in its interface, reports and documentation.

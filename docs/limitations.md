@@ -2,7 +2,7 @@
 
 ## Generation and verification
 
-The application was not executed during this task. A clean dependency installation, Python import compatibility check, Qiskit API-construction check, and frontend lockfile resolution were verified in `docs/verified_environment.md`. TypeScript type checking, frontend builds, API integration, automated tests, Docker, and quantum execution were not independently verified. Static syntax/presence checks are documented separately and must not be described as application tests.
+During source generation, the application was not executed. That historical statement remains true for the generation task. Post-generation Task 1 verification established clean dependency resolution, Python imports, backend startup/API workflows, TypeScript type checking, frontend tests/build/runtime, API integration, classical and bounded quantum execution, security/storage behavior, and the complete native regression. Docker build/runtime remains unverified because the Docker CLI/daemon was unavailable in the final closure environment. Static syntax/presence checks are documented separately and must not be described as application tests. See `docs/task1_final_verification.md`.
 
 ## Biomedical validity
 
@@ -24,7 +24,7 @@ Whole-source quality checks are descriptive and include heuristic target-proxy s
 
 All quantum execution is local simulation. Four-qubit/lightweight defaults are engineering budgets, not scientific evidence. Finite shots, optimization caps and unverified version-sensitive APIs can affect outcomes. Noise simulation is illustrative, not calibrated physical hardware. There is no hardware-provider authentication, mitigation study, quantum speedup proof or quantum-specific probability calibration.
 
-Quantum object serialization/reloading with dill is implemented but not verified for the targeted package combination. Classical/quantum comparison uses identical feature pipelines but does not guarantee matched hyperparameter optimization effort or controlled compute resources.
+Quantum object serialization/reloading with dill was verified for the targeted package combination on the bounded VQC/QSVC artifacts. This does not guarantee compatibility across arbitrary future package versions. Classical/quantum comparison uses identical feature pipelines but does not guarantee matched hyperparameter optimization effort or controlled compute resources.
 
 SHAP supports complete numeric raw inputs in this implementation. Permutation importance needs both classes in its bounded explanation subset. Perturbation covers a disclosed limited feature count, may be off-manifold, and does not completely interpret circuit internals. Feature influence is not biological causation. Model prediction inputs are not persisted; a user must deliberately retain approved inputs outside this service for a separate audit workflow.
 

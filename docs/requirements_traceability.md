@@ -1,6 +1,10 @@
 # Requirements-to-source traceability
 
-Status here means **implemented in generated source**, not runtime verified. Both supplied specifications are retained in `specifications/` and remain authoritative; biomedical constraints take precedence. No missing upstream generic specification is assumed.
+Status here means **implemented in generated source**; current runtime verification is summarized in `docs/task1_final_verification.md` and the linked task records. Both supplied specifications are retained in `specifications/` and remain authoritative; biomedical constraints take precedence. No missing upstream generic specification is assumed.
+
+## Current verification boundary
+
+Post-generation Task 1 verified the native backend, frontend, bounded ML/quantum paths, API workflows, security/storage defenses, and regression suites. Docker was statically audited but not executed because the final environment lacked Docker. Items such as clinical validation, external-cohort validation, real hardware, cross-browser coverage, and general quantum advantage remain limitations rather than silently satisfied requirements.
 
 | Requirement group | Primary implementation |
 |---|---|

@@ -6,6 +6,10 @@
 
 This task verifies the existing implementation. It does not add QNN, replace VQC/QSVC, change the ML methodology, redesign the frontend, or claim clinical validity or quantum advantage.
 
+## Current closure status
+
+The bounded ML/quantum results in this record remain current and were included in the final Task 1 native regression: `67 backend tests passed` with quantum tests enabled. The final live API smoke additionally passed classical training, model retrieval, prediction, report, comparison, rerun, and dataset-retention checks. Docker was not executed because the final environment lacked the Docker CLI/daemon.
+
 ## Scope
 
 The audit covered:
@@ -174,6 +178,6 @@ No dependency upgrade or production behavior change was made to remove warnings.
 - Full-scale production quantum training was not performed; only bounded deterministic smoke and pipeline tests were run.
 - Quantum object serialization was verified for the tested small VQC and QSVC artifacts, not across arbitrary future package versions.
 - The VQC implementation still emits a documented upstream deprecation warning for the `num_qubits` compatibility argument.
-- Docker, browser, and frontend verification belong to the previously completed or separate tasks and were not repeated here.
+- Frontend verification is recorded in `docs/frontend_verification.md`; Docker build/runtime was not executed in final closure because Docker was unavailable. Cross-browser coverage remains outside this task.
 
 No ML or quantum implementation defect required a source-code change. The only code change in this task was focused regression coverage in `backend/tests/test_quantum_optional.py`.

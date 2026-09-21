@@ -1,5 +1,9 @@
 # Generated automated tests
 
+## Current Task 1 verification
+
+The opening statement below describes the original source-generation phase. Post-generation Task 1 verification ran the complete backend suite with quantum tests enabled (`67 passed, 11 warnings`), targeted security/storage/data-quality tests (`32 passed, 2 warnings`), and the frontend `npm ci`, typecheck, Vitest suite (`3 files / 6 tests`), and production build. A bounded live backend smoke also passed. Docker was not executed because the final verification environment did not provide the Docker CLI/daemon. See [Task 1 final verification](task1_final_verification.md).
+
 **No automated test was executed during project generation. No passing test claim is made.** The files are executable tests for the user to run after resolving dependencies in an isolated environment.
 
 ## Backend coverage
@@ -29,4 +33,4 @@ Frontend tests cover absent-measurement formatting, zero-valued metrics, job sta
 
 ## Separate verification levels
 
-`python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests would still not independently establish Docker compatibility, end-to-end UI connectivity, clinical validity or model generalization. Verify each layer separately and record exact commands/environment/results.
+`python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests does not independently establish Docker compatibility, clinical validity or model generalization. The post-generation Task 1 records separately document the native backend/frontend runtime checks and the Docker limitation.

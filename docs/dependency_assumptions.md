@@ -23,7 +23,7 @@
 | React Router DOM | 7.18.3 | `frontend/package.json`, `frontend/package-lock.json` |
 | TypeScript / Vite / Vitest | 5.9.3 / 7.3.6 / 3.2.7 | `frontend/package.json`, `frontend/package-lock.json` |
 
-The Python pins form one verified Python 3.11-compatible set. Qiskit Machine Learning 0.9.1, Qiskit 2.5.2, and Qiskit Aer 0.17.2 successfully imported together, and the existing adapter's Qiskit objects were constructible. Quantum training and execution were intentionally not performed here.
+The Python pins form one verified Python 3.11-compatible set. Qiskit Machine Learning 0.9.1, Qiskit 2.5.2, and Qiskit Aer 0.17.2 successfully imported together, and the existing adapter's Qiskit objects were constructible. During the original dependency-only verification, quantum training and execution were intentionally not performed; Task 1.4 and final native regression later verified bounded simulator training/prediction and artifact reload.
 
 The frontend lockfile was already present, valid, and consistent with `frontend/package.json`; it was preserved and is used by both local setup (`npm ci`) and the Docker build. No package-manager migration was made.
 
@@ -49,6 +49,6 @@ The supported Node runtime is the **22.x line starting at 22.12.0**:
 - SHAP Explainer: https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html
 - Vite Node requirements: https://vite.dev/guide/
 
-## Remaining verification responsibilities
+## Verification boundary
 
-Run the backend tests, opt-in quantum tests, TypeScript/build checks, frontend tests, guided API/UI workflow, and Docker deployment separately. Do not infer those outcomes from this dependency verification.
+The dependency record itself does not replace runtime testing. Post-generation Task 1 records now document backend tests, opt-in quantum tests, TypeScript/build checks, frontend tests, the guided API workflow, and the final native regression. Docker deployment remains not performed because Docker was unavailable in final closure; see `docs/task1_final_verification.md`.

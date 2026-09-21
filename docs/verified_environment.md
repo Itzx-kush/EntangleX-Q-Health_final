@@ -135,8 +135,10 @@ The npm audit reported two moderate-severity advisories in the resolved tree. No
 | Clean npm installation from committed lockfile | PASS |
 | Frontend dependency resolution | PASS |
 | Exact package versions recorded | PASS |
-| Backend test suite | NOT PERFORMED |
-| Frontend test suite/typecheck/build | NOT PERFORMED |
-| Backend/frontend integration | NOT PERFORMED |
-| Docker build/runtime | NOT PERFORMED |
-| Classical or quantum model execution | NOT PERFORMED |
+| Backend test suite | PASS — 67 passed with quantum tests enabled |
+| Frontend test suite/typecheck/build | PASS — 3 files/6 tests; typecheck and build passed |
+| Backend/frontend integration | PASS — native API boundary and live smoke |
+| Docker build/runtime | NOT PERFORMED — Docker unavailable |
+| Classical or quantum model execution | PASS — bounded classical, VQC, QSVC and simulator checks |
+
+The table above is the current post-generation status. The original dependency-only verification intentionally stopped before application runtime; its historical boundary is preserved in the surrounding record.

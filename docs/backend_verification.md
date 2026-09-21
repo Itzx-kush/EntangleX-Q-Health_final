@@ -4,7 +4,7 @@
 **Repository:** `Itzx-kush/EntangleX-Q-Health_final`  
 **Scope:** backend startup, automated backend tests, HTTP integration, classical training, storage, and single-worker job behavior.
 
-This verification preserves the existing API, database model, ML methodology, VQC/QSVC implementation, and frontend. It does not certify frontend runtime/build behavior, Docker runtime, clinical validity, or full quantum model training.
+This verification preserves the existing API, database model, ML methodology, VQC/QSVC implementation, and frontend. The original Task 1.2 record below is historical; later Task 1.3–1.6 records verified frontend native runtime/build behavior, bounded quantum execution, security/storage behavior, and the final live API smoke. Docker runtime remains unverified because Docker was unavailable during final closure. No record certifies clinical validity or full-scale quantum training.
 
 ## Environment and commands
 
@@ -85,11 +85,8 @@ Result: **PASS**.
 - Request IDs and structured validation errors: **PASS**
 - Malformed request did not echo the submitted biomedical marker: **PASS**
 
-## Remaining verification
+## Scope at the time of Task 1.2
 
-- Frontend typecheck, build, tests, and browser workflow: not performed
-- Docker build/runtime: not performed
-- Full quantum circuit/model training and artifact reload: not performed
-- Clinical or external-cohort validation: not performed
+At the time this record was written, frontend checks, Docker, and full quantum execution were intentionally outside the backend prompt. They were later handled in the separate Task 1.3–1.6 records. Clinical and external-cohort validation remain outside Task 1.
 
 No backend implementation defect required a source-code change in this prompt. The API contracts, database semantics, model algorithms, and job architecture remained unchanged.
