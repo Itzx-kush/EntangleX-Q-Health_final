@@ -59,5 +59,13 @@ def load_model(identity: str, expected: str) -> dict:
     # Only application-created, hash-checked local artifacts. NEVER accept uploaded models.
     import dill
     path = safe_path("models", identity, ".dill")
-    verify(path, expected)
-    return dill.loads(path.read_bytes())
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise AppError("integrity_error", "Stored artifact is missing or its integrity hash has changed.", 409) from exc
+    if hashlib.sha256(payload).hexdigest() != expected:
+        raise AppError("integrity_error", "Stored artifact is missing or its integrity hash has changed.", 409)
+    try:
+        return dill.loads(payload)
+    except Exception as exc:
+        raise AppError("artifact_invalid", "Stored model artifact could not be loaded safely.", 409) from exc

@@ -197,6 +197,8 @@ Uploads are size/extension/header constrained and stored with generated IDs. Pat
 
 This MVP has no multi-tenant accounts, RBAC, encryption-at-rest service, clinical audit certification, public-internet hardening or regulated deployment approval. Identifier-name heuristics are not complete de-identification. Use a controlled workstation and appropriate institutional policies. See [security](docs/security.md) before private-data work.
 
+Upload validation, path safety, artifact integrity, deletion consistency, privacy boundaries, and robustness checks were verified in [security and storage verification](docs/security_storage_verification.md). This verification does not claim public-internet security, automatic de-identification, encryption, or regulatory compliance.
+
 ## 18. Troubleshooting and known limitations
 
 - **Backend unavailable:** start both terminals; use the documented ports; inspect `/api/health`. A configured API token must be supplied in Connection settings after browser refresh.
