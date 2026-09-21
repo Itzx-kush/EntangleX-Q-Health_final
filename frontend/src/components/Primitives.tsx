@@ -20,7 +20,7 @@ export function PanelHeader({eyebrow, title, description, actions}: {eyebrow?: s
 }
 
 export function MetricCard({label, value, detail, icon: Icon = Info, tone = 'research'}: {label: string; value: ReactNode; detail: string; icon?: typeof Info; tone?: 'research' | 'quantum' | 'neutral'}) {
-  return <article className={`metric-card metric-card-${tone}`}><div className="metric-card-top"><span className="metric-card-icon" aria-hidden="true"><Icon size={16}/></span><span className="metric-card-label">{label}</span></div><strong>{value}</strong><small>{detail}</small></article>;
+  return <article className={`metric metric-${tone}`}><span aria-hidden="true" className="metric-header"><Icon size={16}/> {label}</span><strong>{value}</strong><small>{detail}</small></article>;
 }
 
 export function Section({children, title, description, actions, className = ''}: {children: ReactNode; title?: string; description?: string; actions?: ReactNode; className?: string}) {
