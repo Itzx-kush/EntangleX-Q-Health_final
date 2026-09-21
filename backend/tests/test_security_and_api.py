@@ -53,3 +53,37 @@ def test_original_records_not_exposed_in_dataset_summary(client, registered):
 def test_body_size_limit_is_enforced(client):
     response = client.post("/api/datasets/upload", content=b"", headers={"Content-Length": str(1024 * 1024 * 500)})
     assert response.status_code == 413
+
+def test_preview_pipeline_endpoints(client, config):
+    endpoints = [
+        "/api/preprocessing/preview",
+        "/api/feature-selection/preview",
+        "/api/pca/preview",
+    ]
+    payload = config.model_dump(mode="json")
+    for endpoint in endpoints:
+        response = client.post(endpoint, json=payload)
+        assert response.status_code == 200, f"Failed on {endpoint}: {response.text}"
+        data = response.json()
+        assert "train_count" in data
+        assert "test_count" in data
+        assert "input_features" in data
+        assert "selected_features" in data
+        assert "output_features" in data
+        assert "split_hash" in data
+        assert "stages" in data
+        assert "warnings" in data
+        assert data["train_count"] > 0
+        assert data["test_count"] > 0
+
+def test_preview_pipeline_invalid_config(client, config):
+    payload = config.model_dump(mode="json")
+    payload["dataset_id"] = str(uuid4())
+    for endpoint in ["/api/preprocessing/preview", "/api/feature-selection/preview", "/api/pca/preview"]:
+        response = client.post(endpoint, json=payload)
+        assert response.status_code == 404
+
+    invalid_payload = config.model_dump(mode="json")
+    invalid_payload["seed"] = -1
+    response = client.post("/api/preprocessing/preview", json=invalid_payload)
+    assert response.status_code == 422
