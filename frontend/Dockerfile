@@ -1,8 +1,7 @@
-FROM node:22-alpine AS build
+FROM node:22.12.0-alpine AS build
 WORKDIR /frontend
-COPY frontend/package.json ./
-# No fabricated lockfile is shipped. npm install resolves one during the build.
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 FROM nginxinc/nginx-unprivileged:stable-alpine

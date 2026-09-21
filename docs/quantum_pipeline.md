@@ -2,7 +2,7 @@
 
 ## Implementation target, not executed compatibility
 
-The isolated adapter targets Qiskit 2.x, Qiskit Machine Learning 0.9.1 and Qiskit Aer 0.17.x. Source inspection of official APIs informed the code; dependency installation, sampler execution, training and serialization were **not** performed during generation. See `dependency_assumptions.md` for documentation sources and resolved-version responsibilities.
+The isolated adapter uses the verified set Qiskit 2.5.2, Qiskit Machine Learning 0.9.1 and Qiskit Aer 0.17.2. Source inspection of official APIs informed the code, and the selected Qiskit objects were constructible in the clean environment recorded in `verified_environment.md`. Sampler execution, training and serialization were **not** performed during generation or this dependency-stabilization task.
 
 ## Shared biomedical representation
 

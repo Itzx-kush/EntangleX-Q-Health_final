@@ -1,24 +1,40 @@
 # Dependency assumptions and external API references
 
-**Generated on 2026-09-10. None of these dependency combinations was installed or execution-tested during source generation.** These are implementation targets, not a compatibility certification or frozen environment.
+**Dependency verification date:** 2026-09-21. The direct dependency manifests and the committed frontend lockfile were installed and checked in clean environments. This is an environment compatibility record, not a certification of the complete application or model execution. See [verified environment](verified_environment.md) for exact resolved versions and commands.
 
-| Component | Declared target | Manifest |
-|---|---|---|
-| Python | 64-bit 3.11 | README / Dockerfile |
-| FastAPI / Pydantic | FastAPI >=0.115,<1; Pydantic >=2.10,<3 | requirements-core.txt |
-| Pydantic settings | >=2.7,<3 | requirements-core.txt |
-| SQLAlchemy | >=2.0.36,<2.1 | requirements-core.txt |
-| NumPy / pandas / SciPy | >=2,<3 / >=2.2,<3 / >=1.13,<2 | requirements-core.txt |
-| scikit-learn | >=1.6,<2 | requirements-core.txt |
-| SHAP | >=0.47,<1 | requirements-explainability.txt |
-| Qiskit | >=2.1,<3 | requirements-quantum.txt |
-| Qiskit Machine Learning | 0.9.1 | requirements-quantum.txt |
-| Qiskit Aer | >=0.17.1,<0.18 | requirements-quantum.txt |
-| React / React DOM | ^19.1.0 | frontend/package.json |
-| TypeScript / Vite | ~5.9.2 / ^7.1.0 | frontend/package.json |
-| Node | >=22.12; Docker Node 22 | frontend/package.json / Dockerfile |
+## Verified direct dependencies
 
-Bounded ranges are deliberately honest about unresolved transitive dependencies. Broad ranges can drift: resolve in a clean environment, run the generated tests and builds, then record exact versions. No package-lock file was fabricated. `npm install` creates a real local lockfile. Docker currently resolves from the manifests; for repeatable deployment, preserve a verified lockfile and switch the frontend install step to `npm ci` only once that real lockfile exists and is copied into the build.
+| Component | Verified version | Manifest |
+|---|---:|---|
+| Python | CPython 3.11.16 | `backend/Dockerfile` |
+| FastAPI | 0.141.1 | `backend/requirements-core.txt` |
+| Uvicorn | 0.53.0 | `backend/requirements-core.txt` |
+| Pydantic / pydantic-settings | 2.13.5 / 2.15.0 | `backend/requirements-core.txt` |
+| SQLAlchemy | 2.0.54 | `backend/requirements-core.txt` |
+| NumPy / pandas / SciPy | 2.4.6 / 2.3.3 / 1.17.1 | `backend/requirements-core.txt` |
+| scikit-learn | 1.9.1 | `backend/requirements-core.txt` |
+| SHAP | 0.51.0 | `backend/requirements-explainability.txt` |
+| Qiskit | 2.5.2 | `backend/requirements-quantum.txt` |
+| Qiskit Machine Learning | 0.9.1 | `backend/requirements-quantum.txt` |
+| Qiskit Aer | 0.17.2 | `backend/requirements-quantum.txt` |
+| pytest / httpx | 8.4.2 / 0.28.1 | `backend/requirements-dev.txt` |
+| Node.js / npm | 22.12.0 / 10.9.0 | `.nvmrc`, `frontend/Dockerfile` |
+| React / React DOM | 19.3.0 / 19.3.0 | `frontend/package.json`, `frontend/package-lock.json` |
+| React Router DOM | 7.18.3 | `frontend/package.json`, `frontend/package-lock.json` |
+| TypeScript / Vite / Vitest | 5.9.3 / 7.3.6 / 3.2.7 | `frontend/package.json`, `frontend/package-lock.json` |
+
+The Python pins form one verified Python 3.11-compatible set. Qiskit Machine Learning 0.9.1, Qiskit 2.5.2, and Qiskit Aer 0.17.2 successfully imported together, and the existing adapter's Qiskit objects were constructible. Quantum training and execution were intentionally not performed here.
+
+The frontend lockfile was already present, valid, and consistent with `frontend/package.json`; it was preserved and is used by both local setup (`npm ci`) and the Docker build. No package-manager migration was made.
+
+## Node version policy
+
+The supported Node runtime is the **22.x line starting at 22.12.0**:
+
+- `.nvmrc` selects `22.12.0`.
+- `frontend/package.json` requires `>=22.12.0 <23`.
+- `frontend/Dockerfile` uses `node:22.12.0-alpine`.
+- The README installation instructions use `npm ci`.
 
 ## Official references consulted for implementation decisions
 
@@ -33,8 +49,6 @@ Bounded ranges are deliberately honest about unresolved transitive dependencies.
 - SHAP Explainer: https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html
 - Vite Node requirements: https://vite.dev/guide/
 
-These references support the selected APIs, not the claim that this particular assembled application works. Quantum adapter updates should remain isolated in `backend/app/quantum`. Confirm QMLSampler seeding, optimizer namespace, pass manager behavior, Aer options, and object serialization against your actually installed environment.
+## Remaining verification responsibilities
 
-## Verification responsibilities after installation
-
-Record `python --version`, `node --version`, `python -m pip freeze`, and `npm ls --depth=0`. Run backend tests, opt-in quantum tests, TypeScript/build checks, frontend tests, then the guided API/UI workflow and Docker deployment separately. Do not infer any of those outcomes from source generation or static parsing alone.
+Run the backend tests, opt-in quantum tests, TypeScript/build checks, frontend tests, guided API/UI workflow, and Docker deployment separately. Do not infer those outcomes from this dependency verification.

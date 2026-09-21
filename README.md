@@ -32,9 +32,9 @@ The backend uses Python, FastAPI, Pydantic 2, SQLAlchemy 2, pandas, NumPy, sciki
 
 ## 3. Prerequisites and version assumptions
 
-Target **64-bit Python 3.11**, **Node.js 22.12 or newer in the 22.x line**, npm, and an ordinary desktop browser. Docker Compose v2 is optional. Platform wheels, native dependencies, and dependency resolution have not been verified. Full quantum dependencies are substantially heavier than the classical-only installation.
+Target **64-bit CPython 3.11**, **Node.js 22.12.0 in the 22.x line**, npm, and an ordinary desktop browser. Docker Compose v2 is optional. The direct dependency set and frontend lockfile were verified in a clean environment; Docker runtime and complete application execution remain separate checks. Full quantum dependencies are substantially heavier than the classical-only installation.
 
-Dependency manifests declare ranges rather than claiming a tested lock. Qiskit Machine Learning is targeted at **0.9.1**, Qiskit at **2.x**, and Aer at **0.17.x**. See [dependency assumptions](docs/dependency_assumptions.md). No fabricated `package-lock.json` is included; `npm install` generates one locally. Preserve successful local lockfiles and exact Python freeze output for reproducibility.
+Backend direct dependencies are pinned to the verified environment documented in [verified environment](docs/verified_environment.md). Qiskit Machine Learning is **0.9.1**, Qiskit is **2.5.2**, and Aer is **0.17.2**. The committed `frontend/package-lock.json` is the authoritative npm lockfile; use `npm ci` for a clean, reproducible install. See [dependency assumptions](docs/dependency_assumptions.md).
 
 ## 4. Installation: Windows PowerShell
 
@@ -48,7 +48,7 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 .\.venv\Scripts\python.exe scripts\init_db.py
 cd frontend
-npm install
+npm ci
 cd ..
 ```
 
@@ -64,7 +64,7 @@ cp .env.example .env
 .venv/bin/python -m pip install -r backend/requirements.txt
 .venv/bin/python scripts/init_db.py
 cd frontend
-npm install
+npm ci
 cd ..
 ```
 
@@ -201,7 +201,7 @@ This MVP has no multi-tenant accounts, RBAC, encryption-at-rest service, clinica
 - **Quality blocks training:** correct or exclude identifiers/proxy features, resolve conflicting duplicates and infinities, and explicitly choose a duplicate policy. Do not simply suppress a leakage warning.
 - **Permutation subset has one class:** increase explanation sample budget or use perturbation. SHAP is restricted to complete numeric raw features.
 - **Slow quantum fit/cancellation:** lower the *shared* sample budget and optimizer iterations. Cancellation takes effect at safe boundaries, not in the middle of a simulator call. Do not start multiple backend workers.
-- **Dependency/build failures:** the declared manifest is not a verified environment. Read [dependency assumptions](docs/dependency_assumptions.md) and record the resolved environment after local validation.
+- **Dependency/build failures:** compare the installed environment with [verified environment](docs/verified_environment.md). The recorded pins and lockfile cover dependency resolution, not Docker runtime or complete application execution.
 
 See [limitations](docs/limitations.md) for unsupported grouped/time-series validation, privacy limitations, external validation gaps, unverified runtime behavior and finite-shot variability. No benchmark score establishes clinical validity, utility, regulatory approval or general quantum advantage.
 

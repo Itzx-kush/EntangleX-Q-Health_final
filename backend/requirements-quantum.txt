@@ -1,4 +1,5 @@
-# API target: Qiskit Machine Learning 0.9.1 and Qiskit 2.x. Resolve and test locally.
-qiskit>=2.1,<3.0
+# Pinned as a compatible set after import and API-construction verification on
+# Python 3.11.16. Quantum model training/execution remains a separate task.
+qiskit==2.5.2
 qiskit-machine-learning==0.9.1
-qiskit-aer>=0.17.1,<0.18
+qiskit-aer==0.17.2

@@ -3,7 +3,7 @@
   "generated_on": "2026-09-10",
   "source_generated": true,
   "delivery": "ENTANGLEX-Q-HEALTH.zip containing the entanglex-q-health folder",
-  "verification_statement": "The project source code was generated and packaged, but the application was not executed in this task. Therefore runtime compatibility, dependency compatibility, tests, frontend/backend integration, Docker execution, and quantum execution have not been independently verified.",
+  "verification_statement": "On 2026-09-21, a clean CPython 3.11.16 environment installed the pinned backend dependency set; major dependency and application imports succeeded, and the existing Qiskit API objects were constructible. The committed frontend package-lock.json passed a clean npm ci under Node 22.12.0/npm 10.9.0. This verifies dependency/environment compatibility only; complete application runtime, tests, integration, Docker, model execution, and clinical validity remain unverified.",
   "static_inspection": {
     "python_ast_parsing": "Performed without importing application modules; no syntax errors found.",
     "python_files_parsed": 56,
@@ -18,8 +18,7 @@
     "runtime_artifact_scan": "No database, trained model, credential-bearing .env, installed node_modules, execution result or bytecode bundle is shipped."
   },
   "not_performed": [
-    "Dependency installation or resolved compatibility checks",
-    "Backend startup or import-time runtime validation",
+    "Backend startup or complete runtime validation",
     "Frontend startup, dependency-resolved type checking, production build or browser rendering",
     "Backend/frontend automated tests",
     "Frontend/backend HTTP integration execution",
@@ -37,5 +36,19 @@
       "path": "docs/specifications/master-prompt.md",
       "sha256": "fb6a685e34fa0508af0ba285b1304af71ab95b8e0ac655804707aa2ebeca6336"
     }
-  ]
+  ],
+  "environment_verification": {
+    "date": "2026-09-21",
+    "python": "CPython 3.11.16",
+    "node": "22.12.0",
+    "npm": "10.9.0",
+    "backend_dependency_installation": "PASS",
+    "python_major_imports": "PASS",
+    "application_imports": "PASS",
+    "qiskit_api_construction": "PASS",
+    "frontend_lockfile_validation": "PASS",
+    "frontend_npm_ci": "PASS",
+    "exact_versions_recorded": "PASS",
+    "record": "docs/verified_environment.md"
+  }
 }

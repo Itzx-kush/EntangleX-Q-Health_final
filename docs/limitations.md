@@ -2,7 +2,7 @@
 
 ## Generation and verification
 
-The application was not executed during this task. Dependency installation/resolution, Python import-time compatibility, TypeScript type checking against installed dependencies, frontend builds, API integration, automated tests, Docker and quantum execution were not independently verified. Static syntax/presence checks are documented separately and must not be described as application tests.
+The application was not executed during this task. A clean dependency installation, Python import compatibility check, Qiskit API-construction check, and frontend lockfile resolution were verified in `docs/verified_environment.md`. TypeScript type checking, frontend builds, API integration, automated tests, Docker, and quantum execution were not independently verified. Static syntax/presence checks are documented separately and must not be described as application tests.
 
 ## Biomedical validity
 

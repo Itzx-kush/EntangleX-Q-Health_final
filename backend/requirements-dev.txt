@@ -1,2 +1,4 @@
-pytest>=8.3,<9.0
-httpx>=0.28,<1.0
+# Direct dependencies pinned from the clean Python 3.11 verification on
+# 2026-09-21. See docs/verified_environment.md for the full freeze.
+pytest==8.4.2
+httpx==0.28.1
