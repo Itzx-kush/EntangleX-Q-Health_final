@@ -6,7 +6,7 @@ import {MobileWorkspaceNav, WorkspaceNavigationBar} from '../components/Workspac
 describe('workspace navigation layer', () => {
   it('renders quick destinations using the real route registry', () => {
     render(<MemoryRouter initialEntries={['/training']}><WorkspaceNavigationBar pathname="/training" onOpenSearch={() => undefined}/></MemoryRouter>);
-    expect(screen.getByRole('link', {name: 'Overview'})).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', {name: 'Research overview'})).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', {name: /Models/})).toHaveAttribute('href', '/training');
     expect(screen.getByRole('button', {name: /Search/})).toBeInTheDocument();
   });
