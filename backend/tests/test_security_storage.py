@@ -64,6 +64,39 @@ def test_invalid_model_artifact_is_rejected_before_use():
         load_model(identity, digest)
 
 
+def test_restricted_unpickler_blocks_malicious_dill_payloads():
+    import os
+    import subprocess
+    import dill
+
+    class ExploitSystem:
+        def __reduce__(self):
+            return (os.system, ("echo EXPLOIT_EXECUTED",))
+
+    class ExploitEval:
+        def __reduce__(self):
+            return (eval, ("1 + 1",))
+
+    class ExploitSubprocess:
+        def __reduce__(self):
+            return (subprocess.Popen, (["echo", "EXPLOIT"],))
+
+    from types import FunctionType
+    code = compile("import os; os.system('echo EXPLOIT_BYTECODE')", "<string>", "exec")
+    exploit_function = FunctionType(code, globals())
+
+    for exploit in [ExploitSystem(), ExploitEval(), ExploitSubprocess(), exploit_function]:
+        identity = str(uuid4())
+        path = safe_path("models", identity, ".dill")
+        payload = dill.dumps(exploit)
+        digest = atomic_bytes(path, payload)
+        try:
+            with pytest.raises(AppError, match="could not be loaded safely"):
+                load_model(identity, digest)
+        finally:
+            path.unlink(missing_ok=True)
+
+
 def test_symlinked_artifact_path_cannot_escape_storage(tmp_path):
     identity = str(uuid4())
     path = safe_path("data/datasets", identity, ".csv")
