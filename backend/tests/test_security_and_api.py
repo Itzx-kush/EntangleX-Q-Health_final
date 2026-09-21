@@ -40,6 +40,18 @@ def test_unknown_ids_and_validation_are_sanitized(client):
     assert response.status_code == 422
     assert "private-record-marker" not in response.text
 
+@pytest.mark.parametrize("fmt", ["html", "json", None])
+def test_report_export_nonexistent_experiment_returns_404(client, fmt):
+    random_id = uuid4()
+    url = f"/api/experiments/{random_id}/report"
+    if fmt:
+        url += f"?format={fmt}"
+    response = client.get(url)
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["error"]["code"] == "not_found"
+    assert "resource does not exist" in payload["error"]["message"].lower()
+
 def test_public_model_upload_route_does_not_exist(client):
     response = client.post("/api/models/upload", files={"file": ("model.dill", b"not-code", "application/octet-stream")})
     assert response.status_code in (404, 405, 422)
