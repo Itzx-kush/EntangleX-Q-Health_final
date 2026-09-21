@@ -1,0 +1,282 @@
+/* Task 3.12 — semantic visual refinement. Layout remains owned by the existing
+   shell and environment styles; this file only supplies shared contracts. */
+
+:root {
+  --qh-chart-1: var(--qh-color-research);
+  --qh-chart-2: var(--qh-color-quantum);
+  --qh-chart-3: var(--qh-color-warning);
+  --qh-chart-4: var(--qh-color-info);
+  --qh-chart-5: var(--qh-color-studio-accent);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: var(--qh-color-background);
+  color: var(--qh-color-text-primary);
+}
+
+body {
+  background: var(--qh-color-background);
+  color: var(--qh-color-text-primary);
+  transition: background-color var(--motion-standard) var(--ease-standard), color var(--motion-standard) var(--ease-standard);
+}
+
+html.theme-transition,
+html.theme-transition body,
+html.theme-transition #root,
+html.theme-transition .app-shell,
+html.theme-transition .app-shell * {
+  transition-property: background-color, border-color, box-shadow, color, fill, stroke;
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--ease-standard);
+}
+
+.app-shell {
+  --qh-current-accent: var(--qh-color-research);
+  --qh-current-accent-soft: var(--qh-color-research-soft);
+}
+
+.app-shell.environment-data-lab {
+  --qh-current-accent: var(--qh-color-data-accent);
+  --qh-current-accent-soft: var(--qh-color-data-accent-soft);
+}
+
+.app-shell.environment-model-lab,
+.app-shell.environment-quantum-lab {
+  --qh-current-accent: var(--qh-color-model-accent);
+  --qh-current-accent-soft: var(--qh-color-model-accent-soft);
+}
+
+.app-shell.environment-research-studio {
+  --qh-current-accent: var(--qh-color-studio-accent);
+  --qh-current-accent-soft: var(--qh-color-studio-accent-soft);
+}
+
+.workspace-context-bar {
+  position: relative;
+}
+
+.workspace-context-bar::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--qh-current-accent), transparent 62%);
+  opacity: .45;
+  pointer-events: none;
+}
+
+.topbar-actions .auth-menu > div,
+.settings-popover {
+  background: var(--qh-color-surface-raised);
+  border-color: var(--qh-color-border);
+  color: var(--qh-color-text-primary);
+  box-shadow: var(--qh-shadow-medium);
+}
+
+.settings-popover .field select {
+  min-height: 40px;
+}
+
+.settings-popover .field {
+  margin-bottom: var(--qh-space-4);
+}
+
+.settings-popover > button {
+  min-height: 40px;
+}
+
+.dashboard-metrics,
+.research-snapshot-grid,
+.metric-grid {
+  container-type: inline-size;
+}
+
+.ui-button,
+.icon-button,
+.foundation-tabs button,
+.command-result,
+.environment-items a,
+.workflow-ribbon span {
+  min-height: 40px;
+}
+
+.ui-button-secondary,
+.ui-button-quiet {
+  color: var(--qh-color-text-primary);
+}
+
+.ui-button-quantum,
+.ui-button-danger {
+  color: var(--qh-color-text-inverse);
+}
+
+.table-scroll,
+.chart,
+.circuit-scroll {
+  min-width: 0;
+  scrollbar-color: var(--qh-color-border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.table-scroll table {
+  min-width: 600px;
+}
+
+.chart {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chart svg {
+  min-width: 560px;
+}
+
+.bar-chart {
+  min-width: 0;
+}
+
+.bar-row > span {
+  color: var(--qh-color-text-secondary);
+}
+
+.chart text,
+.circuit-scroll text {
+  fill: var(--qh-color-text-secondary);
+}
+
+.axis {
+  stroke: var(--qh-color-border-strong);
+}
+
+.chance {
+  stroke: var(--qh-color-border);
+}
+
+.curve-0 { stroke: var(--qh-chart-1); }
+.curve-1 { stroke: var(--qh-chart-2); }
+.curve-2 { stroke: var(--qh-chart-3); }
+.curve-3 { stroke: var(--qh-chart-4); }
+.curve-4 { stroke: var(--qh-chart-5); }
+.legend-0 { color: var(--qh-chart-1); }
+.legend-1 { color: var(--qh-chart-2); }
+.legend-2 { color: var(--qh-chart-3); }
+.legend-3 { color: var(--qh-chart-4); }
+.legend-4 { color: var(--qh-chart-5); }
+
+.circuit-text {
+  border: 1px solid var(--qh-color-border);
+  color: var(--qh-color-text-primary);
+}
+
+.circuit-scroll {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+}
+
+@container (max-width: 720px) {
+  .metric-card {
+    padding: var(--qh-space-4);
+  }
+
+  .metric-card strong {
+    font-size: clamp(1.6rem, 8cqi, 2.2rem);
+  }
+}
+
+@media (min-width: 1440px) {
+  .app-shell .workspace > main {
+    padding-inline: clamp(42px, 4vw, 72px);
+  }
+
+  .app-shell .workspace > main > :is(.data-lab-page, .model-lab-page, .quantum-lab-page, .studio-page) {
+    max-width: 1380px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .workspace > main {
+    padding-inline: 16px;
+  }
+
+  .section-header,
+  .panel-header,
+  .data-lab-panel-header,
+  .model-lab-panel-header,
+  .quantum-panel-header,
+  .studio-panel-header {
+    align-items: stretch;
+  }
+
+  .header-actions,
+  .panel-header-actions,
+  .data-lab-panel-actions,
+  .model-lab-panel-actions,
+  .quantum-lab-header-actions,
+  .studio-header-actions,
+  .action-bar {
+    width: 100%;
+  }
+
+  .header-actions > *,
+  .panel-header-actions > *,
+  .data-lab-panel-actions > *,
+  .model-lab-panel-actions > *,
+  .quantum-lab-header-actions > *,
+  .studio-header-actions > *,
+  .action-bar > * {
+    max-width: 100%;
+  }
+
+  .table-scroll {
+    margin-inline: -1px;
+  }
+
+  .chart svg {
+    min-width: 500px;
+  }
+
+  .settings-popover {
+    width: min(305px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 480px) {
+  .table-scroll {
+    margin-inline: -16px;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .table-scroll table {
+    min-width: 560px;
+  }
+
+  .chart svg {
+    min-width: 460px;
+  }
+
+  .foundation-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  html.theme-transition *,
+  html.theme-transition {
+    transition-duration: 0ms !important;
+  }
+}

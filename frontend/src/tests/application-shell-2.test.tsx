@@ -64,4 +64,13 @@ describe('Application Shell 2.0', () => {
     expect(datasets).toHaveAttribute('href', '/datasets');
     expect(datasets).toHaveAttribute('title', 'Datasets');
   });
+
+  it('switches and persists the semantic Q-Health theme', () => {
+    localStorage.clear();
+    render(<TestShell/>);
+    fireEvent.change(screen.getByRole('combobox', {name: 'Appearance theme'}), {target: {value: 'dark'}});
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem('qhealth-theme-v1')).toBe('dark');
+    localStorage.clear();
+  });
 });

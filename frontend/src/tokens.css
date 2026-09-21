@@ -71,6 +71,26 @@
   --qh-color-sidebar-foreground: #edf6f7;
   --qh-color-sidebar-muted: #9bb2bb;
 
+  /* Semantic visual layer. Components should consume these meanings, not palette literals. */
+  --qh-color-text-primary: var(--qh-color-foreground);
+  --qh-color-text-secondary: var(--qh-color-muted-foreground);
+  --qh-color-text-muted: var(--qh-color-subtle-foreground);
+  --qh-color-text-inverse: var(--qh-color-primary-foreground);
+  --qh-color-surface-hover: #f3f7f8;
+  --qh-color-surface-selected: var(--qh-color-research-soft);
+  --qh-color-border-interactive: var(--qh-border-interactive);
+  --qh-color-data-accent: #397a91;
+  --qh-color-data-accent-soft: #e8f1f5;
+  --qh-color-model-accent: var(--qh-color-quantum);
+  --qh-color-model-accent-soft: var(--qh-color-quantum-soft);
+  --qh-color-studio-accent: #8a6a43;
+  --qh-color-studio-accent-soft: #f5eee4;
+  --qh-surface-accent: var(--qh-color-surface-hover);
+  --qh-surface-quantum: var(--qh-color-quantum-soft);
+  --qh-surface-research: var(--qh-color-research-soft);
+  --qh-surface-warning: var(--qh-color-warning-soft);
+  --qh-surface-danger: var(--qh-color-danger-soft);
+
   --qh-space-1: 4px;
   --qh-space-2: 8px;
   --qh-space-3: 12px;
@@ -151,6 +171,20 @@
   --qh-color-sidebar-muted: #a9c0c8;
   --qh-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 5px 16px rgba(0, 0, 0, 0.12);
   --qh-shadow-md: 0 14px 34px rgba(0, 0, 0, 0.24), 0 3px 8px rgba(0, 0, 0, 0.16);
+  --qh-shadow-low: 0 6px 18px rgba(0, 0, 0, .18);
+  --qh-shadow-medium: 0 12px 28px rgba(0, 0, 0, .25);
+  --qh-shadow-high: 0 22px 56px rgba(0, 0, 0, .4);
+  --qh-color-surface-hover: #2b3a42;
+  --qh-color-surface-selected: var(--qh-color-research-soft);
+  --qh-color-data-accent: #8fc4d7;
+  --qh-color-data-accent-soft: rgba(143, 196, 215, .14);
+  --qh-color-studio-accent: #d8b27d;
+  --qh-color-studio-accent-soft: rgba(216, 178, 125, .14);
+  --qh-surface-accent: var(--qh-color-surface-hover);
+  --qh-surface-quantum: var(--qh-color-quantum-soft);
+  --qh-surface-research: var(--qh-color-research-soft);
+  --qh-surface-warning: var(--qh-color-warning-soft);
+  --qh-surface-danger: var(--qh-color-danger-soft);
 }
 
 [data-theme="system"] {
@@ -194,6 +228,20 @@
     --qh-color-sidebar-raised: #1e3542;
     --qh-color-sidebar-foreground: #f2f8f9;
     --qh-color-sidebar-muted: #a9c0c8;
+    --qh-shadow-low: 0 6px 18px rgba(0, 0, 0, .18);
+    --qh-shadow-medium: 0 12px 28px rgba(0, 0, 0, .25);
+    --qh-shadow-high: 0 22px 56px rgba(0, 0, 0, .4);
+    --qh-color-surface-hover: #2b3a42;
+    --qh-color-surface-selected: var(--qh-color-research-soft);
+    --qh-color-data-accent: #8fc4d7;
+    --qh-color-data-accent-soft: rgba(143, 196, 215, .14);
+    --qh-color-studio-accent: #d8b27d;
+    --qh-color-studio-accent-soft: rgba(216, 178, 125, .14);
+    --qh-surface-accent: var(--qh-color-surface-hover);
+    --qh-surface-quantum: var(--qh-color-quantum-soft);
+    --qh-surface-research: var(--qh-color-research-soft);
+    --qh-surface-warning: var(--qh-color-warning-soft);
+    --qh-surface-danger: var(--qh-color-danger-soft);
   }
 }
 
