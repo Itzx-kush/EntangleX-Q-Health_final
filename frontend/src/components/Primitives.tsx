@@ -7,8 +7,9 @@ type Tone = 'primary' | 'secondary' | 'quiet' | 'quantum' | 'danger';
 
 export function Button({children, tone = 'primary', size = 'md', loading = false, className = '', as, href, ...props}: (ButtonHTMLAttributes<HTMLButtonElement> | AnchorHTMLAttributes<HTMLAnchorElement>) & {tone?: Tone; size?: 'sm' | 'md' | 'lg'; loading?: boolean; as?: 'a'; href?: string}) {
   const classes = `ui-button ui-button-${tone} ui-button-${size} ${className}`.trim();
-  if (as === 'a') return <a href={href} className={classes} aria-busy={loading || undefined} {...props as AnchorHTMLAttributes<HTMLAnchorElement>}>{loading && <span className="button-spinner" aria-hidden="true"/>}{children}</a>;
-  return <button className={classes} aria-busy={loading || undefined} {...props as ButtonHTMLAttributes<HTMLButtonElement>}>{loading && <span className="button-spinner" aria-hidden="true"/>}{children}</button>;
+  if (as === 'a') return <a href={href} className={classes} aria-busy={loading || undefined} aria-disabled={loading || undefined} {...props as AnchorHTMLAttributes<HTMLAnchorElement>}>{loading && <span className="button-spinner" aria-hidden="true"/>}{children}</a>;
+  const buttonProps = props as ButtonHTMLAttributes<HTMLButtonElement>;
+  return <button className={classes} {...buttonProps} aria-busy={loading || undefined} disabled={loading || buttonProps.disabled}>{loading && <span className="button-spinner" aria-hidden="true"/>}{children}</button>;
 }
 
 export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {label: string}>(function IconButton({label, children, className = '', ...props}, ref) {
