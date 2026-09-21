@@ -53,3 +53,8 @@ def test_original_records_not_exposed_in_dataset_summary(client, registered):
 def test_body_size_limit_is_enforced(client):
     response = client.post("/api/datasets/upload", content=b"", headers={"Content-Length": str(1024 * 1024 * 500)})
     assert response.status_code == 413
+
+def test_list_datasets_limit_validation(client):
+    assert client.get("/api/datasets?limit=501").status_code == 422
+    assert client.get("/api/datasets?limit=0").status_code == 422
+    assert client.get("/api/datasets?limit=500").status_code == 200
