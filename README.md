@@ -105,6 +105,8 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Vite proxies `/api` to `http://127.0.0.1:8000`; no frontend environment file is required. The connection indicator reports HTTP reachability, not scientific validity or quantum execution. `npm run build` performs a TypeScript check and production build when you execute it.
 
+The frontend type-check, Vitest suite, production build, development server, production preview, direct route rendering, and live backend boundary were verified in the pinned Node environment. See [frontend verification](docs/frontend_verification.md). Cross-browser coverage and Docker runtime remain separate checks.
+
 ## 8. Docker startup
 
 From the project root after copying `.env.example` to `.env`:

@@ -11,3 +11,7 @@ it('sends an in-memory token without browser persistence', async () => {
   expect(new Headers(fetcher.mock.calls[0][1].headers).get('Authorization')).toBe(`Bearer ${generatedToken}`);
   expect({...localStorage}).toEqual(stored);
 });
+it('surfaces structured API errors with their request reference', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({error: {message: 'Access denied', request_id: 'req-123'}}), {status: 403, headers: {'Content-Type': 'application/json'}})));
+  await expect(api.get('/datasets')).rejects.toThrow('Access denied Reference: req-123');
+});

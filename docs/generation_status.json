@@ -3,7 +3,7 @@
   "generated_on": "2026-09-10",
   "source_generated": true,
   "delivery": "ENTANGLEX-Q-HEALTH.zip containing the entanglex-q-health folder",
-  "verification_statement": "On 2026-09-21, the pinned backend environment was restored and the FastAPI application started successfully. The backend suite passed 43 tests with 3 existing opt-in quantum skips; the live HTTP workflow verified dataset registration, previews, classical training, prediction, reports, rerun, deletion protection, and queued-job cancellation. Frontend runtime/build, Docker runtime, full quantum training, and clinical validity remain unverified.",
+  "verification_statement": "On 2026-09-21, the pinned backend and frontend environments were verified. The backend started and passed its documented tests and HTTP workflow; the frontend passed type checking, all Vitest tests, production build, development-server checks, production preview checks, and direct route rendering. Docker, cross-browser coverage, full quantum training, and clinical validity remain unverified.",
   "static_inspection": {
     "python_ast_parsing": "Performed without importing application modules; no syntax errors found.",
     "python_files_parsed": 56,
@@ -18,9 +18,9 @@
     "runtime_artifact_scan": "No database, trained model, credential-bearing .env, installed node_modules, execution result or bytecode bundle is shipped."
   },
   "not_performed": [
-    "Frontend startup, dependency-resolved type checking, production build or browser rendering",
     "Docker build or execution",
     "Full quantum circuit execution, quantum model training, or quantum artifact reload verification",
+    "Cross-browser compatibility matrix",
     "Clinical validation, external cohort validation or quantum advantage experimentation"
   ],
   "source_documents": [
@@ -69,5 +69,25 @@
     "rerun": "PASS",
     "queued_cancellation": "PASS",
     "record": "docs/backend_verification.md"
+  },
+  "frontend_runtime_verification": {
+    "date": "2026-09-21",
+    "node": "22.12.0",
+    "npm": "10.9.0",
+    "npm_ci": "PASS",
+    "typecheck": "PASS",
+    "tests": {
+      "files_passed": 3,
+      "tests_passed": 6,
+      "failed": 0
+    },
+    "production_build": "PASS",
+    "development_server": "PASS",
+    "development_root": "PASS",
+    "production_preview": "PASS",
+    "production_root": "PASS",
+    "direct_route_rendering": "PASS",
+    "backend_boundary": "PASS",
+    "record": "docs/frontend_verification.md"
   }
 }
