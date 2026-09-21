@@ -53,3 +53,21 @@ def test_original_records_not_exposed_in_dataset_summary(client, registered):
 def test_body_size_limit_is_enforced(client):
     response = client.post("/api/datasets/upload", content=b"", headers={"Content-Length": str(1024 * 1024 * 500)})
     assert response.status_code == 413
+
+def test_delete_dataset_route_success(client, registered):
+    path = safe_path("data/datasets", registered.id, ".csv")
+    assert path.is_file()
+    delete_res = client.delete(f"/api/datasets/{registered.id}")
+    assert delete_res.status_code == 204
+    assert not delete_res.content
+    assert client.get(f"/api/datasets/{registered.id}").status_code == 404
+    assert not path.exists()
+
+def test_delete_dataset_route_errors(client):
+    # Non-existent UUID -> 404
+    response_404 = client.delete(f"/api/datasets/{uuid4()}")
+    assert response_404.status_code == 404
+
+    # Invalid UUID string -> 422
+    response_422 = client.delete("/api/datasets/not-a-uuid")
+    assert response_422.status_code == 422
