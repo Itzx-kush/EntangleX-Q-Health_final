@@ -164,6 +164,7 @@
     "docker": "NOT PERFORMED: Docker unavailable",
     "configuration_consistency": "PASS: API/proxy/ports/storage/Node/lockfile reviewed",
     "scientific_integrity": "PASS: no fabricated runtime metrics, predictions, clinical claims, or quantum-advantage claims",
-    "record": "docs/task1_final_verification.md"
+    "record": "docs/task1_final_verification.md",
+    "task1_6_closure_publication_commit": "cf66c854a877bf3e31c42b155fea98e41682c691"
   }
 }

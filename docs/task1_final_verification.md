@@ -130,7 +130,7 @@ A documented single-worker Uvicorn server was started on an isolated temporary s
 
 ## Current Repository Status
 
-The final commit hash is recorded after the closure changes are committed and pushed. The required final state is:
+The Task 1.6 closure publication commit is `cf66c854a877bf3e31c42b155fea98e41682c691`. The required final state is:
 
 - `HEAD == origin/main`
 - `git status --short` is empty
