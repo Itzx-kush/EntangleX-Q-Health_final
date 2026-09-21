@@ -3,7 +3,7 @@ import {fireEvent, render, screen, waitFor, within} from '@testing-library/react
 import {MemoryRouter} from 'react-router-dom';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {ApplicationShell} from '../components/ApplicationShell';
-import {Dialog, Drawer, ErrorState, IconButton, LoadingState, SuccessState, Tabs, Toast, Tooltip, Button} from '../components/Primitives';
+import {Dialog, Disclosure, Drawer, ErrorState, IconButton, LoadingState, SuccessState, Tabs, Toast, Tooltip, Button} from '../components/Primitives';
 import Dashboard from '../pages/Dashboard';
 
 beforeEach(() => { vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Backend unavailable'))); });
@@ -26,13 +26,35 @@ describe('Q-Health UI foundation', () => {
     expect(screen.getByRole('tab', {name: 'Details'})).toHaveAttribute('aria-selected', 'false');
   });
 
+  it('supports keyboard movement across tabs without changing application state', () => {
+    render(<Tabs items={[{value: 'a', label: 'Summary'}, {value: 'b', label: 'Details'}]} value="a" onChange={() => undefined}/>);
+    const summary = screen.getByRole('tab', {name: 'Summary'});
+    const details = screen.getByRole('tab', {name: 'Details'});
+    summary.focus();
+    fireEvent.keyDown(summary, {key: 'ArrowRight'});
+    expect(document.activeElement).toBe(details);
+    expect(summary).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('keeps expandable content state and relationship accessible', () => {
+    render(<Disclosure title="Advanced settings"><p>Configuration details</p></Disclosure>);
+    const trigger = screen.getByRole('button', {name: 'Advanced settings'});
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Configuration details')).toBeInTheDocument();
+  });
+
   it('opens, closes, and Escape-closes a dialog', async () => {
     function Fixture() { const [open, setOpen] = React.useState(false); return <><button onClick={() => setOpen(true)}>Open dialog</button><Dialog open={open} onClose={() => setOpen(false)} title="Research details"><p>Details</p></Dialog></>; }
     render(<Fixture/>);
-    fireEvent.click(screen.getByRole('button', {name: 'Open dialog'}));
+    const opener = screen.getByRole('button', {name: 'Open dialog'});
+    opener.focus();
+    fireEvent.click(opener);
     expect(screen.getByRole('dialog', {name: 'Research details'})).toBeInTheDocument();
     fireEvent.keyDown(window, {key: 'Escape'});
     await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Research details'})).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(opener);
   });
 
   it('opens and closes a drawer', async () => {

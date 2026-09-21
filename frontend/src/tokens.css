@@ -96,8 +96,19 @@
   --qh-motion-fast: 120ms;
   --qh-motion-standard: 180ms;
   --qh-motion-slow: 320ms;
+  /* 3.11 semantic motion vocabulary: instant feedback, micro, component, navigation. */
+  --motion-instant: 0ms;
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-moderate: 240ms;
+  --motion-slow: 320ms;
   --qh-ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
   --qh-ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --ease-linear: linear;
 }
 
 [data-theme="dark"] {
@@ -191,8 +202,12 @@
     --qh-motion-fast: 0ms;
     --qh-motion-standard: 0ms;
     --qh-motion-slow: 0ms;
+    --motion-fast: 0ms;
+    --motion-standard: 0ms;
+    --motion-moderate: 0ms;
+    --motion-slow: 0ms;
   }
 }
 /* Q-Health 3.3 motion language: short, purposeful, and removable. */
 :root { --qh-motion-page-enter: 260ms; --qh-motion-page-exit: 180ms; --qh-motion-reveal: 420ms; --qh-motion-modal: 220ms; --qh-motion-state: 240ms; --qh-motion-hover: 140ms; --qh-motion-intro: 1680ms; --qh-ease-enter: cubic-bezier(0.16, 1, 0.3, 1); --qh-ease-exit: cubic-bezier(0.7, 0, 0.84, 0); }
-@media (prefers-reduced-motion: reduce) { :root { --qh-motion-page-enter: 1ms; --qh-motion-page-exit: 1ms; --qh-motion-reveal: 1ms; --qh-motion-modal: 1ms; --qh-motion-state: 1ms; --qh-motion-hover: 1ms; --qh-motion-intro: 550ms; } }
+@media (prefers-reduced-motion: reduce) { :root { --qh-motion-page-enter: 1ms; --qh-motion-page-exit: 1ms; --qh-motion-reveal: 1ms; --qh-motion-modal: 1ms; --qh-motion-state: 1ms; --qh-motion-hover: 1ms; --qh-motion-intro: 550ms; --motion-fast: 0ms; --motion-standard: 0ms; --motion-moderate: 0ms; --motion-slow: 0ms; } }
