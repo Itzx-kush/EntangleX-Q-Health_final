@@ -49,7 +49,7 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
 
   useEffect(() => { setMenu(false); }, [pathname, setMenu]);
 
-  return <div className={`app-shell environment-${environment.id} ${collapsed ? 'shell-collapsed' : ''}`}><a className="skip-link" href="#main">Skip to workspace</a>
+  return <div className={`app-shell final-art-direction environment-${environment.id} ${collapsed ? 'shell-collapsed' : ''}`}><a className="skip-link" href="#main">Skip to workspace</a>
     <EnvironmentNavigation open={menu} onNavigate={() => setMenu(false)} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(value => !value)}/>
     {menu && <button className="navigation-scrim" type="button" aria-label="Close navigation" onClick={() => setMenu(false)}/>} 
     <div className="workspace"><header className="topbar global-header">
