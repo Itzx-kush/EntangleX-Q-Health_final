@@ -48,7 +48,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="EntangleX Q-Health", version="0.1.0", description=DISCLAIMER, lifespan=lifespan)
 app.add_middleware(BodyLimitMiddleware, max_bytes=settings.upload_limit + 65536)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=[s.strip() for s in settings.trusted_hosts.split(",")])
-app.add_middleware(CORSMiddleware, allow_origins=[s.strip() for s in settings.cors_origins.split(",")], allow_credentials=False, allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type", "Authorization"], expose_headers=["Content-Disposition", "X-Request-ID"])
+cors_origins = [s.strip() for s in settings.cors_origins.split(",") if s.strip()]
+allow_credentials = "*" not in cors_origins
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=allow_credentials, allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type", "Authorization"], expose_headers=["Content-Disposition", "X-Request-ID"])
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):

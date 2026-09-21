@@ -25,6 +25,13 @@ def test_health_and_private_origin(client):
     blocked = client.get("/api/datasets", headers={"Origin": "https://untrusted.invalid"})
     assert blocked.status_code == 403
 
+def test_cors_credentials_header_and_parsing(client):
+    allowed_origin = "http://localhost:5173"
+    response = client.options("/api/health", headers={"Origin": allowed_origin, "Access-Control-Request-Method": "GET"})
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == allowed_origin
+    assert response.headers.get("access-control-allow-credentials") == "true"
+
 def test_bearer_token_is_enforced_when_configured(client, monkeypatch):
     # Runtime-generated test credential; no credential is embedded in source.
     import secrets
