@@ -1,5 +1,7 @@
 from uuid import uuid4
 import pytest
+from pydantic import ValidationError
+from app.api.schemas import DatasetUploadMetadata
 from app.config import get_settings
 from app.storage.files import atomic_bytes, safe_path, sanitize_filename, verify
 from app.utils.errors import AppError
@@ -53,3 +55,50 @@ def test_original_records_not_exposed_in_dataset_summary(client, registered):
 def test_body_size_limit_is_enforced(client):
     response = client.post("/api/datasets/upload", content=b"", headers={"Content-Length": str(1024 * 1024 * 500)})
     assert response.status_code == 413
+
+def test_dataset_upload_metadata_clean_text_validation():
+    valid_data = {
+        "name": "  Test Dataset  ",
+        "domain": "  biomedical  ",
+        "source": "  User-provided  ",
+        "version": "  1.0  ",
+        "target": "  target_col  ",
+        "positive_label": "  pos  ",
+        "deidentified": True,
+    }
+    metadata = DatasetUploadMetadata(**valid_data)
+    assert metadata.name == "Test Dataset"
+    assert metadata.domain == "biomedical"
+    assert metadata.source == "User-provided"
+    assert metadata.version == "1.0"
+    assert metadata.target == "target_col"
+    assert metadata.positive_label == "pos"
+
+    text_fields = ["name", "domain", "source", "version", "target", "positive_label"]
+    invalid_inputs = [
+        "",
+        "   ",
+        "\t\n",
+        "  \n\t  ",
+        "text\x00with_null",
+        "text\x07with_bell",
+        "text\x1fwith_unit_sep",
+    ]
+
+    base_payload = {
+        "name": "Valid Name",
+        "domain": "biomedical",
+        "source": "User-provided",
+        "version": "1.0",
+        "target": "target_col",
+        "positive_label": "pos",
+        "deidentified": True,
+    }
+
+    for field in text_fields:
+        for invalid_val in invalid_inputs:
+            payload = base_payload.copy()
+            payload[field] = invalid_val
+            with pytest.raises(ValidationError) as exc_info:
+                DatasetUploadMetadata(**payload)
+            assert "Text must be nonempty and contain no control characters." in str(exc_info.value) or "at least 1 character" in str(exc_info.value)
