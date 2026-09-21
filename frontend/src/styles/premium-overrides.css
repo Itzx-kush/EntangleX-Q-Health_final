@@ -1,0 +1,107 @@
+/* Premium interaction layer: visual-only, API-agnostic frontend polish. */
+
+:where(a, button, select, input):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--qh-current-accent, var(--qh-color-primary)) 42%, transparent);
+  outline-offset: 3px;
+}
+
+.final-art-direction .workspace {
+  background:
+    radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--qh-current-accent) 6%, transparent), transparent 28rem),
+    var(--qh-color-background);
+}
+
+.final-art-direction .workspace > main {
+  position: relative;
+  isolation: isolate;
+}
+
+.final-art-direction .workspace > main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  width: min(58vw, 760px);
+  height: 420px;
+  pointer-events: none;
+  opacity: .34;
+  background-image: linear-gradient(color-mix(in srgb, var(--qh-current-accent) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--qh-current-accent) 7%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(135deg, black, transparent 74%);
+}
+
+.final-art-direction .research-hero {
+  border: 1px solid color-mix(in srgb, var(--qh-current-accent) 18%, var(--qh-color-border));
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--qh-color-shadow) 38%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--qh-current-accent) 6%, var(--qh-color-surface)) 0%, var(--qh-color-surface) 58%);
+  overflow: hidden;
+}
+
+.final-art-direction .research-hero::after {
+  content: "";
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  right: -74px;
+  top: -86px;
+  border: 1px solid color-mix(in srgb, var(--qh-current-accent) 20%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 22px color-mix(in srgb, var(--qh-current-accent) 4%, transparent), 0 0 0 44px color-mix(in srgb, var(--qh-current-accent) 3%, transparent);
+  pointer-events: none;
+}
+
+.final-art-direction .research-hero-actions .ui-button,
+.final-art-direction .research-capability,
+.final-art-direction .pipeline-stage,
+.final-art-direction .flow-node {
+  transition: transform var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+}
+
+.final-art-direction .research-hero-actions .ui-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--qh-color-shadow) 18%, transparent);
+}
+
+.final-art-direction .research-capability:hover,
+.final-art-direction .pipeline-stage:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--qh-current-accent) 44%, var(--qh-color-border));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--qh-color-shadow) 14%, transparent);
+}
+
+.final-art-direction .flow-node:hover {
+  transform: translateX(4px);
+  border-color: color-mix(in srgb, var(--qh-current-accent) 42%, var(--qh-color-border));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--qh-color-shadow) 12%, transparent);
+}
+
+.final-art-direction .connection-badge {
+  border-color: color-mix(in srgb, var(--qh-current-accent) 24%, var(--qh-color-border));
+  background: color-mix(in srgb, var(--qh-current-accent) 6%, var(--qh-color-surface));
+}
+
+.final-art-direction .workspace-footer {
+  border-top: 1px solid var(--qh-final-rule);
+  padding-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .final-art-direction .workspace > main::before {
+    width: 100%;
+    height: 280px;
+  }
+
+  .final-art-direction .research-hero {
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--qh-color-shadow) 22%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .final-art-direction .research-hero-actions .ui-button,
+  .final-art-direction .research-capability,
+  .final-art-direction .pipeline-stage,
+  .final-art-direction .flow-node {
+    transition: none;
+  }
+}

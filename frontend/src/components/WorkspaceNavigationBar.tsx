@@ -6,6 +6,7 @@ import {environments, isNavigationItemActive} from '../navigation';
 type WorkspaceNavigationBarProps = {
   pathname: string;
   onOpenSearch: () => void;
+  hideFromAccessibility?: boolean;
 };
 
 const quickLinks = [
@@ -16,8 +17,8 @@ const quickLinks = [
   {label: 'Experiments', path: '/experiments', tone: 'studio'},
 ] as const;
 
-export function WorkspaceNavigationBar({pathname, onOpenSearch}: WorkspaceNavigationBarProps) {
-  return <nav className="workspace-navigation-bar" aria-label="Quick workspace navigation">
+export function WorkspaceNavigationBar({pathname, onOpenSearch, hideFromAccessibility = false}: WorkspaceNavigationBarProps) {
+  return <nav className="workspace-navigation-bar" aria-label="Quick workspace navigation" aria-hidden={hideFromAccessibility || undefined}>
     <div className="workspace-nav-scroller">
       <Link className={isNavigationItemActive('/', pathname) ? 'workspace-nav-chip active' : 'workspace-nav-chip'} to="/" aria-label="Research overview">
         <House size={13} aria-hidden="true"/>
@@ -40,10 +41,11 @@ export function WorkspaceNavigationBar({pathname, onOpenSearch}: WorkspaceNaviga
 
 type MobileWorkspaceNavProps = {
   pathname: string;
+  hideFromAccessibility?: boolean;
 };
 
-export function MobileWorkspaceNav({pathname}: MobileWorkspaceNavProps) {
-  return <nav className="mobile-workspace-nav" aria-label="Primary mobile navigation">
+export function MobileWorkspaceNav({pathname, hideFromAccessibility = false}: MobileWorkspaceNavProps) {
+  return <nav className="mobile-workspace-nav" aria-label="Primary mobile navigation" aria-hidden={hideFromAccessibility || undefined}>
     {quickLinks.map(link => {
       const Icon: LucideIcon = link.label === 'Overview' ? House : link.label === 'Data' ? environments.find(env => env.id === 'data-lab')!.icon : link.label === 'Models' ? environments.find(env => env.id === 'model-lab')!.icon : link.label === 'Quantum' ? environments.find(env => env.id === 'quantum-lab')!.icon : environments.find(env => env.id === 'research-studio')!.icon;
       const active = isNavigationItemActive(link.path, pathname);
