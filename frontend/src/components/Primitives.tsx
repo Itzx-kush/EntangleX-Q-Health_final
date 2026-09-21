@@ -21,7 +21,7 @@ export function Surface({children, className = '', as = 'div'}: {children: React
 
 export function StatusPill({value}: {value: string}) {
   const tone = ['ready', 'succeeded'].includes(value) ? 'success' : ['failed', 'partial', 'interrupted', 'cancelled'].includes(value) ? 'warning' : 'info';
-  return <Badge tone={tone}>{value.replaceAll('_', ' ')}</Badge>;
+  return <Badge tone={tone} className="status-transition">{value.replaceAll('_', ' ')}</Badge>;
 }
 
 export function SectionHeader({eyebrow, title, description, actions}: {eyebrow: string; title: string; description: string; actions?: ReactNode}) {
@@ -29,15 +29,15 @@ export function SectionHeader({eyebrow, title, description, actions}: {eyebrow: 
 }
 
 export function EmptyState({children}: {children: ReactNode}) {
-  return <div className="empty-state">{children}</div>;
+  return <div className="empty-state motion-state state-empty">{children}</div>;
 }
 
 export function LoadingState({children = 'Loading workspace data...'}: {children?: ReactNode}) {
-  return <p className="loading-state" role="status"><span className="pulse-indicator" aria-hidden="true"/> {children}</p>;
+  return <p className="loading-state motion-state state-loading" role="status"><span className="pulse-indicator" aria-hidden="true"/> {children}</p>;
 }
 
 export function ErrorState({children}: {children: ReactNode}) {
-  return <div className="error-state" role="alert">{children}</div>;
+  return <div className="error-state motion-state state-error" role="alert">{children}</div>;
 }
 
 export function Divider({label}: {label?: string}) {
@@ -50,4 +50,16 @@ export function QuantumMark({label = 'Quantum state'}: {label?: string}) {
 
 export function CircuitDivider() {
   return <div className="circuit-divider" aria-hidden="true"><span/><span/><span/></div>;
+}
+
+export function Tooltip({label, children}: {label: string; children: ReactNode}) {
+  return <span className="ui-tooltip"><span className="ui-tooltip-trigger">{children}</span><span className="ui-tooltip-content" role="tooltip">{label}</span></span>;
+}
+
+export function SuccessState({children}: {children: ReactNode}) {
+  return <div className="motion-state state-success" role="status"><span className="state-icon" aria-hidden="true">✓</span><span>{children}</span></div>;
+}
+
+export function RetryState({children, onRetry}: {children: ReactNode; onRetry: () => void}) {
+  return <div className="motion-state state-retry" role="alert"><span>{children}</span><button className="ui-button ui-button-sm ui-button-secondary" onClick={onRetry}>Retry</button></div>;
 }
