@@ -92,6 +92,8 @@ Linux/macOS:
 
 Health endpoint: `http://127.0.0.1:8000/api/health`. Generated OpenAPI schema: `http://127.0.0.1:8000/openapi.json`. Interactive API documentation: `http://127.0.0.1:8000/docs`. Use exactly one process: the MVP training worker is in-process. Avoid `--reload` while training.
 
+The backend startup, automated suite, live HTTP workflow, classical training, prediction, reports, rerun, and queued-job cancellation were verified in the pinned environment. See [backend verification](docs/backend_verification.md). Frontend runtime, Docker runtime, and full quantum training remain separate checks.
+
 ## 7. Frontend startup
 
 Open a second terminal in the project root:

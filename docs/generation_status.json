@@ -3,7 +3,7 @@
   "generated_on": "2026-09-10",
   "source_generated": true,
   "delivery": "ENTANGLEX-Q-HEALTH.zip containing the entanglex-q-health folder",
-  "verification_statement": "On 2026-09-21, a clean CPython 3.11.16 environment installed the pinned backend dependency set; major dependency and application imports succeeded, and the existing Qiskit API objects were constructible. The committed frontend package-lock.json passed a clean npm ci under Node 22.12.0/npm 10.9.0. This verifies dependency/environment compatibility only; complete application runtime, tests, integration, Docker, model execution, and clinical validity remain unverified.",
+  "verification_statement": "On 2026-09-21, the pinned backend environment was restored and the FastAPI application started successfully. The backend suite passed 43 tests with 3 existing opt-in quantum skips; the live HTTP workflow verified dataset registration, previews, classical training, prediction, reports, rerun, deletion protection, and queued-job cancellation. Frontend runtime/build, Docker runtime, full quantum training, and clinical validity remain unverified.",
   "static_inspection": {
     "python_ast_parsing": "Performed without importing application modules; no syntax errors found.",
     "python_files_parsed": 56,
@@ -14,17 +14,13 @@
     "relative_frontend_import_paths": "Checked for file presence; no unresolved local references found.",
     "json_syntax": "Manifest/metadata JSON parsed for syntax only.",
     "documentation_links": "Local Markdown links inspected for file presence.",
-    "api_contract_review": "Route names, request/response fields, frontend callers and configuration names were inspected in source; no HTTP integration execution occurred.",
+    "api_contract_review": "Route names, request/response fields, frontend callers and configuration names were inspected in source; the documented backend HTTP workflow was also executed successfully.",
     "runtime_artifact_scan": "No database, trained model, credential-bearing .env, installed node_modules, execution result or bytecode bundle is shipped."
   },
   "not_performed": [
-    "Backend startup or complete runtime validation",
     "Frontend startup, dependency-resolved type checking, production build or browser rendering",
-    "Backend/frontend automated tests",
-    "Frontend/backend HTTP integration execution",
     "Docker build or execution",
-    "Classical model training or evaluation",
-    "Quantum circuit execution, quantum model training, or quantum artifact reload verification",
+    "Full quantum circuit execution, quantum model training, or quantum artifact reload verification",
     "Clinical validation, external cohort validation or quantum advantage experimentation"
   ],
   "source_documents": [
@@ -50,5 +46,28 @@
     "frontend_npm_ci": "PASS",
     "exact_versions_recorded": "PASS",
     "record": "docs/verified_environment.md"
+  },
+  "backend_runtime_verification": {
+    "date": "2026-09-21",
+    "python": "CPython 3.11.16",
+    "uvicorn_command": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --workers 1 --no-access-log",
+    "startup": "PASS",
+    "lifespan": "PASS",
+    "health": "PASS",
+    "openapi": "PASS",
+    "docs": "PASS",
+    "backend_tests": {
+      "passed": 43,
+      "skipped": 3,
+      "failed": 0,
+      "warnings": 2
+    },
+    "api_integration": "PASS",
+    "classical_training": "PASS",
+    "prediction": "PASS",
+    "reports": "PASS",
+    "rerun": "PASS",
+    "queued_cancellation": "PASS",
+    "record": "docs/backend_verification.md"
   }
 }
