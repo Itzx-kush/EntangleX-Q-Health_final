@@ -1,0 +1,41 @@
+{
+  "project": "EntangleX Q-Health",
+  "generated_on": "2026-09-10",
+  "source_generated": true,
+  "delivery": "ENTANGLEX-Q-HEALTH.zip containing the entanglex-q-health folder",
+  "verification_statement": "The project source code was generated and packaged, but the application was not executed in this task. Therefore runtime compatibility, dependency compatibility, tests, frontend/backend integration, Docker execution, and quantum execution have not been independently verified.",
+  "static_inspection": {
+    "python_ast_parsing": "Performed without importing application modules; no syntax errors found.",
+    "python_files_parsed": 56,
+    "typescript_tsx_source_parsing": "Performed with a preinstalled TypeScript parser; no parse errors found. This was not a dependency-resolved type check or frontend build.",
+    "typescript_tsx_files_parsed": 30,
+    "relative_python_import_paths": "134 checked; no unresolved local paths found.",
+    "named_local_python_imports": "247 checked against local source bindings/modules; no unresolved references found.",
+    "relative_frontend_import_paths": "Checked for file presence; no unresolved local references found.",
+    "json_syntax": "Manifest/metadata JSON parsed for syntax only.",
+    "documentation_links": "Local Markdown links inspected for file presence.",
+    "api_contract_review": "Route names, request/response fields, frontend callers and configuration names were inspected in source; no HTTP integration execution occurred.",
+    "runtime_artifact_scan": "No database, trained model, credential-bearing .env, installed node_modules, execution result or bytecode bundle is shipped."
+  },
+  "not_performed": [
+    "Dependency installation or resolved compatibility checks",
+    "Backend startup or import-time runtime validation",
+    "Frontend startup, dependency-resolved type checking, production build or browser rendering",
+    "Backend/frontend automated tests",
+    "Frontend/backend HTTP integration execution",
+    "Docker build or execution",
+    "Classical model training or evaluation",
+    "Quantum circuit execution, quantum model training, or quantum artifact reload verification",
+    "Clinical validation, external cohort validation or quantum advantage experimentation"
+  ],
+  "source_documents": [
+    {
+      "path": "docs/specifications/biomedical-specification.txt",
+      "sha256": "ae4da97a160f3705ab6bfd1dc67d495676b43505f808e11785dcddc9cbd2b5ab"
+    },
+    {
+      "path": "docs/specifications/master-prompt.md",
+      "sha256": "fb6a685e34fa0508af0ba285b1304af71ab95b8e0ac655804707aa2ebeca6336"
+    }
+  ]
+}

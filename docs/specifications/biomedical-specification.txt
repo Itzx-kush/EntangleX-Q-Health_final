@@ -1,0 +1,817 @@
+# 62A. HEALTH / BIOMEDICAL SPECIFICATION
+
+This section is mandatory.
+
+EntangleX Q-Health operates in the MedTech / BioTech / HealthTech domain.
+
+The system is a **research and decision-support prototype**, not a clinically validated diagnostic device.
+
+The implementation must therefore treat biomedical prediction differently from generic ML classification.
+
+---
+
+## 62A.1 HEALTH USE CASE
+
+The primary use case is:
+
+> Early disease-risk classification using biomedical data through hybrid quantum-classical machine learning.
+
+The system should demonstrate how biomedical features can be processed through:
+
+```text
+Biomedical Data
+↓
+Quality Validation
+↓
+Preprocessing
+↓
+Feature Engineering
+↓
+Dimensionality Reduction
+↓
+Classical ML / Quantum ML
+↓
+Risk Classification
+↓
+Explainability
+↓
+Benchmarking
+```
+
+The output represents a **model-generated risk prediction**, not a confirmed medical diagnosis.
+
+---
+
+## 62A.2 INITIAL DISEASE DOMAIN
+
+The first implementation should use:
+
+**Breast Cancer Wisconsin Diagnostic dataset**
+
+or another established public biomedical binary-classification benchmark if technical constraints require it.
+
+The application architecture must remain disease-agnostic.
+
+Do NOT create hardcoded business logic such as:
+
+```text
+if breast_cancer:
+    ...
+```
+
+Instead, represent disease/task information through dataset metadata.
+
+Example:
+
+```json
+{
+  "dataset_name": "Breast Cancer Wisconsin Diagnostic",
+  "domain": "oncology",
+  "task": "binary_classification",
+  "target": "diagnosis"
+}
+```
+
+Future datasets should be able to represent:
+
+* cardiovascular disease
+* diabetes
+* neurological disorders
+* cancer subtypes
+* biomarker-based disease prediction
+* genomics-derived features
+* imaging-derived features
+* other biomedical classification tasks
+
+---
+
+# 62A.3 HEALTH OUTPUT TERMINOLOGY
+
+Use terminology carefully.
+
+Preferred:
+
+* Disease Risk Prediction
+* Risk Classification
+* Predicted Class
+* Model Probability
+* Estimated Risk Score
+* Research Prediction
+* Decision Support
+* Biomedical Prediction
+* Observed Model Performance
+* Feature Influence
+* Model Explanation
+
+Do NOT present the output as:
+
+* confirmed diagnosis
+* clinical diagnosis
+* medical diagnosis
+* guaranteed disease detection
+* medical advice
+* treatment recommendation
+* clinical decision
+* patient prognosis
+
+Unless a future version undergoes appropriate clinical validation, the system must never represent its prediction as a clinical diagnosis.
+
+---
+
+# 62A.4 MEDICAL DISCLAIMER
+
+Display a concise but visible disclaimer in the application.
+
+Use:
+
+> **Research Prototype:** This platform provides model-generated disease-risk predictions for research and decision-support purposes. Predictions are based on benchmark or user-provided datasets and are not a substitute for professional medical diagnosis, treatment, or clinical validation.
+
+The disclaimer should appear:
+
+1. On the landing/dashboard screen.
+2. On the prediction screen.
+3. In exported experiment reports.
+
+---
+
+# 62A.5 HEALTH DATA CLASSIFICATION
+
+Treat uploaded biomedical data as potentially sensitive.
+
+The system must assume that biomedical datasets may contain sensitive information even if the demo dataset does not.
+
+Therefore:
+
+* do not unnecessarily expose raw biomedical records
+* do not display all uploaded rows globally
+* do not log raw health records
+* do not place uploaded data into frontend console logs
+* do not include raw records in experiment summaries unless explicitly required
+* do not expose uploaded files through arbitrary public URLs
+* use generated dataset IDs
+* validate uploaded file paths
+* prevent path traversal
+* restrict upload size
+* sanitize filenames
+
+---
+
+# 62A.6 DATASET PROVENANCE
+
+Every dataset used in an experiment should record, where available:
+
+* dataset name
+* dataset source
+* source URL/reference
+* dataset version
+* dataset hash
+* upload timestamp
+* row count
+* feature count
+* target column
+* target classes
+* preprocessing configuration
+
+For bundled demo datasets, document their public source and licensing/provenance information.
+
+The system must make it possible to answer:
+
+> "Exactly what dataset produced this experiment?"
+
+---
+
+# 62A.7 BIOMEDICAL DATA QUALITY
+
+Before training, perform health-data-oriented quality checks.
+
+Check:
+
+### Structural quality
+
+* missing values
+* duplicate rows
+* invalid numeric values
+* infinite values
+* unsupported categorical values
+* inconsistent schemas
+
+### Statistical quality
+
+* class imbalance
+* low-variance features
+* constant features
+* highly correlated features
+* suspiciously predictive features
+* feature distributions
+
+### Target quality
+
+Verify:
+
+* target exists
+* target has at least two classes
+* class labels are valid
+* target is not accidentally included as an input feature
+
+If a target column is used as a feature accidentally, the pipeline must reject the configuration.
+
+---
+
+# 62A.8 DATA LEAKAGE IS A HEALTH-SAFETY ISSUE
+
+Data leakage must be treated as a critical scientific error.
+
+Never allow:
+
+```text
+Entire Dataset
+↓
+PCA
+↓
+Train/Test Split
+```
+
+Instead:
+
+```text
+Dataset
+↓
+Train/Test Split
+↓
+Training Pipeline
+    ├── preprocessing
+    ├── feature selection
+    └── PCA
+↓
+Model
+```
+
+The test set must remain completely isolated.
+
+For cross-validation:
+
+```text
+Fold
+↓
+Fit preprocessing on training portion
+↓
+Transform validation portion
+↓
+Train model
+↓
+Evaluate
+```
+
+This requirement is mandatory.
+
+---
+
+# 62A.9 HEALTH-RELEVANT CLASSIFICATION METRICS
+
+Accuracy alone must never be treated as sufficient for early disease detection.
+
+Always display:
+
+* Accuracy
+* Precision
+* Recall
+* Sensitivity
+* Specificity
+* F1 Score
+* ROC-AUC
+* Confusion Matrix
+
+Make **Sensitivity** especially prominent.
+
+Explain:
+
+```text
+Sensitivity = ability to correctly identify positive cases.
+```
+
+Explain:
+
+```text
+Specificity = ability to correctly identify negative cases.
+```
+
+The UI should make false negatives visible because missed positive cases can be especially important in early-detection research.
+
+---
+
+# 62A.10 FALSE POSITIVE / FALSE NEGATIVE ANALYSIS
+
+The benchmark screen should clearly expose:
+
+```text
+True Positive
+True Negative
+False Positive
+False Negative
+```
+
+Provide human-readable descriptions:
+
+### False Negative
+
+A sample that is actually positive but predicted as negative.
+
+### False Positive
+
+A sample that is actually negative but predicted as positive.
+
+Do not claim that these directly represent clinical outcomes unless the dataset and study design justify that interpretation.
+
+---
+
+# 62A.11 MODEL PROBABILITIES
+
+If the selected model supports probability estimation, display:
+
+```text
+Predicted Class
+Probability / Score
+Risk Category
+```
+
+Clearly distinguish:
+
+**model probability**
+
+from:
+
+**actual clinical probability**
+
+Do not call a model probability a medically calibrated risk unless calibration has actually been performed and validated.
+
+---
+
+# 62A.12 RISK CATEGORIES
+
+The UI may provide:
+
+```text
+LOW
+MEDIUM
+HIGH
+```
+
+but these must be clearly labelled:
+
+> Demonstration / research risk categories.
+
+Do not imply that thresholds such as:
+
+```text
+0.00–0.33
+0.33–0.66
+0.66–1.00
+```
+
+are medically validated thresholds.
+
+Make thresholds configurable.
+
+---
+
+# 62A.13 MODEL CALIBRATION
+
+Where probability outputs are available, architect the evaluation system so calibration can be added.
+
+Potential future methods:
+
+* Platt scaling
+* isotonic regression
+* calibration curves
+* Brier score
+
+Do not claim that raw classifier probabilities are clinically calibrated.
+
+If calibration is implemented, report it separately.
+
+---
+
+# 62A.14 GENERALIZATION
+
+A health prediction model must not be judged solely by performance on one test split.
+
+Support:
+
+* train/test evaluation
+* stratified cross-validation
+* mean CV performance
+* standard deviation
+* held-out test performance
+
+Clearly distinguish:
+
+```text
+Training Performance
+Validation Performance
+Test Performance
+```
+
+Never present training accuracy as evidence of real-world disease-detection performance.
+
+---
+
+# 62A.15 DATASET SIZE AND LIMITATIONS
+
+The application should display:
+
+* number of samples
+* number of features
+* class distribution
+* training size
+* test size
+
+Where the dataset is small, make the limitation visible.
+
+Do not imply that strong performance on a small benchmark establishes clinical effectiveness.
+
+---
+
+# 62A.16 HEALTH MODEL COMPARISON
+
+For every experiment, compare quantum and classical models under equivalent conditions.
+
+Example:
+
+```text
+                    CLASSICAL       QUANTUM
+
+Dataset              SAME            SAME
+Target               SAME            SAME
+Train/Test Split     SAME            SAME
+Preprocessing        SAME            SAME
+Feature Selection    SAME            SAME
+Test Set             SAME            SAME
+```
+
+Then compare:
+
+* sensitivity
+* specificity
+* ROC-AUC
+* F1
+* accuracy
+* computational cost
+* generalization
+
+The system must not selectively display only the metric where the quantum model performs best.
+
+---
+
+# 62A.17 QUANTUM ADVANTAGE
+
+The application must NOT assume that quantum models will outperform classical models.
+
+Possible legitimate outcomes include:
+
+### Outcome A
+
+Quantum model performs better on the selected metric.
+
+### Outcome B
+
+Quantum and classical models perform similarly.
+
+### Outcome C
+
+Quantum model improves sensitivity but reduces specificity.
+
+### Outcome D
+
+Quantum model has comparable predictive performance but greater computational cost.
+
+### Outcome E
+
+Classical model performs better.
+
+### Outcome F
+
+No measurable quantum advantage is observed.
+
+All of these are valid scientific results.
+
+The application must report the actual result.
+
+---
+
+# 62A.18 CLINICAL VALIDATION BOUNDARY
+
+The prototype does NOT establish:
+
+* clinical validity
+* clinical utility
+* regulatory approval
+* patient safety
+* treatment efficacy
+* diagnostic accuracy in clinical practice
+
+The application must clearly separate:
+
+```text
+Machine Learning Benchmark
+```
+
+from:
+
+```text
+Clinical Validation
+```
+
+They are not equivalent.
+
+---
+
+# 62A.19 EXPLAINABILITY IN HEALTH CONTEXT
+
+Feature importance must be described as:
+
+> Model feature influence.
+
+Do not automatically translate feature importance into:
+
+> Medical cause.
+
+For example:
+
+If the model identifies Feature X as highly influential, the system must NOT state:
+
+> "Feature X causes the disease."
+
+Instead:
+
+> "Feature X had high observed influence on this model's prediction."
+
+---
+
+# 62A.20 QUANTUM EXPLAINABILITY
+
+For the quantum model, use:
+
+**Feature Perturbation / Sensitivity Analysis**
+
+Show:
+
+```text
+Baseline prediction
+↓
+Perturb Feature A
+↓
+Prediction change
+
+Perturb Feature B
+↓
+Prediction change
+
+Perturb Feature C
+↓
+Prediction change
+```
+
+Describe this as model sensitivity.
+
+Do not claim it provides a complete interpretation of the underlying quantum circuit.
+
+---
+
+# 62A.21 PATIENT / SAMPLE TERMINOLOGY
+
+For a generic research prototype, prefer:
+
+**Sample**
+
+rather than:
+
+**Patient**
+
+unless the dataset genuinely represents patient records and the terminology is justified.
+
+For the demo dataset, use:
+
+```text
+Sample #123
+```
+
+rather than implying the record belongs to an identifiable real patient.
+
+---
+
+# 62A.22 NO PATIENT IDENTIFIABLE INFORMATION
+
+The demo system must contain no:
+
+* names
+* phone numbers
+* addresses
+* email addresses
+* medical record numbers
+* government IDs
+* personally identifiable health information
+
+The demonstration dataset should contain only appropriate public/benchmark data.
+
+---
+
+# 62A.23 HEALTHCARE UI DESIGN
+
+The UI should feel trustworthy and scientific.
+
+Use:
+
+* clear metric labels
+* explicit units
+* readable charts
+* visible dataset provenance
+* visible experiment configuration
+* visible model identity
+* visible disclaimer
+* clear distinction between prediction and diagnosis
+
+Avoid:
+
+* alarmist red warnings
+* "YOU HAVE CANCER" style messaging
+* fake clinical dashboards
+* emergency-style alerts
+* exaggerated certainty
+* decorative medical claims
+
+---
+
+# 62A.24 PREDICTION SCREEN
+
+The prediction screen should use a structure similar to:
+
+```text
+BIOMEDICAL RISK PREDICTION
+
+Sample:
+Sample #123
+
+Model:
+VQC
+
+Predicted Class:
+Positive
+
+Model Probability:
+82%
+
+Research Risk Category:
+HIGH
+
+──────────────────────
+
+MODEL FEATURE INFLUENCE
+
+Feature A       High
+Feature B       Medium
+Feature C       Low
+
+──────────────────────
+
+INTERPRETATION
+
+The selected model classified this sample as
+Positive based on the learned patterns in the
+provided biomedical features.
+
+This is a research prediction and is not a
+clinical diagnosis.
+```
+
+Never generate a medical recommendation.
+
+---
+
+# 62A.25 HEALTH REPORTING
+
+Every experiment report should contain:
+
+### Dataset
+
+* source
+* task
+* target
+* sample count
+* feature count
+
+### Preprocessing
+
+* missing-value strategy
+* encoding
+* scaling
+* outlier strategy
+* feature selection
+* PCA
+
+### Models
+
+* classical models
+* quantum models
+* quantum backend
+
+### Evaluation
+
+* accuracy
+* sensitivity
+* specificity
+* precision
+* F1
+* ROC-AUC
+* confusion matrix
+
+### Computational
+
+* training time
+* inference time
+* qubits
+* circuit depth
+
+### Generalization
+
+* CV mean
+* CV standard deviation
+* test performance
+
+### Interpretation
+
+* feature influence
+* quantum perturbation results
+
+### Scientific conclusion
+
+Automatically generate a conclusion based only on measured results.
+
+---
+
+# 62A.26 HEALTH-SPECIFIC ACCEPTANCE CRITERIA
+
+The project is not complete unless:
+
+```text
+[ ] biomedical dataset can be loaded
+[ ] dataset provenance is recorded
+[ ] target validation works
+[ ] class imbalance is detected
+[ ] missing data is handled
+[ ] data leakage is prevented
+[ ] sensitivity is calculated correctly
+[ ] specificity is calculated correctly
+[ ] false positives are visible
+[ ] false negatives are visible
+[ ] model probabilities are clearly labelled
+[ ] risk thresholds are explicitly non-clinical
+[ ] quantum predictions are real
+[ ] classical predictions are real
+[ ] model comparison uses identical experimental conditions
+[ ] feature influence is clearly labelled
+[ ] quantum perturbation is clearly labelled
+[ ] medical disclaimer is displayed
+[ ] no clinical diagnosis claims are made
+[ ] no patient-identifiable demo data exists
+[ ] dataset provenance is available
+[ ] health limitations are documented
+[ ] quantum advantage is never assumed
+```
+
+---
+
+# 62A.27 FINAL HEALTH POSITIONING
+
+The completed platform should be described as:
+
+> **EntangleX Q-Health is a research-oriented hybrid quantum-classical machine learning platform for evaluating biomedical disease-risk prediction. It combines biomedical data processing, classical machine learning, quantum machine learning, explainability, reproducible experimentation, and comparative benchmarking while explicitly distinguishing model predictions from clinically validated diagnosis.**
+
+The platform demonstrates a **research methodology**, not a medical device.
+
+---
+
+# 62A.28 HEALTH-FIRST ENGINEERING PRINCIPLE
+
+When a software feature conflicts with scientific or health integrity:
+
+**scientific validity wins.**
+
+When visual design conflicts with clarity:
+
+**clarity wins.**
+
+When a quantum result conflicts with the desired narrative:
+
+**the measured result wins.**
+
+When a model performs poorly:
+
+**report the poor result honestly.**
+
+When the quantum model loses to the classical baseline:
+
+**display that result clearly.**
+
+The purpose of EntangleX Q-Health is not to prove that quantum ML is better.
+
+The purpose is to **measure whether and when hybrid quantum-classical ML provides useful value for biomedical prediction.**

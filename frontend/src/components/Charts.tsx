@@ -1,0 +1,16 @@
+import type {Circuit} from '../types';
+import {metric} from '../utils/format';
+export function BarChart({items, label, percent = false}: {items: {name: string; value: number}[]; label: string; percent?: boolean}) {
+  const max = Math.max(...items.map(i => Math.abs(i.value)), 0.000001);
+  if (!items.length) return <p className="empty">No measured values available.</p>;
+  return <div className="bar-chart" role="img" aria-label={label}>{items.map((item, i) => <div className="bar-row" key={`${item.name}-${i}`}><span title={item.name}>{item.name}</span><div className="bar-track"><div className={`bar ${item.value < 0 ? 'negative' : ''}`} style={{width: `${Math.abs(item.value) / max * 100}%`}}/></div><b>{percent ? metric(item.value) : item.value.toFixed(4)}</b></div>)}</div>;
+}
+export function ROCChart({curves}: {curves: {name: string; fpr: number[]; tpr: number[]}[]}) {
+  if (!curves.length) return <p className="empty">ROC curves appear only after measured evaluation.</p>;
+  const width = 600, height = 320, left = 58, top = 15, plotW = 515, plotH = 255;
+  return <div className="chart"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Held-out receiver operating characteristic curves"><path d={`M${left},${top}V${top + plotH}H${left + plotW}`} className="axis"/><path d={`M${left},${top + plotH}L${left + plotW},${top}`} className="chance"/>{[0, .25, .5, .75, 1].map(t => <g key={t}><text x={left + t * plotW} y={top + plotH + 20} textAnchor="middle">{t}</text><text x={left - 10} y={top + (1 - t) * plotH + 4} textAnchor="end">{t}</text></g>)}{curves.map((curve, i) => <polyline key={curve.name} className={`curve curve-${i % 5}`} points={curve.fpr.map((f, j) => `${left + f * plotW},${top + (1 - curve.tpr[j]) * plotH}`).join(' ')} fill="none"/>)}<text x={left + plotW / 2} y={height - 5} textAnchor="middle">False positive rate</text><text transform="translate(15,145) rotate(-90)" textAnchor="middle">Sensitivity / true positive rate</text></svg><div className="legend">{curves.map((c, i) => <span key={c.name} className={`legend-${i % 5}`}>{c.name}</span>)}</div></div>;
+}
+export function CircuitDiagram({circuit}: {circuit: Circuit}) {
+  const gates = circuit.gates.slice(0, 100), width = Math.max(560, gates.length * 52 + 90), height = circuit.qubits * 62 + 30;
+  return <div className="circuit-scroll"><svg width={width} height={height} role="img" aria-label={`${circuit.qubits}-qubit parameterized circuit`}>{Array.from({length: circuit.qubits}, (_, i) => <g key={i}><text x={8} y={42 + i * 62}>q[{i}]</text><line className="wire" x1={55} x2={width - 10} y1={37 + i * 62} y2={37 + i * 62}/></g>)}{gates.map((gate, i) => {const x = 85 + i * 52; return <g key={i}><title>{gate.name}: {gate.parameters.join(', ')}</title>{gate.qubits.length > 1 && <line className="gate-link" x1={x} x2={x} y1={37 + Math.min(...gate.qubits) * 62} y2={37 + Math.max(...gate.qubits) * 62}/>} {gate.qubits.map(q => <g key={q}><rect className="gate" x={x - 19} y={20 + q * 62} width={38} height={34} rx={4}/><text x={x} y={42 + q * 62} textAnchor="middle">{gate.name}</text></g>)}</g>;})}</svg>{circuit.gates.length > 100 && <p>Diagram shows the first 100 instructions; the full text circuit is provided below.</p>}</div>;
+}
