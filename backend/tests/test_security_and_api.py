@@ -53,3 +53,27 @@ def test_original_records_not_exposed_in_dataset_summary(client, registered):
 def test_body_size_limit_is_enforced(client):
     response = client.post("/api/datasets/upload", content=b"", headers={"Content-Length": str(1024 * 1024 * 500)})
     assert response.status_code == 413
+
+def test_validate_dataset_endpoint(client, registered):
+    # Happy path: default features
+    res = client.post(f"/api/datasets/{registered.id}/validate", json={})
+    assert res.status_code == 200
+    report = res.json()
+    assert report["row_count"] > 0
+    assert "target_classes" in report
+    assert "numeric_features" in report
+
+    # Happy path: custom feature list
+    res = client.post(f"/api/datasets/{registered.id}/validate", json={"features": ["biomarker_0", "biomarker_1"]})
+    assert res.status_code == 200
+    report = res.json()
+    assert report["feature_count"] == 2
+    assert report["numeric_features"] == ["biomarker_0", "biomarker_1"]
+
+    # Error path: non-existent dataset UUID
+    res = client.post(f"/api/datasets/{uuid4()}/validate", json={})
+    assert res.status_code == 404
+
+    # Error path: extra fields in request payload (forbid extra)
+    res = client.post(f"/api/datasets/{registered.id}/validate", json={"features": ["biomarker_0"], "extra_field": 123})
+    assert res.status_code == 422
