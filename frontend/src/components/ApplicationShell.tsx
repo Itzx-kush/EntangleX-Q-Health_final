@@ -1,5 +1,6 @@
 import {useEffect, type Dispatch, type ReactNode, type SetStateAction} from 'react';
 import {useLocation} from 'react-router-dom';
+import {KeyRound, Menu, Settings2, Wifi, X} from 'lucide-react';
 import {getEnvironmentForPath, getNavigationItemForPath} from '../navigation';
 import type {Health} from '../types';
 import {Disclaimer, Field} from './Common';
@@ -33,9 +34,9 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
     <EnvironmentNavigation open={menu} onNavigate={() => setMenu(false)}/>
     {menu && <button className="navigation-scrim" type="button" aria-label="Close navigation" onClick={() => setMenu(false)}/>} 
     <div className="workspace"><header className="topbar">
-      <button className="menu-button secondary" type="button" aria-expanded={menu} aria-controls="environment-navigation" aria-label={menu ? 'Close research workspace navigation' : 'Open research workspace navigation'} onClick={() => setMenu(value => !value)}>{menu ? 'Close' : 'Menu'}</button>
+      <button className="menu-button secondary" type="button" aria-expanded={menu} aria-controls="environment-navigation" aria-label={menu ? 'Close research workspace navigation' : 'Open research workspace navigation'} onClick={() => setMenu(value => !value)}>{menu ? <X size={17}/> : <Menu size={17}/>}<span className="menu-button-label">{menu ? 'Close' : 'Menu'}</span></button>
       <div className="workspace-context" aria-live="polite"><span className="context-kicker">{environment.name.toUpperCase()}</span><span className="divider">/</span><span>{page?.label ?? 'Page not found'}</span></div>
-      <div className="connection"><span className={`connection-dot ${health.error ? 'disconnected' : ''}`} aria-hidden="true"/>{health.error ? 'Backend unavailable' : health.data ? 'Backend reachable' : 'Connecting...'}<details className="auth-menu"><summary>Connection settings</summary><div><Field label="Optional local API token" help="Stored in memory only; a page refresh clears it."><input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)}/></Field><button type="button" onClick={onApplyToken}>Apply token</button><small>{health.data?.authentication_required ? 'Backend requires a token.' : 'Local-only mode: no token is configured.'}</small></div></details></div>
+      <div className="connection"><span className="connection-badge"><Wifi size={14} aria-hidden="true"/><span className={`connection-dot ${health.error ? 'disconnected' : ''}`} aria-hidden="true"/>{health.error ? 'Backend unavailable' : health.data ? 'Backend reachable' : 'Connecting...'}</span><details className="auth-menu"><summary><Settings2 size={13} aria-hidden="true"/> Connection settings</summary><div><Field label="Optional local API token" help="Stored in memory only; a page refresh clears it."><KeyRound size={14} aria-hidden="true"/><input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)}/></Field><button type="button" onClick={onApplyToken}>Apply token</button><small>{health.data?.authentication_required ? 'Backend requires a token.' : 'Local-only mode: no token is configured.'}</small></div></details></div>
     </header><main id="main"><Disclaimer/>{children}</main><footer className="workspace-footer">EntangleX Q-Health / Biomedical ML benchmark != clinical validation / No quantum advantage is presumed</footer></div>
   </div>;
 }
