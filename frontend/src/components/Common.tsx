@@ -5,15 +5,16 @@ import {useLoad} from '../hooks/useLoad';
 import {useDraft} from '../hooks/ExperimentDraft';
 import type {Dataset, ModelRecord, Metrics, MetricName} from '../types';
 import {metric, modelLabels, shortId} from '../utils/format';
+import {EmptyState, ErrorState, LoadingState, QuantumMark, SectionHeader, StatusPill} from './Primitives';
 export const disclaimer = 'Research Prototype: This platform provides model-generated disease-risk predictions for research and decision-support purposes. Predictions are based on benchmark or user-provided datasets and are not a substitute for professional medical diagnosis, treatment, or clinical validation.';
-export function Disclaimer() {return <aside className="disclaimer" role="note"><span className="disclaimer-mark" aria-hidden="true">i</span><p>{disclaimer}</p></aside>;}
-export function PageHeader({eyebrow, title, description, children}: {eyebrow: string; title: string; description: string; children?: ReactNode}) {return <header className="page-header"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="lead">{description}</p></div><div className="header-actions">{children}</div></header>;}
-export function Card({title, children, className = ''}: {title?: string; children: ReactNode; className?: string}) {return <section className={`card ${className}`}>{title && <h2>{title}</h2>}{children}</section>;}
-export function ErrorNotice({message}: {message?: string}) {return message ? <div className="notice error" role="alert">{message}</div> : null;}
+export function Disclaimer() {return <aside className="disclaimer" role="note"><QuantumMark label="Research prototype information"/><p>{disclaimer}</p></aside>;}
+export function PageHeader({eyebrow, title, description, children}: {eyebrow: string; title: string; description: string; children?: ReactNode}) {return <header className="page-header"><SectionHeader eyebrow={eyebrow} title={title} description={description} actions={children}/></header>;}
+export function Card({title, children, className = ''}: {title?: string; children: ReactNode; className?: string}) {return <section className={`card ui-surface ${className}`}>{title && <h2>{title}</h2>}{children}</section>;}
+export function ErrorNotice({message}: {message?: string}) {return message ? <ErrorState>{message}</ErrorState> : null;}
 export function Note({children}: {children: ReactNode}) {return <div className="notice">{children}</div>;}
-export function Empty({children}: {children: ReactNode}) {return <div className="empty">{children}</div>;}
-export function Loading() {return <p className="loading" role="status">Loading workspace data...</p>;}
-export function Status({value}: {value: string}) {return <span className={`status status-${value}`}>{value.replaceAll('_', ' ')}</span>;}
+export function Empty({children}: {children: ReactNode}) {return <EmptyState>{children}</EmptyState>;}
+export function Loading() {return <LoadingState/>;}
+export function Status({value}: {value: string}) {return <StatusPill value={value}/>;}
 export function JsonView({value, label = 'Configuration and provenance'}: {value: unknown; label?: string}) {return <details className="json-view"><summary>{label}</summary><pre>{JSON.stringify(value, null, 2)}</pre></details>;}
 export function Field({label, help, children}: {label: string; help?: string; children: ReactNode}) {return <label className="field"><span>{label}</span>{children}{help && <small>{help}</small>}</label>;}
 export function DatasetPicker() {
