@@ -63,6 +63,13 @@ export function ResearchWorkspaceProvider({children}: {children: ReactNode}) {
     if (experiment?.id) { setSelectedExperimentId(experiment.id); sessionStorage.setItem('qhealth-current-experiment', experiment.id); }
   }, [experiment?.id]);
   useEffect(() => {
+    const routeExperiment = pathname.match(/^\/experiments\/([^/]+)/)?.[1];
+    if (!routeExperiment && dataset?.id && experiment && experiment.dataset_id !== dataset.id) {
+      setSelectedExperimentId('');
+      sessionStorage.removeItem('qhealth-current-experiment');
+    }
+  }, [dataset?.id, experiment, pathname]);
+  useEffect(() => {
     if (job?.experiment_id && job.experiment_id !== selectedExperimentId) {
       setSelectedExperimentId(job.experiment_id);
       sessionStorage.setItem('qhealth-current-experiment', job.experiment_id);
