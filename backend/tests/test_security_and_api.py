@@ -40,6 +40,25 @@ def test_unknown_ids_and_validation_are_sanitized(client):
     assert response.status_code == 422
     assert "private-record-marker" not in response.text
 
+def test_validation_error_handler_response_structure_and_privacy(client):
+    secret_input = "CONFIDENTIAL_PATIENT_RECORD_XYZ123"
+    response = client.post("/api/training/jobs", json={"dataset_id": secret_input, "cv_folds": "not-an-int"})
+    assert response.status_code == 422
+    data = response.json()
+    assert "error" in data
+    error = data["error"]
+    assert error["code"] == "validation_error"
+    assert error["message"] == "Request validation failed. Check the field types and allowed configuration ranges."
+    assert "request_id" in error
+    assert isinstance(error["fields"], list)
+    assert len(error["fields"]) > 0
+    for field in error["fields"]:
+        assert "location" in field
+        assert "type" in field
+        assert isinstance(field["location"], list)
+        assert isinstance(field["type"], str)
+    assert secret_input not in response.text
+
 def test_public_model_upload_route_does_not_exist(client):
     response = client.post("/api/models/upload", files={"file": ("model.dill", b"not-code", "application/octet-stream")})
     assert response.status_code in (404, 405, 422)
