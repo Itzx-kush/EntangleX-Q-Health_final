@@ -1,0 +1,301 @@
+/* AETHER-inspired visual layer.
+   Content, routes, API calls, and application state remain untouched. */
+
+.aether-visual-root {
+  position: relative;
+  min-height: 100%;
+  isolation: isolate;
+  --aether-pointer-x: 50vw;
+  --aether-pointer-y: 35vh;
+  --aether-scroll-progress: 0;
+}
+
+.aether-content {
+  position: relative;
+  z-index: 2;
+  min-height: 100%;
+}
+
+.aether-effects,
+.aether-effects > * {
+  pointer-events: none;
+}
+
+.aether-effects {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.aether-spotlight {
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background:
+    radial-gradient(
+      circle 340px at var(--aether-pointer-x) var(--aether-pointer-y),
+      color-mix(in srgb, var(--qh-color-research) 12%, transparent),
+      transparent 72%
+    );
+  transition: opacity .6s cubic-bezier(.22,1,.36,1);
+}
+
+.aether-interactive-focus .aether-spotlight {
+  opacity: .82;
+}
+
+.aether-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 38%, rgba(8,25,31,.025) 72%, rgba(8,25,31,.18) 100%);
+}
+
+.aether-grain {
+  position: absolute;
+  inset: -90%;
+  opacity: .024;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  animation: aether-grain 1s steps(4) infinite;
+}
+
+.aether-network {
+  position: absolute;
+  inset: 0;
+  opacity: .1;
+  transform: translate3d(calc((var(--aether-pointer-x) - 50vw) * .015), calc((var(--aether-pointer-y) - 50vh) * .01), 0);
+  transition: opacity .8s ease;
+}
+
+.aether-network svg {
+  width: 100%;
+  height: 100%;
+}
+
+.aether-network line {
+  fill: none;
+  stroke: var(--qh-color-research);
+  stroke-width: 1;
+  stroke-dasharray: 3 10;
+  animation: aether-flow 12s linear infinite;
+}
+
+.aether-network-nodes circle {
+  fill: var(--qh-color-research);
+  opacity: .58;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--qh-color-research) 65%, transparent));
+  animation: aether-node 2.8s ease-in-out infinite alternate;
+}
+
+.aether-network-nodes circle:nth-child(2n) {
+  fill: var(--qh-color-quantum);
+  animation-delay: -.9s;
+}
+
+.aether-network-nodes circle:nth-child(3n) {
+  animation-delay: -1.7s;
+}
+
+.aether-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--qh-color-research);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.45),
+    0 0 18px color-mix(in srgb, var(--qh-color-research) 58%, transparent);
+  opacity: .95;
+  transform: translate3d(-999px,-999px,0);
+  transition:
+    width .35s cubic-bezier(.16,1,.3,1),
+    height .35s cubic-bezier(.16,1,.3,1),
+    opacity .25s ease,
+    background-color .25s ease,
+    box-shadow .35s ease;
+}
+
+.aether-interactive-focus .aether-cursor {
+  width: 34px;
+  height: 34px;
+  background: color-mix(in srgb, var(--qh-color-research) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qh-color-research) 68%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.25),
+    0 0 28px color-mix(in srgb, var(--qh-color-research) 32%, transparent);
+}
+
+.aether-scroll-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--aether-scroll-progress) * 100%);
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--qh-color-research), var(--qh-color-quantum));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--qh-color-research) 48%, transparent);
+}
+
+.aether-enabled .aether-reveal {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  filter: blur(5px);
+  transition:
+    opacity .85s cubic-bezier(.16,1,.3,1),
+    transform .85s cubic-bezier(.16,1,.3,1),
+    filter .85s cubic-bezier(.16,1,.3,1);
+}
+
+.aether-enabled .aether-reveal:nth-child(2) { transition-delay: 40ms; }
+.aether-enabled .aether-reveal:nth-child(3) { transition-delay: 80ms; }
+.aether-enabled .aether-reveal:nth-child(4) { transition-delay: 120ms; }
+
+.aether-enabled .aether-reveal.aether-reveal-visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.aether-enabled .aether-magnetic {
+  transform:
+    translate3d(
+      var(--aether-mx, 0px),
+      var(--aether-my, 0px),
+      0
+    );
+  transition:
+    transform .55s cubic-bezier(.16,1,.3,1),
+    box-shadow .35s ease,
+    border-color .35s ease,
+    background-color .35s ease;
+  will-change: transform;
+}
+
+.aether-enabled .aether-magnetic:hover {
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--qh-color-research) 12%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--qh-color-research) 14%, transparent);
+}
+
+.aether-enabled .card,
+.aether-enabled .metric,
+.aether-enabled .hero-panel,
+.aether-enabled .dataset-picker,
+.aether-enabled .prediction-result {
+  transition:
+    transform .55s cubic-bezier(.16,1,.3,1),
+    box-shadow .55s cubic-bezier(.16,1,.3,1),
+    border-color .35s ease,
+    background-color .35s ease;
+}
+
+.aether-enabled .card:hover,
+.aether-enabled .metric:hover,
+.aether-enabled .dataset-picker:hover,
+.aether-enabled .prediction-result:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    var(--qh-shadow-low),
+    0 18px 50px color-mix(in srgb, var(--qh-color-research) 7%, transparent);
+  border-color: color-mix(in srgb, var(--qh-color-research) 34%, var(--qh-color-border));
+}
+
+.aether-enabled .hero-panel::after {
+  content: "";
+  position: absolute;
+  inset: -30% -10%;
+  background:
+    radial-gradient(circle at 76% 32%, color-mix(in srgb, var(--qh-color-research) 17%, transparent), transparent 31%),
+    radial-gradient(circle at 20% 82%, color-mix(in srgb, var(--qh-color-quantum) 10%, transparent), transparent 32%);
+  opacity: .65;
+  transform: translate3d(-1%, 0, 0);
+  animation: aether-hero-breathe 7s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.aether-enabled .button,
+.aether-enabled button,
+.aether-enabled .ui-button-primary,
+.aether-enabled .ui-button-quiet,
+.aether-enabled .context-command-trigger,
+.aether-enabled .context-icon-button,
+.aether-enabled .workflow-step,
+.aether-enabled .sidebar nav a {
+  transition:
+    transform .45s cubic-bezier(.16,1,.3,1),
+    box-shadow .3s ease,
+    border-color .3s ease,
+    background-color .3s ease,
+    color .3s ease;
+}
+
+@keyframes aether-grain {
+  0% { transform: translate3d(0,0,0); }
+  25% { transform: translate3d(-2%,3%,0); }
+  50% { transform: translate3d(3%,-2%,0); }
+  75% { transform: translate3d(-3%,-3%,0); }
+  100% { transform: translate3d(2%,2%,0); }
+}
+
+@keyframes aether-flow {
+  to { stroke-dashoffset: -52; }
+}
+
+@keyframes aether-node {
+  from { transform: scale(.82); opacity: .3; }
+  to { transform: scale(1.18); opacity: .82; }
+}
+
+@keyframes aether-hero-breathe {
+  from { transform: translate3d(-1%,0,0) scale(.98); }
+  to { transform: translate3d(2%,-1%,0) scale(1.04); }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .aether-cursor,
+  .aether-network {
+    display: none;
+  }
+
+  .aether-enabled .card:hover,
+  .aether-enabled .metric:hover,
+  .aether-enabled .dataset-picker:hover,
+  .aether-enabled .prediction-result:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aether-grain,
+  .aether-network line,
+  .aether-network-nodes circle,
+  .aether-enabled .hero-panel::after {
+    animation: none !important;
+  }
+
+  .aether-spotlight {
+    opacity: .18;
+  }
+
+  .aether-enabled .aether-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+
+  .aether-scroll-progress {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .aether-network,
+  .aether-vignette {
+    opacity: .45;
+  }
+}
