@@ -9,6 +9,8 @@ import {EnvironmentNavigation} from './EnvironmentNavigation';
 import {WorkspaceContext} from './WorkspaceContext';
 import {useTheme, type ThemeMode} from '../hooks/useTheme';
 import {WorkspaceNavigationBar, MobileWorkspaceNav} from './WorkspaceNavigationBar';
+import {ContextualActionBar, ResearchContextStrip, WorkflowRail} from './ResearchWorkspaceChrome';
+import {useResearchWorkspace} from '../hooks/ResearchWorkspace';
 
 type HealthState = {data?: Health; error: string};
 
@@ -26,11 +28,12 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
   const {pathname} = useLocation();
   const environment = getEnvironmentForPath(pathname);
   const page = getNavigationItemForPath(pathname);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [navigationHovered, setNavigationHovered] = useState(false);
   const shellCollapsed = collapsed && !navigationHovered;
   const [commandOpen, setCommandOpen] = useState(false);
   const {theme, setTheme} = useTheme();
+  const {focusMode, immersionMode} = useResearchWorkspace();
 
   useEffect(() => {
     if (!menu) return;
@@ -52,7 +55,7 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
 
   useEffect(() => { setMenu(false); }, [pathname, setMenu]);
 
-  return <div className={`app-shell qhealth-app final-art-direction environment-${environment.id} ${shellCollapsed ? 'shell-collapsed' : ''}`}>
+  return <div className={`app-shell qhealth-app final-art-direction environment-${environment.id} ${shellCollapsed ? 'shell-collapsed' : ''} ${focusMode ? 'focus-mode' : ''} ${immersionMode ? 'technical-immersion' : ''}`}>
     <a className="skip-link" href="#main">Skip to workspace</a>
     <EnvironmentNavigation open={menu} onNavigate={() => setMenu(false)} collapsed={shellCollapsed} onToggleCollapsed={() => setCollapsed(value => !value)} onHoverChange={setNavigationHovered}/>
     {menu && <button className="navigation-scrim" type="button" aria-label="Close navigation" onClick={() => setMenu(false)}/>} 
@@ -60,7 +63,7 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
       <div className="topbar-leading"><button className="menu-button secondary" type="button" aria-expanded={menu} aria-controls="environment-navigation" aria-label={menu ? 'Close research workspace navigation' : 'Open research workspace navigation'} onClick={() => setMenu(value => !value)}>{menu ? <X size={17}/> : <Menu size={17}/>}<span className="menu-button-label">{menu ? 'Close' : 'Menu'}</span></button><div className="topbar-identity"><strong>Q-HEALTH</strong><span>RESEARCH WORKSPACE</span></div><div className="topbar-location"><span className="context-kicker">{environment.name.toUpperCase()}</span><span className="divider">/</span><strong>{page?.label ?? 'Page not found'}</strong></div></div>
       <button className="command-trigger" type="button" onClick={() => setCommandOpen(true)} aria-label="Open command palette"><Search size={15} aria-hidden="true"/><span>Search workspace</span><kbd>Ctrl/⌘ K</kbd></button>
       <div className="topbar-actions"><span className="connection-badge" role="status" aria-live="polite"><Wifi size={14} aria-hidden="true"/><span className={`connection-dot ${health.error ? 'disconnected' : ''}`} aria-hidden="true"/>{health.error ? 'Unavailable' : health.data ? 'Connected' : 'Checking'}</span><details className="auth-menu"><summary><Settings2 size={13} aria-hidden="true"/><span>Settings</span></summary><div className="settings-popover"><Field label="Appearance" help="Choose a persisted Q-Health theme."><select aria-label="Appearance theme" value={theme} onChange={event => setTheme(event.target.value as ThemeMode)}><option value="light">Q-Health Light</option><option value="dark">Q-Health Dark</option><option value="system">Use system preference</option></select></Field><Field label="Optional local API token" help="Stored in memory only; a page refresh clears it."><KeyRound size={14} aria-hidden="true"/><input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)}/></Field><button type="button" onClick={onApplyToken}>Apply token</button><small>{health.data?.authentication_required ? 'Backend requires a token.' : 'Local-only mode: no token is configured.'}</small></div></details></div>
-    </header><WorkspaceNavigationBar pathname={pathname} onOpenSearch={() => setCommandOpen(true)} hideFromAccessibility/><main id="main"><WorkspaceContext pathname={pathname}/><Disclaimer/>{children}</main><MobileWorkspaceNav pathname={pathname}/><footer className="workspace-footer"><span>EntangleX Q-Health</span><span>Research prototype</span><span>{environment.name} / {health.error ? 'Backend unavailable' : health.data ? 'Backend connected' : 'Checking backend'}</span><span className="footer-disclaimer">Biomedical ML benchmark ≠ clinical validation · No quantum advantage is presumed</span></footer></div>
+    </header><ResearchContextStrip onOpenCommand={() => setCommandOpen(true)}/><WorkspaceNavigationBar pathname={pathname} onOpenSearch={() => setCommandOpen(true)} hideFromAccessibility/><main id="main"><WorkspaceContext pathname={pathname}/><WorkflowRail pathname={pathname}/><ContextualActionBar pathname={pathname}/><Disclaimer/>{children}</main><MobileWorkspaceNav pathname={pathname} hideFromAccessibility/><footer className="workspace-footer"><span>EntangleX Q-Health</span><span>Research prototype</span><span>{environment.name} / {health.error ? 'Backend unavailable' : health.data ? 'Backend connected' : 'Checking backend'}</span><span className="footer-disclaimer">Biomedical ML benchmark ≠ clinical validation · No quantum advantage is presumed</span></footer></div>
     <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)}/>
   </div>;
 }
