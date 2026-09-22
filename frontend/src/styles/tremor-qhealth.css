@@ -1,0 +1,198 @@
+/* Tremor-inspired Q-Health product surface.
+   Adapted for the existing Q-Health tokens and routes; no backend contract changes. */
+
+:root{
+  --tq-card-radius:16px;
+  --tq-border:color-mix(in srgb,var(--qh-color-border) 88%,transparent);
+  --tq-muted:var(--qh-color-text-secondary);
+  --tq-panel:var(--qh-color-surface);
+  --tq-panel-soft:var(--qh-color-surface-soft);
+  --tq-focus:color-mix(in srgb,var(--qh-color-research) 34%,transparent);
+}
+.qhm-content{background:var(--qh-color-background)}
+
+.app-shell .card,
+.app-shell .metric,
+.app-shell .dataset-picker,
+.app-shell .job-card,
+.app-shell .prediction-result,
+.app-shell .notice,
+.app-shell .model-option,
+.app-shell .studio-summary-strip,
+.app-shell .circuit-stats{
+  border-color:var(--tq-border);
+  border-radius:var(--tq-card-radius);
+  box-shadow:0 1px 2px rgba(15,23,42,.025),0 14px 36px rgba(15,23,42,.025);
+}
+
+.app-shell .card,
+.app-shell .metric,
+.app-shell .job-card,
+.app-shell .prediction-result{background:var(--tq-panel)}
+
+.app-shell .metric{
+  padding:24px;
+  min-height:148px;
+}
+.app-shell .metric>span{font-size:11px;letter-spacing:.08em}
+.app-shell .metric>strong{font-size:clamp(28px,3vw,42px);font-weight:720}
+.app-shell .metric>small{font-size:12px;color:var(--tq-muted)}
+
+.app-shell .stat-grid .card{
+  padding:22px;
+  min-height:150px;
+}
+.app-shell .stat-number{font-size:clamp(32px,3vw,48px);font-weight:720}
+
+.app-shell .page-header{
+  align-items:flex-end;
+  margin-bottom:30px;
+}
+.app-shell .page-header h1{
+  font-size:clamp(34px,4vw,54px);
+  letter-spacing:-.045em;
+}
+.app-shell .page-header .lead{
+  max-width:780px;
+  font-size:15px;
+}
+
+.app-shell main{
+  max-width:1680px;
+  padding:34px clamp(18px,3vw,52px) 68px;
+}
+
+.app-shell .topbar{
+  height:76px;
+  background:color-mix(in srgb,var(--qh-color-surface) 94%,transparent);
+  backdrop-filter:blur(16px);
+  border-bottom-color:var(--tq-border);
+}
+
+.app-shell .research-context-strip{
+  border-bottom-color:var(--tq-border);
+  background:color-mix(in srgb,var(--qh-color-surface) 90%,transparent);
+}
+
+.app-shell .workspace-footer{
+  border-top-color:var(--tq-border);
+}
+
+.app-shell table{
+  border-collapse:separate;
+  border-spacing:0;
+}
+.app-shell .table-scroll{
+  border-color:var(--tq-border);
+  border-radius:14px;
+  overflow:auto;
+  background:var(--tq-panel);
+}
+.app-shell th{
+  background:var(--tq-panel-soft);
+  color:var(--qh-color-text-primary);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  padding:14px 16px;
+}
+.app-shell td{
+  padding:14px 16px;
+  border-bottom-color:color-mix(in srgb,var(--qh-color-border) 65%,transparent);
+}
+.app-shell tbody tr{
+  transition:background .18s ease,transform .18s ease;
+}
+.app-shell tbody tr:hover{
+  background:var(--qh-color-surface-hover);
+}
+
+.app-shell .status,
+.app-shell .chip,
+.app-shell .pill{
+  border-radius:999px;
+  padding:5px 9px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+
+.app-shell button,
+.app-shell .button{
+  border-radius:10px;
+  transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease,background-color .2s ease,border-color .2s ease;
+}
+.app-shell button:hover:not(:disabled),
+.app-shell .button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 24px color-mix(in srgb,var(--qh-color-research) 9%,transparent);
+}
+.app-shell button:active:not(:disabled),
+.app-shell .button:active{transform:translateY(0)}
+
+.app-shell input,
+.app-shell select,
+.app-shell textarea{
+  min-height:42px;
+  border-radius:10px;
+}
+.app-shell input:focus,
+.app-shell select:focus,
+.app-shell textarea:focus{
+  border-color:var(--qh-color-research)!important;
+  box-shadow:0 0 0 4px var(--tq-focus);
+  outline:none;
+}
+
+.app-shell .hero-panel{
+  border-radius:22px;
+  min-height:280px;
+  padding:38px;
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb,var(--qh-color-surface) 88%,var(--qh-color-research-soft)),
+      color-mix(in srgb,var(--qh-color-surface-soft) 82%,var(--qh-color-quantum-soft)));
+}
+.app-shell .hero-panel h2{
+  font-size:clamp(30px,4vw,56px);
+  max-width:720px;
+  letter-spacing:-.045em;
+}
+.app-shell .hero-panel p{max-width:720px}
+
+.app-shell .research-overview,
+.app-shell .model-lab-page,
+.app-shell .research-studio-page{
+  display:grid;
+  gap:24px;
+}
+
+.app-shell .two-columns{
+  gap:20px;
+}
+.app-shell .two-columns>.card{
+  min-height:100%;
+}
+
+.app-shell .research-context-rail .rail-card{
+  border-radius:14px;
+  box-shadow:0 1px 2px rgba(15,23,42,.02),0 12px 30px rgba(15,23,42,.025);
+}
+
+.app-shell .workflow-step{
+  border-radius:999px;
+}
+.app-shell .workflow-step.current{
+  background:var(--qh-color-surface-selected);
+}
+.app-shell .contextual-action-bar{
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(15,23,42,.03);
+}
+
+@media(max-width:900px){
+  .app-shell main{padding-inline:16px}
+  .app-shell .page-header h1{font-size:34px}
+  .app-shell .hero-panel{padding:26px;border-radius:18px}
+}
