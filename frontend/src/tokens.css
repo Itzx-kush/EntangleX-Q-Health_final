@@ -8,10 +8,14 @@
   --qh-type-section-title: 1rem;
   --qh-type-subsection-title: 0.875rem;
   --qh-type-body: 0.875rem;
-  --qh-type-body-small: 0.75rem;
+  --qh-type-body-small: 0.8125rem;
   --qh-type-label: 0.75rem;
-  --qh-type-eyebrow: 0.625rem;
-  --qh-type-metadata: 0.625rem;
+  --qh-type-eyebrow: 0.6875rem;
+  --qh-type-metadata: 0.6875rem;
+  --qh-motion-fast: 120ms;
+  --qh-motion-standard: 180ms;
+  --qh-motion-moderate: 240ms;
+  --qh-motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --qh-type-metric: clamp(1.5rem, 2.5vw, 2rem);
   --qh-space-section: clamp(20px, 2.5vw, 32px);
   --qh-space-stack: clamp(12px, 1.5vw, 16px);

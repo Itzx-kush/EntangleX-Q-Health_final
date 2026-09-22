@@ -1,0 +1,145 @@
+/* Final experience pass: restrained, shared polish layered on the existing system. */
+:root {
+  --qh-focus-ring: 0 0 0 3px color-mix(in srgb, var(--qh-color-focus) 42%, transparent);
+  --qh-control-height: 40px;
+  --qh-touch-target: 44px;
+}
+
+html { scroll-behavior: smooth; }
+body { line-height: 1.6; }
+
+button, .button, input, select, textarea, a {
+  transition:
+    color var(--qh-motion-fast) var(--qh-motion-ease),
+    background-color var(--qh-motion-fast) var(--qh-motion-ease),
+    border-color var(--qh-motion-fast) var(--qh-motion-ease),
+    box-shadow var(--qh-motion-fast) var(--qh-motion-ease),
+    transform var(--qh-motion-fast) var(--qh-motion-ease);
+}
+
+button:focus-visible, .button:focus-visible, a:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--qh-focus-ring);
+}
+
+button:not(:disabled):active, .button:not([aria-disabled="true"]):active {
+  transform: translateY(1px);
+}
+
+button:disabled, .button[aria-disabled="true"] {
+  filter: saturate(.7);
+}
+
+input, select, textarea {
+  min-height: var(--qh-control-height);
+  border-radius: 7px;
+}
+
+textarea { min-height: 96px; }
+
+.field small, .field .help, .data-lab-panel-header p, .model-lab-panel-header p,
+.studio-panel-header p, .panel-header p {
+  line-height: 1.5;
+}
+
+.data-lab-panel, .model-lab-panel, .studio-panel, .job-card,
+.research-brief, .research-capability, .metric, .quantum-panel,
+.studio-model-record, .classical-quantum-panel {
+  border-color: color-mix(in srgb, var(--qh-color-border) 86%, var(--qh-color-foreground));
+  box-shadow: var(--qh-shadow-low);
+}
+
+.data-lab-panel:hover, .model-lab-panel:hover, .studio-panel:hover,
+.research-capability:hover, .metric:hover, .job-card:hover {
+  border-color: var(--qh-border-interactive);
+  box-shadow: var(--qh-shadow-medium);
+}
+
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--qh-color-surface-soft);
+  color: var(--qh-color-muted-foreground);
+  font-size: var(--qh-type-label);
+  letter-spacing: .02em;
+}
+tbody tr { transition: background-color var(--qh-motion-fast) var(--qh-motion-ease); }
+tbody tr:hover { background: color-mix(in srgb, var(--qh-color-research) 5%, transparent); }
+tbody tr.selected-row { background: color-mix(in srgb, var(--qh-color-research) 9%, transparent); }
+.table-scroll { scrollbar-gutter: stable; }
+
+.loading-state, .qh-state, .empty-state, .error-state {
+  border-radius: 8px;
+}
+.loading-state::after {
+  content: "";
+  display: inline-block;
+  width: 42px;
+  height: 2px;
+  margin-left: 8px;
+  vertical-align: middle;
+  background: linear-gradient(90deg, transparent, var(--qh-color-research), transparent);
+  animation: qh-loading-sweep 1.4s var(--qh-motion-ease) infinite;
+}
+@keyframes qh-loading-sweep { from { opacity: .25; transform: translateX(-8px); } 50% { opacity: 1; } to { opacity: .25; transform: translateX(8px); } }
+
+.dialog-backdrop { background: rgba(18, 30, 38, .46); backdrop-filter: blur(3px); }
+.dialog-panel, .drawer-panel {
+  box-shadow: var(--qh-shadow-high);
+  border-color: color-mix(in srgb, var(--qh-color-border) 78%, var(--qh-color-foreground));
+}
+.drawer-panel { overscroll-behavior: contain; }
+
+.workspace-footer { font-size: var(--qh-type-metadata); }
+.mono { font-size: .75rem; }
+
+@media (max-width: 1200px) {
+  .workspace { padding-inline: 20px; }
+  .data-lab-page, .model-lab-page, .quantum-lab-page, .studio-page { max-width: 1120px; }
+}
+
+@media (max-width: 900px) {
+  .workspace { padding-inline: 16px; }
+  .topbar-location { display: none; }
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two-columns { grid-template-columns: 1fr; }
+  .panel-header, .data-lab-panel-header, .model-lab-panel-header, .studio-panel-header {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  html { scroll-behavior: auto; }
+  body { font-size: 14px; }
+  .workspace { padding-inline: 12px; }
+  .topbar { min-height: 56px; padding-inline: 12px; }
+  .topbar-identity span, .connection-badge span:last-child, .auth-menu summary span { display: none; }
+  .topbar-actions { gap: 4px; }
+  .command-trigger { min-width: 38px; padding-inline: 9px; }
+  .command-trigger span, .command-trigger kbd { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+  .header-actions, .panel-header-actions, .data-lab-header-actions, .model-lab-header-actions {
+    width: 100%;
+  }
+  .header-actions > *, .panel-header-actions > *, .data-lab-header-actions > *,
+  .model-lab-header-actions > * { flex: 1 1 auto; }
+  table { min-width: 640px; }
+  .table-scroll { margin-inline: -4px; padding-inline: 4px; overflow-x: auto; }
+  .drawer-panel { width: 100%; max-width: 100%; }
+  .dialog-panel { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .command-results { max-height: min(58vh, 420px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
