@@ -96,6 +96,15 @@ tbody tr.selected-row { background: color-mix(in srgb, var(--qh-color-research) 
 
 .workspace-footer { font-size: var(--qh-type-metadata); }
 .mono { font-size: .75rem; }
+.workspace-navigation-bar { display: none; }
+.research-context-strip { min-height: 36px; padding-block: 5px; }
+.workflow-rail { padding-block: 7px 4px; }
+.workflow-step.workflow-completed { color: var(--qh-color-success); }
+.workflow-step.workflow-running { color: var(--qh-color-research); }
+.workflow-step.workflow-failed { color: var(--qh-color-danger); }
+.workflow-step.workflow-available { color: var(--qh-color-muted-foreground); }
+.workflow-step.workflow-not-started { color: var(--qh-color-subtle-foreground); }
+.workflow-step.workflow-current { color: var(--qh-color-foreground); font-weight: 700; }
 
 @media (max-width: 1200px) {
   .workspace { padding-inline: 20px; }

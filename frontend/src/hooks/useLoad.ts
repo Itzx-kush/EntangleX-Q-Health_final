@@ -15,7 +15,7 @@ export function useLoad<T>(load: () => Promise<T>, dependencies: DependencyList 
       finally {inFlight = false; if (active) setLoading(false);}
     }
     setData(undefined); setError(''); setLoading(true); void refresh();
-    const timer = pollMs ? window.setInterval(() => {void refresh();}, pollMs) : undefined;
+    const timer = pollMs ? window.setInterval(() => {if (!document.hidden) void refresh();}, pollMs) : undefined;
     return () => {active = false; if (timer) clearInterval(timer);};
   }, [...dependencies, revision, pollMs]);
   useEffect(() => {window.addEventListener('qhealth-auth', reload); window.addEventListener('qhealth-data', reload); return () => {window.removeEventListener('qhealth-auth', reload); window.removeEventListener('qhealth-data', reload);};}, [reload]);

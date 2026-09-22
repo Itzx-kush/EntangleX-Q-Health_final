@@ -28,7 +28,7 @@ export function ApplicationShell({children, health, token, setToken, menu, setMe
   const {pathname} = useLocation();
   const environment = getEnvironmentForPath(pathname);
   const page = getNavigationItemForPath(pathname);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [navigationHovered, setNavigationHovered] = useState(false);
   const shellCollapsed = collapsed && !navigationHovered;
   const [commandOpen, setCommandOpen] = useState(false);

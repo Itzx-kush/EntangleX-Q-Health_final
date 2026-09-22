@@ -58,8 +58,10 @@ describe('Application Shell 2.0', () => {
 
   it('supports compact navigation while retaining accessible route names', () => {
     render(<TestShell/>);
-    fireEvent.click(screen.getByRole('button', {name: 'Collapse environment navigation'}));
     expect(screen.getByRole('button', {name: 'Expand environment navigation'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Expand environment navigation'}));
+    expect(screen.getByRole('button', {name: 'Collapse environment navigation'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Collapse environment navigation'}));
     const datasets = screen.getByRole('link', {name: '02 Datasets'});
     expect(datasets).toHaveAttribute('href', '/datasets');
     expect(datasets).toHaveAttribute('title', 'Datasets');
