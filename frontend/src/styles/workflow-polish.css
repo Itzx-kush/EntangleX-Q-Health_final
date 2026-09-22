@@ -130,3 +130,39 @@
 @media (prefers-reduced-motion: reduce) {
   .qhealth-app details[open] > :not(summary), .qhealth-app .model-option, .qhealth-app .job-card { animation: none; transition: none; }
 }
+
+/* Advanced interaction layer: shared overlays, drawer hierarchy, and hover intelligence. */
+.qhealth-app .advanced-drawer-body { display: grid; gap: 12px; padding: 16px 20px 24px; overflow: auto; }
+.qhealth-app .drawer-panel { display: flex; flex-direction: column; width: min(560px, 100vw); max-width: 100vw; height: 100%; max-height: 100vh; }
+.qhealth-app .drawer-panel > header { position: sticky; top: 0; z-index: 1; flex: 0 0 auto; background: var(--qh-color-surface-raised); border-bottom: 1px solid var(--qh-color-border); padding: 18px 20px; }
+.qhealth-app .drawer-panel > header h2 { max-width: 42ch; font-size: 18px; letter-spacing: -.02em; }
+.qhealth-app .drawer-panel .disclosure { background: var(--qh-color-surface-inset); }
+.qhealth-app .drawer-panel dl { display: grid; grid-template-columns: minmax(110px, .8fr) 1.2fr; gap: 9px 14px; margin: 0; padding: 14px; }
+.qhealth-app .drawer-panel dt { color: var(--qh-color-text-secondary); font-size: 11px; font-weight: 700; }
+.qhealth-app .drawer-panel dd { margin: 0; color: var(--qh-color-text-primary); overflow-wrap: anywhere; }
+.qhealth-app .drawer-action-stack { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px; }
+.qhealth-app .dataset-name-button, .qhealth-app .experiment-detail-button { display: block; max-width: 32ch; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; padding-inline: 0; font-weight: 750; }
+.qhealth-app .dataset-name-button:hover, .qhealth-app .experiment-detail-button:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.qhealth-app .metric-guide { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--qh-workflow-line); }
+.qhealth-app .metric-guide-item { min-height: 58px; align-items: flex-start; flex-direction: column; padding: 9px 10px; border: 1px solid var(--qh-workflow-line); border-radius: var(--qh-radius-sm); background: var(--qh-color-surface-inset); color: var(--qh-color-text-primary); text-align: left; }
+.qhealth-app .metric-guide-item:hover { border-color: var(--qh-current-accent); background: color-mix(in srgb, var(--qh-current-accent) 7%, var(--qh-color-surface)); }
+.qhealth-app .metric-guide-item span { color: var(--qh-color-text-secondary); font-size: 9px; letter-spacing: .08em; }
+.qhealth-app .metric-guide-item b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.qhealth-app .metric-detail-value { color: var(--qh-current-accent); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.qhealth-app .circuit-viewer { display: grid; gap: 10px; }
+.qhealth-app .circuit-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 9px 0; border-bottom: 1px solid var(--qh-workflow-line); }
+.qhealth-app .circuit-toolbar button { min-height: 34px; padding: 6px 10px; font-size: 11px; }
+.qhealth-app .circuit-zoom-readout { margin-left: auto; color: var(--qh-color-text-secondary); font: 700 11px var(--qh-font-mono); }
+.qhealth-app .circuit-scroll { max-height: 560px; padding: 12px; border: 1px solid var(--qh-workflow-line); border-radius: var(--qh-radius-sm); background: var(--qh-color-surface-inset); overflow: auto; }
+.qhealth-app .circuit-zoom-stage { position: relative; }
+.qhealth-app .circuit-zoom-stage svg { display: block; }
+@media (max-width: 760px) {
+  .qhealth-app .drawer-panel { width: 100%; height: min(88vh, 760px); max-height: 88vh; margin-top: auto; border-radius: 16px 16px 0 0; }
+  .qhealth-app .advanced-drawer-body { padding-inline: 15px; }
+  .qhealth-app .metric-guide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .qhealth-app .drawer-panel dl { grid-template-columns: 1fr; gap: 4px; }
+  .qhealth-app .drawer-panel dd { margin-bottom: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qhealth-app .drawer-panel, .qhealth-app .metric-guide-item, .qhealth-app .dataset-name-button, .qhealth-app .experiment-detail-button { transition: none; }
+}
