@@ -1,0 +1,132 @@
+/* Task 2 — workflow experience polish. Visual and interaction refinements only. */
+
+.qhealth-app {
+  --qh-workflow-max: 1440px;
+  --qh-workflow-line: color-mix(in srgb, var(--qh-color-border) 78%, transparent);
+  --qh-workflow-shadow: 0 1px 2px rgba(24, 47, 59, .04), 0 8px 24px rgba(24, 47, 59, .05);
+}
+
+/* Shared page rhythm: title -> context -> primary action -> evidence. */
+.qhealth-app :is(.data-lab-page, .model-lab-page, .quantum-lab-page, .studio-page) {
+  max-width: var(--qh-workflow-max);
+}
+.qhealth-app :is(.data-lab-panel, .model-lab-panel, .quantum-panel, .studio-panel) {
+  position: relative;
+  isolation: isolate;
+  transition: border-color 160ms var(--qh-ease-standard), box-shadow 160ms var(--qh-ease-standard), transform 160ms var(--qh-ease-standard);
+}
+.qhealth-app :is(.data-lab-panel, .model-lab-panel, .quantum-panel, .studio-panel):focus-within {
+  border-color: color-mix(in srgb, var(--qh-current-accent) 42%, var(--qh-color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--qh-current-accent) 10%, transparent);
+}
+.qhealth-app :is(.data-lab-panel-header, .model-lab-panel-header, .quantum-panel-header, .studio-panel-header) p {
+  max-width: 68ch;
+}
+
+/* Active dataset/model context is treated as a persistent workspace anchor. */
+.qhealth-app :is(.data-lab-dataset-context, .model-lab-dataset-context, .model-lab-model-context, .quantum-backend-state, .quantum-circuit-context) {
+  border: 1px solid var(--qh-workflow-line);
+  border-left: 3px solid var(--qh-current-accent);
+  border-radius: var(--qh-radius-sm);
+  background: var(--qh-color-surface-inset);
+  box-shadow: var(--qh-shadow-sm);
+}
+.qhealth-app :is(.data-lab-dataset-context, .model-lab-dataset-context, .model-lab-model-context, .quantum-backend-state, .quantum-circuit-context):hover {
+  border-color: color-mix(in srgb, var(--qh-current-accent) 34%, var(--qh-color-border));
+}
+
+/* Progressive disclosure: native details remain accessible and readable. */
+.qhealth-app details.json-view,
+.qhealth-app details:not(.auth-menu) {
+  border: 1px solid var(--qh-workflow-line);
+  border-radius: var(--qh-radius-sm);
+  background: var(--qh-color-surface-inset);
+}
+.qhealth-app details > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  color: var(--qh-color-text-primary);
+  font-weight: 700;
+}
+.qhealth-app details > summary::-webkit-details-marker { display: none; }
+.qhealth-app details > summary::after { content: '＋'; color: var(--qh-color-subtle-foreground); font-weight: 500; }
+.qhealth-app details[open] > summary::after { content: '−'; }
+.qhealth-app details > summary:hover { background: var(--qh-color-surface-hover); }
+.qhealth-app details > summary:focus-visible { outline-offset: -3px; }
+.qhealth-app details.json-view[open] pre,
+.qhealth-app details[open] > :not(summary) { animation: qh-disclosure-in 180ms var(--qh-ease-enter) both; }
+@keyframes qh-disclosure-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+.qhealth-app details.json-view pre { max-height: 360px; overflow: auto; margin: 0; padding: 13px; border-top: 1px solid var(--qh-workflow-line); }
+
+/* Forms: clear grouping, better scanning, no change to field semantics. */
+.qhealth-app .form-grid { align-items: start; gap: 16px; }
+.qhealth-app .field { min-width: 0; }
+.qhealth-app .field > span { color: var(--qh-color-text-primary); font-weight: 700; }
+.qhealth-app .field > small { color: var(--qh-color-text-secondary); line-height: 1.45; }
+.qhealth-app .check { min-height: 42px; display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--qh-radius-sm); transition: background-color 140ms var(--qh-ease-standard), border-color 140ms var(--qh-ease-standard); }
+.qhealth-app .check:hover { background: var(--qh-color-surface-hover); border-color: var(--qh-workflow-line); }
+.qhealth-app select[multiple] { min-height: 208px; padding: 6px; }
+.qhealth-app select[multiple] option { padding: 7px 8px; border-radius: 4px; }
+.qhealth-app select[multiple] option:checked { background: color-mix(in srgb, var(--qh-current-accent) 18%, var(--qh-color-surface)); color: var(--qh-color-text-primary); }
+
+/* Model selection: retain existing model IDs and semantics, add a legible category split. */
+.qhealth-app .model-lab-model-group { padding: 14px 0 8px; border-top: 1px solid var(--qh-workflow-line); }
+.qhealth-app .model-lab-model-group:first-child { padding-top: 0; border-top: 0; }
+.qhealth-app .model-lab-group-label { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--qh-color-text-secondary); font: 800 11px var(--qh-font-sans); letter-spacing: .08em; }
+.qhealth-app .model-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.qhealth-app .model-option { min-height: 94px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 14px; border: 1px solid var(--qh-workflow-line); border-radius: var(--qh-radius-sm); background: var(--qh-color-surface); cursor: pointer; }
+.qhealth-app .model-option:hover { border-color: color-mix(in srgb, var(--qh-current-accent) 40%, var(--qh-color-border)); transform: translateY(-1px); box-shadow: var(--qh-shadow-sm); }
+.qhealth-app .model-option.chosen { border-color: var(--qh-current-accent); background: color-mix(in srgb, var(--qh-current-accent) 7%, var(--qh-color-surface)); box-shadow: inset 3px 0 var(--qh-current-accent), var(--qh-shadow-sm); }
+.qhealth-app .model-option strong { font-size: 14px; }
+.qhealth-app .model-option small { color: var(--qh-color-text-secondary); }
+
+/* Evidence/results: make real backend results the visual focus. */
+.qhealth-app :is(.data-lab-result-header, .model-lab-result-header, .quantum-result-header) { border-bottom: 1px solid var(--qh-workflow-line); padding-bottom: 12px; margin-bottom: 14px; }
+.qhealth-app :is(.data-lab-result-header, .model-lab-result-header, .quantum-result-header) strong { color: var(--qh-current-accent); font-variant-numeric: tabular-nums; }
+.qhealth-app :is(.data-lab-unavailable, .model-lab-unavailable, .quantum-empty) { min-height: 112px; border: 1px dashed var(--qh-workflow-line); background: var(--qh-color-surface-inset); }
+.qhealth-app .warning-text { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--qh-color-warning); background: var(--qh-color-warning-soft); color: var(--qh-color-text-primary); border-radius: 0 var(--qh-radius-sm) var(--qh-radius-sm) 0; }
+.qhealth-app .error-state { padding: 12px 14px; border-left: 3px solid var(--qh-color-danger); }
+.qhealth-app .job-card { position: relative; border: 1px solid var(--qh-workflow-line); border-radius: var(--qh-radius-sm); background: var(--qh-color-surface); transition: border-color 160ms var(--qh-ease-standard), box-shadow 160ms var(--qh-ease-standard); }
+.qhealth-app .job-card:hover { border-color: color-mix(in srgb, var(--qh-current-accent) 34%, var(--qh-color-border)); box-shadow: var(--qh-shadow-sm); }
+.qhealth-app .prediction-result { border-left: 3px solid var(--qh-current-accent); padding: 16px; background: color-mix(in srgb, var(--qh-current-accent) 5%, var(--qh-color-surface)); }
+.qhealth-app .prediction-result h3 { margin-top: 4px; font-size: clamp(1.1rem, 2vw, 1.55rem); }
+.qhealth-app .pair-summary { padding: 14px 0; border-top: 1px solid var(--qh-workflow-line); }
+
+/* Tables and charts remain usable instead of being squeezed into cards. */
+.qhealth-app .table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.qhealth-app .table-scroll table { min-width: 700px; }
+.qhealth-app .chart { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.qhealth-app .chart svg { min-width: 560px; }
+.qhealth-app .circuit-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.qhealth-app .circuit-text { max-height: 280px; overflow: auto; }
+
+/* Existing action rows behave predictably when content gets narrow. */
+.qhealth-app .actions,
+.qhealth-app .model-lab-action-row,
+.qhealth-app .data-lab-panel-actions,
+.qhealth-app .model-lab-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qhealth-app .actions button,
+.qhealth-app .model-lab-action-row > *,
+.qhealth-app .data-lab-panel-actions > *,
+.qhealth-app .model-lab-panel-actions > * { flex: 0 0 auto; }
+
+@media (max-width: 900px) {
+  .qhealth-app .model-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .qhealth-app .two-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .qhealth-app .model-options { grid-template-columns: 1fr; }
+  .qhealth-app .two-columns { gap: 16px; }
+  .qhealth-app .form-grid { grid-template-columns: 1fr; }
+  .qhealth-app .data-lab-panel, .qhealth-app .model-lab-panel, .qhealth-app .quantum-panel, .qhealth-app .studio-panel { padding: 18px; }
+  .qhealth-app .chart svg { min-width: 500px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qhealth-app details[open] > :not(summary), .qhealth-app .model-option, .qhealth-app .job-card { animation: none; transition: none; }
+}
