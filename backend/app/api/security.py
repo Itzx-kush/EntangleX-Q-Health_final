@@ -6,7 +6,8 @@ from ..utils.errors import AppError
 async def authorize(request: Request) -> None:
     settings = get_settings()
     origin = request.headers.get("origin")
-    if origin is not None and origin not in [x.strip() for x in settings.cors_origins.split(",")]:
+    cors_origins = [x.strip() for x in settings.cors_origins.split(",") if x.strip()]
+    if origin is not None and origin not in cors_origins and "*" not in cors_origins:
         # CORS alone does not prevent simple cross-origin write requests.
         raise AppError("origin_not_allowed", "This request origin is not allowed.", 403)
     if settings.api_token:
