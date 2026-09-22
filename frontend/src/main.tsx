@@ -5,6 +5,7 @@ import {DraftProvider} from './hooks/ExperimentDraft';
 import App from './App';
 import './styles.css';
 import './styles/reference-product-composition.css';
+import './styles/aether-visual-system.css';
 import {AetherVisualLayer} from './components/AetherVisualLayer';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
