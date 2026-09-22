@@ -7,12 +7,12 @@ export type MotionVariant = 'page' | 'page-exit' | 'reveal' | 'fade' | 'slide-up
 /** Shared motion vocabulary. Keep timing decisions here, not in individual pages. */
 export const motionTokens = {
   instant: 0,
-  fast: 0.12,
-  standard: 0.18,
-  moderate: 0.24,
-  slow: 0.32,
-  page: 0.26,
-  reveal: 0.42,
+  fast: 0.08,
+  standard: 0.15,
+  moderate: 0.20,
+  slow: 0.25,
+  page: 0.20,
+  reveal: 0.30,
 } as const;
 
 export const motionEasings = {
