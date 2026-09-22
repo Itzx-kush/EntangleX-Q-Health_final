@@ -4,4 +4,5 @@ import {BrowserRouter} from 'react-router-dom';
 import {DraftProvider} from './hooks/ExperimentDraft';
 import App from './App';
 import './styles.css';
+import './styles/reference-product-composition.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><DraftProvider><App/></DraftProvider></BrowserRouter></React.StrictMode>);
