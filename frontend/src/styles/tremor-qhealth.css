@@ -1,198 +1,408 @@
-/* Tremor-inspired Q-Health product surface.
-   Adapted for the existing Q-Health tokens and routes; no backend contract changes. */
+/* Tremor-inspired Q-Health system.
+   Adapted as local copy-and-paste primitives so the application keeps its own
+   routing, accessibility, research language and backend contracts intact. */
 
 :root{
-  --tq-card-radius:16px;
-  --tq-border:color-mix(in srgb,var(--qh-color-border) 88%,transparent);
+  --tq-panel:var(--qh-color-surface,#fff);
+  --tq-panel-soft:var(--qh-color-surface-soft,#f8fafc);
+  --tq-panel-strong:var(--qh-color-surface-hover,#f3f6fb);
+  --tq-border:color-mix(in srgb,var(--qh-color-border) 86%,transparent);
+  --tq-border-strong:color-mix(in srgb,var(--qh-color-border) 100%,transparent);
   --tq-muted:var(--qh-color-text-secondary);
-  --tq-panel:var(--qh-color-surface);
-  --tq-panel-soft:var(--qh-color-surface-soft);
-  --tq-focus:color-mix(in srgb,var(--qh-color-research) 34%,transparent);
+  --tq-strong:var(--qh-color-text-primary);
+  --tq-subtle:color-mix(in srgb,var(--qh-color-text-secondary) 72%,transparent);
+  --tq-focus:color-mix(in srgb,var(--qh-color-research) 28%,transparent);
+  --tq-grid:color-mix(in srgb,var(--qh-color-border) 62%,transparent);
+  --tq-hover:color-mix(in srgb,var(--qh-color-research-soft) 32%,transparent);
+  --tq-chart-primary:var(--qh-color-research);
+  --tq-chart-1:var(--qh-color-research);
+  --tq-chart-2:var(--qh-color-quantum);
+  --tq-chart-3:#64748b;
+  --tq-chart-4:#0f766e;
+  --tq-radius:12px;
+  --tq-radius-lg:16px;
+  --tq-shadow:0 1px 2px rgba(15,23,42,.035),0 12px 30px rgba(15,23,42,.035);
+  --tq-shadow-hover:0 10px 30px rgba(15,23,42,.075);
 }
-.qhm-content{background:var(--qh-color-background)}
-
-.app-shell .card,
-.app-shell .metric,
-.app-shell .dataset-picker,
-.app-shell .job-card,
-.app-shell .prediction-result,
-.app-shell .notice,
-.app-shell .model-option,
-.app-shell .studio-summary-strip,
-.app-shell .circuit-stats{
-  border-color:var(--tq-border);
-  border-radius:var(--tq-card-radius);
-  box-shadow:0 1px 2px rgba(15,23,42,.025),0 14px 36px rgba(15,23,42,.025);
-}
-
-.app-shell .card,
-.app-shell .metric,
-.app-shell .job-card,
-.app-shell .prediction-result{background:var(--tq-panel)}
-
-.app-shell .metric{
-  padding:24px;
-  min-height:148px;
-}
-.app-shell .metric>span{font-size:11px;letter-spacing:.08em}
-.app-shell .metric>strong{font-size:clamp(28px,3vw,42px);font-weight:720}
-.app-shell .metric>small{font-size:12px;color:var(--tq-muted)}
-
-.app-shell .stat-grid .card{
-  padding:22px;
-  min-height:150px;
-}
-.app-shell .stat-number{font-size:clamp(32px,3vw,48px);font-weight:720}
-
-.app-shell .page-header{
-  align-items:flex-end;
-  margin-bottom:30px;
-}
-.app-shell .page-header h1{
-  font-size:clamp(34px,4vw,54px);
-  letter-spacing:-.045em;
-}
-.app-shell .page-header .lead{
-  max-width:780px;
-  font-size:15px;
+[data-theme="dark"],.theme-dark{
+  --tq-panel-soft:color-mix(in srgb,var(--qh-color-surface) 88%,black);
+  --tq-panel-strong:color-mix(in srgb,var(--qh-color-surface-hover) 88%,black);
+  --tq-border:color-mix(in srgb,var(--qh-color-border) 92%,transparent);
+  --tq-grid:color-mix(in srgb,var(--qh-color-border) 45%,transparent);
+  --tq-hover:color-mix(in srgb,var(--qh-color-research) 10%,transparent);
+  --tq-shadow:0 1px 2px rgba(0,0,0,.12),0 16px 40px rgba(0,0,0,.16);
 }
 
-.app-shell main{
-  max-width:1680px;
-  padding:34px clamp(18px,3vw,52px) 68px;
+.qhealth-app{
+  --tq-inline-gap:16px;
 }
-
-.app-shell .topbar{
-  height:76px;
-  background:color-mix(in srgb,var(--qh-color-surface) 94%,transparent);
-  backdrop-filter:blur(16px);
-  border-bottom-color:var(--tq-border);
-}
-
-.app-shell .research-context-strip{
-  border-bottom-color:var(--tq-border);
-  background:color-mix(in srgb,var(--qh-color-surface) 90%,transparent);
-}
-
-.app-shell .workspace-footer{
-  border-top-color:var(--tq-border);
-}
-
-.app-shell table{
-  border-collapse:separate;
-  border-spacing:0;
-}
-.app-shell .table-scroll{
-  border-color:var(--tq-border);
-  border-radius:14px;
-  overflow:auto;
+.qhealth-app .tremor-card,
+.qhealth-app .card,
+.qhealth-app .metric,
+.qhealth-app .dataset-picker,
+.qhealth-app .job-card,
+.qhealth-app .prediction-result,
+.qhealth-app .notice,
+.qhealth-app .model-option,
+.qhealth-app .studio-summary-strip,
+.qhealth-app .circuit-stats{
+  position:relative;
+  width:100%;
   background:var(--tq-panel);
+  border:1px solid var(--tq-border);
+  border-radius:var(--tq-radius-lg);
+  box-shadow:var(--tq-shadow);
 }
-.app-shell th{
-  background:var(--tq-panel-soft);
-  color:var(--qh-color-text-primary);
+.qhealth-app .tremor-card{
+  padding:24px;
+}
+.qhealth-app .tremor-card:hover,
+.qhealth-app .card:hover,
+.qhealth-app .metric:hover,
+.qhealth-app .dataset-picker:hover,
+.qhealth-app .job-card:hover,
+.qhealth-app .prediction-result:hover{
+  border-color:color-mix(in srgb,var(--qh-color-research) 26%,var(--tq-border));
+  box-shadow:var(--tq-shadow-hover);
+}
+.qhealth-app .tremor-decoration-top::before,
+.qhealth-app .tremor-decoration-left::before{
+  content:"";
+  position:absolute;
+  background:linear-gradient(90deg,var(--qh-color-research),color-mix(in srgb,var(--qh-color-research) 20%,transparent));
+}
+.qhealth-app .tremor-decoration-top::before{
+  left:0;right:0;top:-1px;height:3px;border-radius:16px 16px 0 0;
+}
+.qhealth-app .tremor-decoration-left::before{
+  left:-1px;top:0;bottom:0;width:3px;border-radius:16px 0 0 16px;
+}
+.qhealth-app .tremor-decoration-quantum::before{
+  background:linear-gradient(90deg,var(--qh-color-quantum),color-mix(in srgb,var(--qh-color-quantum) 20%,transparent));
+}
+.qhealth-app .tremor-decoration-data::before{
+  background:linear-gradient(90deg,var(--qh-color-research),color-mix(in srgb,var(--qh-color-research) 20%,transparent));
+}
+.qhealth-app .tremor-decoration-model::before{
+  background:linear-gradient(90deg,#64748b,transparent);
+}
+
+.qhealth-app .tremor-metric{
+  min-height:154px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:12px;
+}
+.qhealth-app .tremor-metric-label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--tq-muted);
   font-size:11px;
   font-weight:700;
-  letter-spacing:.04em;
+  letter-spacing:.07em;
   text-transform:uppercase;
-  padding:14px 16px;
 }
-.app-shell td{
-  padding:14px 16px;
-  border-bottom-color:color-mix(in srgb,var(--qh-color-border) 65%,transparent);
+.qhealth-app .tremor-metric-label svg{color:var(--qh-color-research)}
+.qhealth-app .tremor-metric-value{
+  font-size:clamp(30px,3vw,44px);
+  line-height:1;
+  letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums;
+  font-weight:750;
+  color:var(--tq-strong);
 }
-.app-shell tbody tr{
-  transition:background .18s ease,transform .18s ease;
+.qhealth-app .tremor-metric-detail{
+  color:var(--tq-muted);
+  font-size:12px;
+  line-height:1.45;
 }
-.app-shell tbody tr:hover{
-  background:var(--qh-color-surface-hover);
-}
+.qhealth-app .metric{padding:0;border:none;background:transparent;box-shadow:none}
+.qhealth-app .metric .metric-header{display:none}
 
-.app-shell .status,
-.app-shell .chip,
-.app-shell .pill{
+.qhealth-app .tremor-badge{
+  display:inline-flex;
+  width:max-content;
+  align-items:center;
+  gap:6px;
+  border:1px solid var(--tq-border);
   border-radius:999px;
-  padding:5px 9px;
+  padding:4px 9px;
+  background:var(--tq-panel-soft);
+  color:var(--tq-muted);
   font-size:10px;
+  line-height:1.2;
   font-weight:700;
   letter-spacing:.02em;
+  white-space:nowrap;
+}
+.qhealth-app .tremor-badge-default,.qhealth-app .tremor-badge-info{background:color-mix(in srgb,var(--qh-color-research-soft) 72%,var(--tq-panel));color:var(--qh-color-research)}
+.qhealth-app .tremor-badge-research{background:color-mix(in srgb,var(--qh-color-research-soft) 78%,var(--tq-panel));color:var(--qh-color-research)}
+.qhealth-app .tremor-badge-quantum{background:color-mix(in srgb,var(--qh-color-quantum-soft) 82%,var(--tq-panel));color:var(--qh-color-quantum)}
+.qhealth-app .tremor-badge-success{background:color-mix(in srgb,#16a34a 10%,var(--tq-panel));color:#15803d;border-color:color-mix(in srgb,#16a34a 22%,var(--tq-border))}
+.qhealth-app .tremor-badge-warning{background:color-mix(in srgb,#d97706 10%,var(--tq-panel));color:#b45309;border-color:color-mix(in srgb,#d97706 22%,var(--tq-border))}
+.qhealth-app .tremor-badge-error{background:color-mix(in srgb,#dc2626 9%,var(--tq-panel));color:#b91c1c;border-color:color-mix(in srgb,#dc2626 22%,var(--tq-border))}
+
+.qhealth-app .tremor-progress{
+  width:100%;
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:var(--tq-panel-soft);
+  border:1px solid color-mix(in srgb,var(--tq-border) 75%,transparent);
+}
+.qhealth-app .tremor-progress span{
+  display:block;height:100%;border-radius:inherit;
+  background:var(--qh-color-research);
+  transition:width .4s cubic-bezier(.16,1,.3,1);
+}
+.qhealth-app .tremor-progress-quantum span{background:var(--qh-color-quantum)}
+
+.qhealth-app .panel-header,
+.qhealth-app .tremor-section-header,
+.qhealth-app .section-header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding:0 0 16px;
+  border-bottom:1px solid var(--tq-border);
+}
+.qhealth-app .panel-header>div:first-child,
+.qhealth-app .section-header>div:first-child{min-width:0}
+.qhealth-app .panel-header h2,
+.qhealth-app .section-header h1{
+  margin:2px 0 6px;
+  color:var(--tq-strong);
+  letter-spacing:-.03em;
+}
+.qhealth-app .panel-header p:not(.eyebrow),
+.qhealth-app .section-header .lead{
+  max-width:760px;
+  color:var(--tq-muted);
+  line-height:1.6;
+}
+.qhealth-app .eyebrow,
+.qhealth-app .tremor-overline{
+  color:var(--qh-color-research);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.11em;
+  text-transform:uppercase;
 }
 
-.app-shell button,
-.app-shell .button{
+.qhealth-app .foundation-tabs{
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  border-bottom:1px solid var(--tq-border);
+  padding:0 2px;
+}
+.qhealth-app .foundation-tabs::-webkit-scrollbar{display:none}
+.qhealth-app .foundation-tabs button{
+  position:relative;
+  min-height:42px;
+  padding:0 12px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--tq-muted);
+  font-size:13px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.qhealth-app .foundation-tabs button:hover{color:var(--tq-strong);background:transparent;box-shadow:none;transform:none}
+.qhealth-app .foundation-tabs button.active{color:var(--qh-color-research)}
+.qhealth-app .foundation-tabs .tab-active-indicator{
+  position:absolute;left:12px;right:12px;bottom:-1px;height:2px;
+  border-radius:2px 2px 0 0;background:var(--qh-color-research);
+}
+
+.qhealth-app .table-scroll{
+  overflow:auto;
+  border:1px solid var(--tq-border);
+  border-radius:var(--tq-radius);
+  background:var(--tq-panel);
+}
+.qhealth-app table{width:100%;border-collapse:separate;border-spacing:0}
+.qhealth-app thead th{
+  position:sticky;top:0;z-index:1;
+  padding:12px 15px;
+  background:var(--tq-panel-soft);
+  color:var(--tq-muted);
+  border-bottom:1px solid var(--tq-border);
+  font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+}
+.qhealth-app tbody td{
+  padding:13px 15px;
+  border-bottom:1px solid color-mix(in srgb,var(--tq-border) 70%,transparent);
+  color:var(--tq-strong);
+  font-size:12px;
+}
+.qhealth-app tbody tr:last-child td{border-bottom:0}
+.qhealth-app tbody tr:hover td{background:var(--tq-hover)}
+
+.qhealth-app .chart,
+.qhealth-app .tremor-chart-card{
+  padding:20px;
+  border:1px solid var(--tq-border);
+  border-radius:var(--tq-radius-lg);
+  background:var(--tq-panel);
+  box-shadow:var(--tq-shadow);
+}
+.qhealth-app .tremor-chart-heading{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--tq-border);
+}
+.qhealth-app .tremor-chart-heading strong{
+  display:block;
+  margin-top:3px;
+  font-size:15px;
+  letter-spacing:-.02em;
+}
+.qhealth-app .tremor-chart-frame{padding-top:18px}
+.qhealth-app .tremor-chart-caption{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:10px;
+  color:var(--tq-muted);
+  font-size:11px;
+}
+.qhealth-app .legend{
+  display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;
+  font-size:11px;color:var(--tq-muted);
+}
+
+.qhealth-app .bar-chart{display:grid;gap:12px}
+.qhealth-app .bar-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(140px,2fr) auto;gap:12px;align-items:center}
+.qhealth-app .bar-track{height:8px;border-radius:999px;background:var(--tq-panel-soft);overflow:hidden}
+.qhealth-app .bar{height:100%;border-radius:999px;background:var(--qh-color-research)}
+.qhealth-app .bar-row b{font-size:11px;font-variant-numeric:tabular-nums}
+
+.qhealth-app button,
+.qhealth-app .button,
+.qhealth-app .ui-button{
   border-radius:10px;
-  transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s ease,background-color .2s ease,border-color .2s ease;
 }
-.app-shell button:hover:not(:disabled),
-.app-shell .button:hover{
-  transform:translateY(-1px);
-  box-shadow:0 8px 24px color-mix(in srgb,var(--qh-color-research) 9%,transparent);
+.qhealth-app .ui-button{
+  box-shadow:none;
+  font-weight:700;
 }
-.app-shell button:active:not(:disabled),
-.app-shell .button:active{transform:translateY(0)}
-
-.app-shell input,
-.app-shell select,
-.app-shell textarea{
+.qhealth-app .ui-button-primary{
+  background:var(--qh-color-research);
+}
+.qhealth-app .ui-button-primary:hover{
+  box-shadow:0 8px 22px color-mix(in srgb,var(--qh-color-research) 18%,transparent);
+}
+.qhealth-app input,.qhealth-app select,.qhealth-app textarea{
   min-height:42px;
   border-radius:10px;
+  border:1px solid var(--tq-border);
+  background:var(--tq-panel);
+  color:var(--tq-strong);
 }
-.app-shell input:focus,
-.app-shell select:focus,
-.app-shell textarea:focus{
+.qhealth-app input:focus,.qhealth-app select:focus,.qhealth-app textarea:focus{
   border-color:var(--qh-color-research)!important;
   box-shadow:0 0 0 4px var(--tq-focus);
   outline:none;
 }
 
-.app-shell .hero-panel{
-  border-radius:22px;
-  min-height:280px;
-  padding:38px;
+.qhealth-app .topbar{
+  min-height:72px;
+  background:color-mix(in srgb,var(--tq-panel) 94%,transparent);
+  border-bottom:1px solid var(--tq-border);
+  backdrop-filter:blur(14px);
+}
+.qhealth-app .research-context-strip{
+  border-bottom:1px solid var(--tq-border);
+  background:color-mix(in srgb,var(--tq-panel) 90%,transparent);
+}
+.qhealth-app .workspace-footer{border-top:1px solid var(--tq-border)}
+
+.qhealth-app main{
+  max-width:1680px;
+  padding:32px clamp(18px,3vw,52px) 68px;
+}
+.qhealth-app .page-header{margin-bottom:28px}
+.qhealth-app .page-header h1{
+  font-size:clamp(34px,4vw,54px);
+  letter-spacing:-.048em;
+}
+.qhealth-app .hero-panel{
+  border-radius:20px;
+  border:1px solid var(--tq-border);
+  box-shadow:var(--tq-shadow);
   background:
     linear-gradient(135deg,
-      color-mix(in srgb,var(--qh-color-surface) 88%,var(--qh-color-research-soft)),
-      color-mix(in srgb,var(--qh-color-surface-soft) 82%,var(--qh-color-quantum-soft)));
-}
-.app-shell .hero-panel h2{
-  font-size:clamp(30px,4vw,56px);
-  max-width:720px;
-  letter-spacing:-.045em;
-}
-.app-shell .hero-panel p{max-width:720px}
-
-.app-shell .research-overview,
-.app-shell .model-lab-page,
-.app-shell .research-studio-page{
-  display:grid;
-  gap:24px;
+      color-mix(in srgb,var(--tq-panel) 90%,var(--qh-color-research-soft)),
+      color-mix(in srgb,var(--tq-panel-soft) 86%,var(--qh-color-quantum-soft)));
 }
 
-.app-shell .two-columns{
-  gap:20px;
+.qhealth-app .research-overview,
+.qhealth-app .model-lab-page,
+.qhealth-app .research-studio-page{gap:24px}
+.qhealth-app .two-columns{gap:20px}
+.qhealth-app .research-capability-grid{gap:14px}
+.qhealth-app .research-capability{
+  border:1px solid var(--tq-border);
+  border-radius:var(--tq-radius-lg);
+  background:var(--tq-panel);
+  box-shadow:var(--tq-shadow);
 }
-.app-shell .two-columns>.card{
-  min-height:100%;
+.qhealth-app .research-activity-list>a{
+  border:1px solid transparent;
+  border-bottom-color:var(--tq-border);
+}
+.qhealth-app .research-activity-list>a:hover{
+  background:var(--tq-hover);
 }
 
-.app-shell .research-context-rail .rail-card{
-  border-radius:14px;
-  box-shadow:0 1px 2px rgba(15,23,42,.02),0 12px 30px rgba(15,23,42,.025);
-}
-
-.app-shell .workflow-step{
+.qhealth-app .workflow-step,
+.qhealth-app .workspace-nav-chip{
   border-radius:999px;
 }
-.app-shell .workflow-step.current{
-  background:var(--qh-color-surface-selected);
+.qhealth-app .workspace-nav-chip{
+  border:1px solid transparent;
 }
-.app-shell .contextual-action-bar{
-  border-radius:12px;
-  box-shadow:0 8px 24px rgba(15,23,42,.03);
+.qhealth-app .workspace-nav-chip.active{
+  border-color:var(--tq-border);
+  background:var(--tq-panel);
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.qhealth-app .contextual-action-bar{
+  border:1px solid var(--tq-border);
+  border-radius:var(--tq-radius);
+  background:var(--tq-panel);
+  box-shadow:var(--tq-shadow);
 }
 
+.qhealth-app .skeleton{
+  border-radius:8px;
+  background:linear-gradient(90deg,var(--tq-panel-soft),var(--tq-panel-strong),var(--tq-panel-soft));
+  background-size:200% 100%;
+  animation:tremor-shimmer 1.5s ease-in-out infinite;
+}
+.qhealth-app .empty-state,.qhealth-app .loading-state,.qhealth-app .error-state{
+  border:1px dashed var(--tq-border);
+  border-radius:var(--tq-radius-lg);
+  background:var(--tq-panel);
+}
+@keyframes tremor-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
 @media(max-width:900px){
-  .app-shell main{padding-inline:16px}
-  .app-shell .page-header h1{font-size:34px}
-  .app-shell .hero-panel{padding:26px;border-radius:18px}
+  .qhealth-app main{padding-inline:16px}
+  .qhealth-app .page-header h1{font-size:34px}
+  .qhealth-app .tremor-card{padding:18px}
+  .qhealth-app .tremor-metric{min-height:138px}
+}
+@media(max-width:640px){
+  .qhealth-app .panel-header,.qhealth-app .section-header{align-items:flex-start;flex-direction:column}
+  .qhealth-app .bar-row{grid-template-columns:1fr;gap:6px}
+  .qhealth-app .tremor-chart-caption{flex-direction:column}
 }
