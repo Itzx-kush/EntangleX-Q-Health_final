@@ -1,0 +1,71 @@
+/* Q-Health premium shell foundation: compact rail, hover expansion, and responsive disclosure. */
+.app-shell.qhealth-app { --qh-shell-rail: 76px; --qh-shell-expanded: 248px; }
+.app-shell.qhealth-app .environment-sidebar { width: var(--qh-shell-expanded); transition: width 220ms var(--qh-ease-emphasis), transform 220ms var(--qh-ease-emphasis), box-shadow 220ms ease; overflow-x: hidden; }
+.app-shell.qhealth-app .workspace { margin-left: var(--qh-shell-expanded); transition: margin-left 220ms var(--qh-ease-emphasis); }
+.app-shell.qhealth-app.shell-collapsed .environment-sidebar { width: var(--qh-shell-rail); padding-inline: 10px; }
+.app-shell.qhealth-app.shell-collapsed .workspace { margin-left: var(--qh-shell-rail); }
+.app-shell.qhealth-app.shell-collapsed .rail-header { justify-content: center; gap: 0; }
+.app-shell.qhealth-app.shell-collapsed .brand { padding-inline: 0; }
+.app-shell.qhealth-app.shell-collapsed .brand-copy,
+.app-shell.qhealth-app.shell-collapsed .sidebar-label,
+.app-shell.qhealth-app.shell-collapsed .environment-heading-copy,
+.app-shell.qhealth-app.shell-collapsed .environment-description,
+.app-shell.qhealth-app.shell-collapsed .environment-chevron,
+.app-shell.qhealth-app.shell-collapsed .nav-index,
+.app-shell.qhealth-app.shell-collapsed .nav-text,
+.app-shell.qhealth-app.shell-collapsed .sidebar-foot { display: none; }
+.app-shell.qhealth-app.shell-collapsed .rail-collapse-button { position: absolute; right: 8px; top: 31px; opacity: 0; width: 25px; height: 25px; padding: 0; }
+.app-shell.qhealth-app.shell-collapsed .rail-header:hover .rail-collapse-button,
+.app-shell.qhealth-app.shell-collapsed .rail-collapse-button:focus-visible { opacity: 1; }
+.app-shell.qhealth-app.shell-collapsed .environment-list { gap: 8px; }
+.app-shell.qhealth-app.shell-collapsed .environment-group { padding-inline: 0; }
+.app-shell.qhealth-app.shell-collapsed .environment-heading { justify-content: center; padding-inline: 0; }
+.app-shell.qhealth-app.shell-collapsed .environment-items a { justify-content: center; padding-inline: 0 !important; gap: 0 !important; position: relative; }
+.app-shell.qhealth-app.shell-collapsed .environment-items a::after { content: attr(data-tooltip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translate(-4px, -50%); opacity: 0; pointer-events: none; white-space: nowrap; z-index: var(--qh-z-dropdown); padding: 7px 9px; border: 1px solid var(--qh-color-border-strong); border-radius: var(--qh-radius-sm); background: var(--qh-color-sidebar); color: var(--qh-color-sidebar-foreground); font-size: 12px; box-shadow: var(--qh-shadow-medium); transition: opacity 140ms var(--qh-ease-standard), transform 140ms var(--qh-ease-standard); }
+.app-shell.qhealth-app.shell-collapsed .environment-items a:hover::after,
+.app-shell.qhealth-app.shell-collapsed .environment-items a:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+.app-shell.qhealth-app .environment-sidebar:focus-within { box-shadow: 12px 0 32px rgba(16,42,52,.12); }
+.app-shell.qhealth-app .rail-collapse-button { transition: opacity 140ms ease, background 140ms ease; }
+.app-shell.qhealth-app .rail-collapse-button:focus-visible { outline: 3px solid var(--qh-color-focus); outline-offset: 2px; }
+.app-shell.qhealth-app .environment-items a { transition: background 180ms var(--qh-ease-standard), color 180ms var(--qh-ease-standard), border-color 180ms var(--qh-ease-standard), transform 180ms var(--qh-ease-standard); }
+.app-shell.qhealth-app .environment-items a:active { transform: translateY(1px); }
+.app-shell.qhealth-app .workspace > main { transition: padding 220ms var(--qh-ease-standard); }
+.app-shell.qhealth-app .mobile-workspace-nav { display: none; }
+@media (max-width: 1150px) and (min-width: 761px) {
+  .app-shell.qhealth-app { --qh-shell-rail: 68px; --qh-shell-expanded: 224px; }
+  .app-shell.qhealth-app .environment-sidebar { width: var(--qh-shell-expanded); }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar { width: var(--qh-shell-rail); }
+  .app-shell.qhealth-app.shell-collapsed .workspace { margin-left: var(--qh-shell-rail); }
+}
+@media (max-width: 760px) {
+  .app-shell.qhealth-app .environment-sidebar,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar { width: min(248px, 86vw); padding-inline: 16px; transform: translateX(-105%); box-shadow: 12px 0 32px rgba(16,42,52,.18); }
+  .app-shell.qhealth-app .environment-sidebar.open { transform: translateX(0); }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .brand-copy,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-heading-copy,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-description,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-chevron,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .nav-index,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .nav-text,
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .sidebar-foot { display: block; }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .rail-header { justify-content: space-between; gap: 11px; }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .brand { padding-inline: 12px; }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-heading-copy { display:flex; }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-items a { justify-content:flex-start; padding-inline:8px !important; gap:10px !important; }
+  .app-shell.qhealth-app.shell-collapsed .environment-sidebar.open .environment-items a::after { display:none; }
+  .app-shell.qhealth-app .workspace,
+  .app-shell.qhealth-app.shell-collapsed .workspace { margin-left: 0; }
+  .app-shell.qhealth-app .mobile-workspace-nav { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: var(--qh-z-sticky); display:grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 7px; border: 1px solid var(--qh-color-border); border-radius: var(--qh-radius-lg); background: color-mix(in srgb, var(--qh-color-surface) 94%, transparent); box-shadow: var(--qh-shadow-high); backdrop-filter: blur(14px); }
+  .app-shell.qhealth-app .mobile-workspace-nav-item { display:flex; min-width:0; min-height:44px; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius: var(--qh-radius-sm); color: var(--qh-color-text-secondary); text-decoration:none; font-size:10px; font-weight:700; }
+  .app-shell.qhealth-app .mobile-workspace-nav-item:hover,
+  .app-shell.qhealth-app .mobile-workspace-nav-item:focus-visible { color: var(--qh-color-text-primary); background: var(--qh-color-surface-hover); }
+  .app-shell.qhealth-app .mobile-workspace-nav-item.active { color: var(--qh-color-primary); background: var(--qh-color-primary-soft, var(--qh-color-research-soft)); }
+  .app-shell.qhealth-app .workspace-footer { padding-bottom: 86px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.qhealth-app .environment-sidebar,
+  .app-shell.qhealth-app .workspace,
+  .app-shell.qhealth-app .workspace > main,
+  .app-shell.qhealth-app .environment-items a,
+  .app-shell.qhealth-app.shell-collapsed .environment-items a::after { transition-duration: 0ms; }
+}
