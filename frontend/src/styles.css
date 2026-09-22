@@ -17,3 +17,5 @@
 @import './styles/reference-product-composition.css';
 :root {font-family:var(--qh-font-sans);color:var(--qh-color-text-primary);background:var(--qh-color-background);font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;--ink:var(--qh-color-text-primary);--muted:var(--qh-color-text-secondary);--accent:var(--qh-color-primary);--border:var(--qh-color-border);--paper:var(--qh-color-surface);--soft:var(--qh-color-research-soft);--warning:var(--qh-color-warning);--violet:var(--qh-color-quantum)}
 @import './styles/qhealth-lenis-composition.css';
+
+@import './styles/tremor-qhealth.css';
