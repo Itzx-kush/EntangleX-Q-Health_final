@@ -156,3 +156,12 @@ export function SuccessState({children}: {children: ReactNode}) {
 export function RetryState({children, onRetry}: {children: ReactNode; onRetry: () => void}) {
   return <div className="motion-state state-retry" role="alert"><span>{children}</span><button className="ui-button ui-button-sm ui-button-secondary" onClick={onRetry}>Retry</button></div>;
 }
+
+// Enterprise component vocabulary (additive to the original foundation primitives).
+export {
+  ActionButton, Badge as EnterpriseBadge, Breadcrumb, Checkbox, Cluster, DataTable, EmptyState as EnterpriseEmptyState,
+  ErrorState as EnterpriseErrorState, FilterBar, Input, KeyValueList, LoadingState as EnterpriseLoadingState,
+  MetadataRow, Notice, PageHeader as EnterprisePageHeader, Pagination, Panel, ResultState, SearchInput, Section as EnterpriseSection,
+  SelectField, Skeleton, SplitPane, Stack, StatCard, StatusBadge, TextareaField, Toggle, Toolbar, UnavailableState, UnsupportedState,
+} from './EnterpriseComponents';
+export type {DataColumn, StatusValue, ActionButtonProps} from './EnterpriseComponents';
