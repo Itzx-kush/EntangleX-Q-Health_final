@@ -1,8 +1,20 @@
 :root {
   color-scheme: light;
-  --qh-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --qh-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --qh-font-sans: var(--qh-font-family);
   --qh-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --qh-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --qh-font-display: var(--qh-font-family);
+  --qh-text-xs: 0.6875rem;
+  --qh-text-sm: 0.8125rem;
+  --qh-text-md: 0.9375rem;
+  --qh-text-lg: 1.125rem;
+  --qh-text-xl: clamp(1.5rem, 2.1vw, 2rem);
+  --qh-text-2xl: clamp(1.9rem, 3vw, 2.75rem);
+  --qh-title-size: var(--qh-text-2xl);
+  --qh-title-weight: 680;
+  --qh-body-line-height: 1.6;
+  --qh-heading-line-height: 1.2;
+  --qh-label-tracking: 0.08em;
   --qh-type-display: clamp(1.8rem, 3.5vw, 3.2rem);
   --qh-type-page-title: clamp(1.35rem, 2.1vw, 2rem);
   --qh-type-section-title: 1rem;
@@ -38,7 +50,7 @@
   --qh-z-toast: 80;
   --qh-z-intro: 100;
 
-  --qh-color-background: #f2f6f8;
+  --qh-color-background: #f5f8fa;
   --qh-color-foreground: #20313d;
   --qh-color-muted-foreground: #5f707b;
   --qh-color-subtle-foreground: #7d8b94;
@@ -70,8 +82,8 @@
   --qh-color-info: #397aa0;
   --qh-color-info-soft: #eaf3f8;
   --qh-color-focus: rgba(23, 111, 120, 0.45);
-  --qh-color-sidebar: #fbfbfc;
-  --qh-color-sidebar-raised: #f3f4f6;
+  --qh-color-sidebar: #eaf1f4;
+  --qh-color-sidebar-raised: #dfe9ed;
   --qh-color-sidebar-foreground: #111418;
   --qh-color-sidebar-muted: #6b7280;
 
