@@ -31,7 +31,7 @@ export function BarChart({items, label, percent = false}: {items: {name: string;
             <CartesianGrid vertical={false} stroke="var(--tq-grid)" />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{fontSize: 11, fill: 'var(--tq-muted)'}} />
             <YAxis tickLine={false} axisLine={false} tick={{fontSize: 11, fill: 'var(--tq-muted)'}} width={42} />
-            <Tooltip cursor={{fill: 'var(--tq-hover)'}} contentStyle={{borderRadius: 12, border: '1px solid var(--tq-border)', background: 'var(--tq-panel)', boxShadow: '0 12px 32px rgba(15,23,42,.10)', fontSize: 12}} formatter={(value: number | string) => [percent ? metric(Number(value)) : Number(value).toFixed(4), 'Value']} />
+            <Tooltip cursor={{fill: 'var(--tq-hover)'}} contentStyle={{borderRadius: 12, border: '1px solid var(--tq-border)', background: 'var(--tq-panel)', boxShadow: '0 12px 32px rgba(15,23,42,.10)', fontSize: 12}} formatter={(value) => [percent ? metric(Number(value)) : Number(value).toFixed(4), 'Value']} />
             <Bar dataKey="value" name="Value" radius={[6,6,0,0]} fill="var(--tq-chart-primary)" maxBarSize={44} />
           </RechartsBarChart>
         </ResponsiveContainer>
