@@ -35,7 +35,8 @@ def quality_report(frame: pd.DataFrame, target: str, positive_label: str, featur
     X = frame[features]
     numeric = list(X.select_dtypes(include=np.number).columns)
     categorical = [c for c in features if c not in numeric]
-    counts = frame[target].astype(str).value_counts().to_dict()
+    target_str = frame[target].astype(str)
+    counts = target_str.value_counts().to_dict()
     minority_fraction = min(counts.values()) / len(frame)
     warnings: list[str] = []
     blockers: list[str] = []
@@ -44,13 +45,13 @@ def quality_report(frame: pd.DataFrame, target: str, positive_label: str, featur
     low_variance = [c for c in numeric if float(X[c].replace([np.inf, -np.inf], np.nan).var()) < 1e-8]
     suspect_identifiers = [c for c in features if is_identifier(c)]
     high_cardinality = [c for c in categorical if X[c].nunique(dropna=True) > 32]
-    target_codes = (frame[target].astype(str) == positive_label).astype(int)
+    target_codes = (target_str == positive_label).astype(int)
     suspicious = []
     for c in features:
         nonmissing = X[c].notna()
         if nonmissing.sum() < 4:
             continue
-        if X[c].astype(str).equals(frame[target].astype(str)):
+        if X[c].astype(str).equals(target_str):
             suspicious.append(c)
         elif c in numeric:
             values = X[c].replace([np.inf, -np.inf], np.nan)
@@ -80,7 +81,7 @@ def quality_report(frame: pd.DataFrame, target: str, positive_label: str, featur
     duplicates = int(frame.duplicated().sum())
     feature_duplicates = int(X.duplicated().sum())
     row_hashes = pd.util.hash_pandas_object(X, index=False)
-    conflicting = int(pd.DataFrame({"hash": row_hashes, "target": frame[target].astype(str)}).groupby("hash")["target"].nunique().gt(1).sum())
+    conflicting = int(pd.DataFrame({"hash": row_hashes, "target": target_str}).groupby("hash")["target"].nunique().gt(1).sum())
     if minority_fraction < 0.2:
         warnings.append("Class imbalance: the minority class represents less than 20% of samples.")
     if len(frame) < 1000:
