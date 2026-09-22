@@ -87,6 +87,79 @@ def test_quantum_api_smoke(client):
     invalid = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": {"qubits": 1}, "seed": 42})
     assert invalid.status_code == 422
 
+@pytest.mark.parametrize("model_type", ["vqc", "qsvc", "qnn"])
+@pytest.mark.parametrize("backend", ["statevector", "aer"])
+def test_preview_circuit_all_model_types_and_backends(client, model_type, backend):
+    pytest.importorskip("qiskit_machine_learning")
+    if backend == "aer":
+        pytest.importorskip("qiskit_aer")
+    q_config = quantum_config().model_dump()
+    q_config["backend"] = backend
+    response = client.post("/api/quantum/circuit", json={"model_type": model_type, "quantum": q_config, "seed": 42})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["model_type"] == model_type
+    assert data["backend"] == backend
+    assert data["qubits"] == 2
+
+def test_preview_circuit_custom_quantum_config(client):
+    pytest.importorskip("qiskit_machine_learning")
+    q_config = {
+        "qubits": 3,
+        "feature_map_reps": 2,
+        "ansatz_reps": 2,
+        "entanglement": "full",
+        "backend": "statevector",
+    }
+    response = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": q_config, "seed": 123})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["qubits"] == 3
+    assert data["parameter_count"] > 0
+    assert len(data["gates"]) > 0
+
+def test_preview_circuit_validation_errors(client):
+    # Test invalid model type
+    resp1 = client.post("/api/quantum/circuit", json={"model_type": "invalid_type", "quantum": quantum_config().model_dump(), "seed": 42})
+    assert resp1.status_code == 422
+
+    # Test out-of-range qubits (too small < 2)
+    resp2 = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": {"qubits": 1}, "seed": 42})
+    assert resp2.status_code == 422
+
+    # Test out-of-range qubits (too large > 8)
+    resp3 = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": {"qubits": 9}, "seed": 42})
+    assert resp3.status_code == 422
+
+    # Test noise probability with non-aer backend
+    resp4 = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": {"backend": "statevector", "noise_probability": 0.05}, "seed": 42})
+    assert resp4.status_code == 422
+
+    # Test forbidden extra fields
+    resp5 = client.post("/api/quantum/circuit", json={"model_type": "vqc", "quantum": quantum_config().model_dump(), "seed": 42, "extra_field": "forbidden"})
+    assert resp5.status_code == 422
+
+def test_preview_circuit_response_schema_and_determinism(client):
+    pytest.importorskip("qiskit_machine_learning")
+    payload = {"model_type": "vqc", "quantum": quantum_config().model_dump(), "seed": 42}
+    resp1 = client.post("/api/quantum/circuit", json=payload)
+    resp2 = client.post("/api/quantum/circuit", json=payload)
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    data1 = resp1.json()
+    data2 = resp2.json()
+    assert data1 == data2
+
+    expected_keys = {
+        "model_type", "execution_kind", "backend", "qubits",
+        "logical_depth", "gate_counts", "parameter_count",
+        "text", "gates", "limitation"
+    }
+    assert set(data1.keys()) == expected_keys
+    assert isinstance(data1["gate_counts"], dict)
+    assert isinstance(data1["gates"], list)
+    assert isinstance(data1["text"], str)
+
 @pytest.mark.parametrize("kind", ["vqc", "qsvc"])
 def test_quantum_pipeline_training_with_shared_preprocessing(kind, config):
     pytest.importorskip("qiskit_machine_learning")
