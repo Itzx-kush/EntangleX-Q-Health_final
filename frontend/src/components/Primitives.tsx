@@ -2,6 +2,7 @@ import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Check, ChevronDown, CircleAlert, CircleCheck, Info, X} from 'lucide-react';
 import {forwardRef, useEffect, useId, useRef, useState, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode, type RefObject} from 'react';
 import {motionEasings, motionTokens} from './Motion';
+import {TremorBadge, TremorCard, TremorMetric, TremorSectionHeader} from './TremorUI';
 
 type Tone = 'primary' | 'secondary' | 'quiet' | 'quantum' | 'danger';
 
@@ -17,11 +18,11 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
 });
 
 export function PanelHeader({eyebrow, title, description, actions}: {eyebrow?: string; title: string; description?: string; actions?: ReactNode}) {
-  return <header className="panel-header"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{description && <p>{description}</p>}</div>{actions && <div className="panel-header-actions">{actions}</div>}</header>;
+  return <TremorSectionHeader className="panel-header"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{description && <p>{description}</p>}</div>{actions && <div className="panel-header-actions">{actions}</div>}</TremorSectionHeader>;
 }
 
 export function MetricCard({label, value, detail, icon: Icon = Info, tone = 'research'}: {label: string; value: ReactNode; detail: string; icon?: typeof Info; tone?: 'research' | 'quantum' | 'neutral'}) {
-  return <article className={`metric metric-${tone}`}><span aria-hidden="true" className="metric-header"><Icon size={16}/> {label}</span><strong>{value}</strong><small>{detail}</small></article>;
+  return <TremorMetric label={label} value={value} detail={detail} tone={tone} icon={<Icon size={16} aria-hidden="true" />} />;
 }
 
 export function Section({children, title, description, actions, className = ''}: {children: ReactNode; title?: string; description?: string; actions?: ReactNode; className?: string}) {
@@ -104,12 +105,12 @@ export function Toast({message, tone = 'success', onDismiss}: {message: string; 
 }
 
 export function Badge({children, tone = 'neutral', className = ''}: {children: ReactNode; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'quantum' | 'research'; className?: string}) {
-  return <span className={`ui-badge ui-badge-${tone} ${className}`.trim()}>{children}</span>;
+  const variant = tone === 'danger' ? 'error' : tone;
+  return <TremorBadge variant={variant} className={className}>{children}</TremorBadge>;
 }
 
 export function Surface({children, className = '', as = 'div'}: {children: ReactNode; className?: string; as?: 'div' | 'section' | 'article'}) {
-  const Component = as;
-  return <Component className={`ui-surface ${className}`.trim()}>{children}</Component>;
+  return <TremorCard as={as} className={`ui-surface ${className}`.trim()}>{children}</TremorCard>;
 }
 
 export function StatusPill({value}: {value: string}) {
@@ -118,7 +119,7 @@ export function StatusPill({value}: {value: string}) {
 }
 
 export function SectionHeader({eyebrow, title, description, actions}: {eyebrow: string; title: string; description: string; actions?: ReactNode}) {
-  return <div className="section-header"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="lead">{description}</p></div>{actions && <div className="header-actions">{actions}</div>}</div>;
+  return <TremorSectionHeader className="section-header"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="lead">{description}</p></div>{actions && <div className="header-actions">{actions}</div>}</TremorSectionHeader>;
 }
 
 export function EmptyState({children}: {children: ReactNode}) {
