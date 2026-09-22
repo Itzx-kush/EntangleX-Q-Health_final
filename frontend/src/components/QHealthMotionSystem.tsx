@@ -1,10 +1,26 @@
-import {useEffect, useRef, type ReactNode} from 'react';
-import {useLenis} from '../hooks/useLenis';
+import {useEffect, useRef, type CSSProperties, type ReactNode} from 'react';
 
 const INTERACTIVE = 'button:not(:disabled), a, [role="button"], summary, input, select, textarea';
+const REVEAL_SELECTOR = [
+  '.page-header',
+  '.hero-panel',
+  '.card',
+  '.metric',
+  '.stat-grid > *',
+  '.two-columns > *',
+  '.table-scroll',
+  '.chart',
+  '.dataset-picker',
+  '.prediction-result',
+  '.notice',
+  '.research-context-strip',
+  '.workflow-rail',
+  '.contextual-action-bar',
+  '.circuit-scroll',
+  '.job-card',
+].join(',');
 
 export function QHealthMotionSystem({children}: {children: ReactNode}) {
-  useLenis();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,8 +39,8 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
     let raf = 0;
 
     const render = () => {
-      pointer.x += (target.x - pointer.x) * 0.12;
-      pointer.y += (target.y - pointer.y) * 0.12;
+      pointer.x += (target.x - pointer.x) * 0.14;
+      pointer.y += (target.y - pointer.y) * 0.14;
       root.style.setProperty('--qhm-x', `${pointer.x}px`);
       root.style.setProperty('--qhm-y', `${pointer.y}px`);
       raf = requestAnimationFrame(render);
@@ -38,10 +54,10 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
 
       if (element && !reduced && !coarse) {
         const box = element.getBoundingClientRect();
-        const dx = (event.clientX - (box.left + box.width / 2)) * 0.10;
-        const dy = (event.clientY - (box.top + box.height / 2)) * 0.10;
-        element.style.setProperty('--qhm-mx', `${Math.max(-8, Math.min(8, dx))}px`);
-        element.style.setProperty('--qhm-my', `${Math.max(-8, Math.min(8, dy))}px`);
+        const dx = (event.clientX - (box.left + box.width / 2)) * 0.07;
+        const dy = (event.clientY - (box.top + box.height / 2)) * 0.07;
+        element.style.setProperty('--qhm-mx', `${Math.max(-6, Math.min(6, dx))}px`);
+        element.style.setProperty('--qhm-my', `${Math.max(-6, Math.min(6, dy))}px`);
         element.classList.add('qhm-magnetic');
       }
     };
@@ -54,26 +70,24 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
       element.style.removeProperty('--qhm-my');
     };
 
-    const revealSelector = [
-      '.page-header',
-      '.hero-panel',
-      '.card',
-      '.metric',
-      '.stat-grid > *',
-      '.two-columns > *',
-      '.table-scroll',
-      '.chart',
-      '.dataset-picker',
-      '.prediction-result',
-      '.notice',
-      '.research-context-strip',
-      '.workflow-rail',
-      '.contextual-action-bar',
-      '.circuit-scroll',
-      '.job-card',
-    ].join(',');
+    const updateScroll = () => {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollable > 0 ? window.scrollY / scrollable : 0;
+      root.style.setProperty('--qhm-scroll', String(Math.max(0, Math.min(1, progress))));
+    };
 
     let observer: IntersectionObserver | null = null;
+    let mutations: MutationObserver | null = null;
+
+    const observe = () => {
+      if (reduced || !observer) return;
+      root.querySelectorAll(REVEAL_SELECTOR).forEach(element => {
+        if (element.classList.contains('qhm-visible')) return;
+        element.classList.add('qhm-reveal');
+        observer?.observe(element);
+      });
+    };
+
     if (!reduced && 'IntersectionObserver' in window) {
       observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
@@ -82,13 +96,14 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
             observer?.unobserve(entry.target);
           }
         });
-      }, {threshold: 0.06, rootMargin: '0px 0px -7% 0px'});
+      }, {threshold: 0.04, rootMargin: '0px 0px -5% 0px'});
 
-      root.querySelectorAll(revealSelector).forEach(element => {
-        element.classList.add('qhm-reveal');
-        observer?.observe(element);
-      });
+      observe();
+      mutations = new MutationObserver(() => observe());
+      mutations.observe(root, {childList: true, subtree: true});
     }
+
+    window.addEventListener('scroll', updateScroll, {passive: true});
 
     if (!reduced && !coarse) {
       raf = requestAnimationFrame(render);
@@ -96,11 +111,15 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
       window.addEventListener('pointerout', reset, {passive: true});
     }
 
+    updateScroll();
+
     return () => {
       cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', updateScroll);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerout', reset);
       observer?.disconnect();
+      mutations?.disconnect();
     };
   }, []);
 
@@ -108,15 +127,10 @@ export function QHealthMotionSystem({children}: {children: ReactNode}) {
     <div ref={rootRef} className="qhm-root">
       <div className="qhm-content">{children}</div>
       <div className="qhm-scene" aria-hidden="true">
-        <div className="qhm-spotlight"/>
-        <div className="qhm-grid"/>
-        <div className="qhm-glow qhm-glow-a"/>
-        <div className="qhm-glow qhm-glow-b"/>
-        <div className="qhm-particles">
-          {Array.from({length: 18}, (_, index) => <i key={index} style={{'--i': index} as React.CSSProperties}/>)}
-        </div>
-        <div className="qhm-cursor"/>
-        <div className="qhm-progress"/>
+        <div className="qhm-spotlight" />
+        <div className="qhm-grid" />
+        <div className="qhm-cursor" />
+        <div className="qhm-progress" />
       </div>
     </div>
   );
