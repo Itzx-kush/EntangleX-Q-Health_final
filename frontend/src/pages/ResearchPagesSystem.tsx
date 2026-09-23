@@ -29,14 +29,14 @@ export function DemoCenter(){
   const active=jobs.data?.filter(job=>['queued','running','cancel_requested'].includes(job.status)).length||0;
   const current=demoStages[step];
   const hasDataset=Boolean(summary.data?.counts.datasets);
-  const hasCompletedExperiment=Boolean(experiments.data?.some(experiment=>['succeeded','completed'].includes(experiment.status)));
-  const hasReadyModel=Boolean(models.data?.some(model=>model.status==='ready'));
+  const completedExperimentIds=new Set((experiments.data||[]).filter(experiment=>['succeeded','completed'].includes(experiment.status)).map(experiment=>experiment.id));
+  const hasCompletedExperimentWithReadyModel=Boolean(models.data?.some(model=>model.status==='ready'&&completedExperimentIds.has(model.experiment_id)));
   const readiness=(index:number)=>{
     if(index===0)return 'READY';
     if(index===1)return hasDataset?'READY':'NOT YET RUN';
     if(index===2||index===3||index===4)return hasDataset?'READY TO EXECUTE':'NOT YET RUN';
     if(index===5)return health.data?.quantum.available?'READY TO EXECUTE':health.isError?'UNAVAILABLE':health.data?'UNAVAILABLE':'NOT YET RUN';
-    if(index===6||index===7||index===8)return hasCompletedExperiment&&hasReadyModel?'READY':'NOT YET RUN';
+    if(index===6||index===7||index===8)return hasCompletedExperimentWithReadyModel?'READY':'NOT YET RUN';
     if(index===9)return experiments.data?.length?'READY':'NOT YET RUN';
     return 'NOT YET RUN';
   };

@@ -92,6 +92,43 @@ describe('settings and Demo Center readiness',()=>{
     expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
   });
 
+  it.each([
+    {
+      label:'does not use a ready model from a different experiment',
+      modelExperimentId:'experiment-b',
+      expectedReady:false,
+    },
+    {
+      label:'accepts a ready model from the completed experiment',
+      modelExperimentId:'experiment-a',
+      expectedReady:true,
+    },
+  ])('$label',async({modelExperimentId,expectedReady})=>{
+    vi.mocked(qh.summary).mockResolvedValue({
+      counts:{datasets:1,experiments:1,ready_models:1,active_jobs:0},
+      recent_experiments:[],
+      disclaimer:'Research only',
+    });
+    vi.mocked(qh.experiments).mockResolvedValue([
+      {id:'experiment-a',status:'succeeded'},
+    ] as Awaited<ReturnType<typeof qh.experiments>>);
+    vi.mocked(qh.models).mockResolvedValue([
+      {id:'model-1',experiment_id:modelExperimentId,status:'ready'},
+    ] as Awaited<ReturnType<typeof qh.models>>);
+
+    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    await waitFor(()=>{
+      const dependentSteps=Array.from(document.querySelectorAll('.demo-step')).slice(6,9);
+      expect(dependentSteps).toHaveLength(3);
+      if(expectedReady){
+        dependentSteps.forEach(step=>expect(step.textContent).toContain('READY'));
+      }else{
+        dependentSteps.forEach(step=>expect(step.textContent).toContain('NOT YET RUN'));
+        dependentSteps.forEach(step=>expect(step.textContent).not.toMatch(/\bREADY\b/));
+      }
+    });
+  });
+
   it('surfaces backend errors instead of failing silently',async()=>{
     vi.mocked(qh.summary).mockRejectedValueOnce(new Error('Backend unavailable'));
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
