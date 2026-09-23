@@ -6,6 +6,8 @@ import {Toaster} from 'sonner';
 import {DraftProvider} from './hooks/useDraft';
 import App from './App';
 import './index.css';
+import './tokens.css';
+import './styles/reference-theme.css';
 
 const queryClient=new QueryClient({defaultOptions:{queries:{staleTime:3000,retry:1}}});
 
