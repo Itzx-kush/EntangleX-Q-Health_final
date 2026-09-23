@@ -1,27 +1,26 @@
-import {useState} from 'react';
-import {NavLink, Route, Routes} from 'react-router-dom';
-import {IntroGate} from './components/Intro';
-import {PageTransition} from './components/Motion';
-import {api, setSessionToken} from './services/api';
-import {useLoad} from './hooks/useLoad';
-import type {Health} from './types';
-import {ApplicationShell} from './components/ApplicationShell';
-import Dashboard from './pages/Dashboard';
-import Datasets from './pages/Datasets';
-import Quality from './pages/Quality';
-import Preprocessing from './pages/Preprocessing';
-import FeatureSelection from './pages/FeatureSelection';
-import PCA from './pages/PCA';
-import Training from './pages/Training';
-import Comparison from './pages/Comparison';
-import QuantumCircuit from './pages/QuantumCircuit';
-import Explainability from './pages/Explainability';
-import Prediction from './pages/Prediction';
-import Experiments from './pages/Experiments';
-import ExperimentDetail from './pages/ExperimentDetail';
-import {ResearchWorkspaceProvider} from './hooks/ResearchWorkspace';
-import {QHealthMotionSystem} from './components/QHealthMotionSystem';
-export default function App() {
-  const health = useLoad(() => api.get<Health>('/health'), [], 15000); const [token, setToken] = useState(''); const [menu, setMenu] = useState(false);
-  return <IntroGate><QHealthMotionSystem><ResearchWorkspaceProvider><ApplicationShell health={health} token={token} setToken={setToken} menu={menu} setMenu={setMenu} onApplyToken={() => {setSessionToken(token); setToken('');}}><PageTransition><Routes><Route path="/" element={<Dashboard/>}/><Route path="/datasets" element={<Datasets/>}/><Route path="/quality" element={<Quality/>}/><Route path="/preprocessing" element={<Preprocessing/>}/><Route path="/features" element={<FeatureSelection/>}/><Route path="/pca" element={<PCA/>}/><Route path="/training" element={<Training/>}/><Route path="/comparison" element={<Comparison/>}/><Route path="/quantum" element={<QuantumCircuit/>}/><Route path="/explainability" element={<Explainability/>}/><Route path="/prediction" element={<Prediction/>}/><Route path="/experiments" element={<Experiments/>}/><Route path="/experiments/:id" element={<ExperimentDetail/>}/><Route path="*" element={<div className="empty"><h1>Page not found</h1><NavLink to="/">Return to overview</NavLink></div>}/></Routes></PageTransition></ApplicationShell></ResearchWorkspaceProvider></QHealthMotionSystem></IntroGate>;
+import {Navigate,Route,Routes} from 'react-router-dom';
+import {ResearchShell} from './components/ResearchShell';
+import {Overview,Datasets,Quality,PipelineStage} from './pages/ResearchPagesCore';
+import {Training,Comparison,Quantum,Explainability,PredictionPage} from './pages/ResearchPagesModels';
+import {Experiments,ExperimentDetail} from './pages/ResearchPagesStudio';
+
+export default function App(){
+  return <ResearchShell>
+    <Routes>
+      <Route path="/" element={<Overview/>}/>
+      <Route path="/datasets" element={<Datasets/>}/>
+      <Route path="/quality" element={<Quality/>}/>
+      <Route path="/preprocessing" element={<PipelineStage endpoint="/preprocessing/preview" eyebrow="03 / Prepare" title="Preprocessing" description="Configure leakage-safe transformations that are fitted within the backend research pipeline and carried into every model comparison." />}/>
+      <Route path="/features" element={<PipelineStage endpoint="/feature-selection/preview" eyebrow="04 / Select" title="Feature selection" description="Inspect training-only feature selection decisions without converting benchmark association into biological causation." />}/>
+      <Route path="/pca" element={<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary." />}/>
+      <Route path="/training" element={<Training/>}/>
+      <Route path="/comparison" element={<Comparison/>}/>
+      <Route path="/quantum" element={<Quantum/>}/>
+      <Route path="/explainability" element={<Explainability/>}/>
+      <Route path="/prediction" element={<PredictionPage/>}/>
+      <Route path="/experiments" element={<Experiments/>}/>
+      <Route path="/experiments/:id" element={<ExperimentDetail/>}/>
+      <Route path="*" element={<Navigate to="/" replace/>}/>
+    </Routes>
+  </ResearchShell>;
 }
