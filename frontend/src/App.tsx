@@ -1,6 +1,7 @@
 import {lazy,Suspense} from 'react';
 import {Navigate,Route,Routes} from 'react-router-dom';
 import {ResearchShell} from './components/ResearchShell';
+import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
@@ -19,6 +20,7 @@ const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({defa
 
 export default function App(){
   return <ResearchShell>
+    <ThemeToggle/>
     <Suspense fallback={<Loading/>}><Routes>
       <Route path="/" element={<Overview/>}/>
       <Route path="/datasets" element={<Datasets/>}/>
