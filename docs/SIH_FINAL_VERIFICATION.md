@@ -1,97 +1,102 @@
 # EntangleX Q-Health — Final SIH verification
 
-**Repository:** `Itzx-kush/EntangleX-Q-Health_final`  
-**Baseline reviewed:** `main` at `cff56db5d77dc401f2aa6e99500875536aaf6d07`  
-**Verification date:** 2026-09-23  
-**Scope:** Final completion pass focused on the inner research pages while preserving the existing FastAPI, SQLite, ML, quantum, provenance, storage, and Astra shell architecture.
+**Repository:** `Itzx-kush/EntangleX-Q-Health_final`
+**Current branch:** `main`
+**Baseline reviewed:** `1ed30206f49635636ee763d3d43891564726f67b`
+**Verification date:** 2026-09-23
+**Scope:** Final hardening pass for the existing FastAPI, SQLite, ML, quantum, provenance, storage, React, and SIH presentation architecture.
 
-## Current implementation status
+> This file records only the current pass. Earlier Task 1 and Task 2 records remain historical evidence and are not overwritten.
 
-The repository now has a stronger SIH presentation path across the inner application surfaces:
+## Current hardening changes
 
-- Overview includes an interactive, linked research workflow from data through reports.
-- Preprocessing, feature selection, and PCA previews now surface backend-returned selection scores and explained-variance values where available.
-- Quantum Lab includes separate Explain and Technical modes plus a logical circuit viewer built from backend-returned gates.
-- SIH Demo Center provides current-step navigation, previous/next controls, presenter focus, and explicit readiness states (`READY`, `READY TO EXECUTE`, `NOT YET RUN`, or `UNAVAILABLE`) instead of fabricated completion.
-- Command palette supports keyboard arrows, Enter, Escape, navigation, appearance, density, and inspector actions.
-- Theme application now updates both the Tailwind theme class and the visual-system `data-theme` attribute.
-- Route-level lazy loading reduces the initial frontend bundle and removes the prior >500 kB chunk warning.
-- Scientific guardrails remain explicit throughout the UI and documentation.
+- Added focused frontend coverage for route fallback/active navigation, command palette search and keyboard activation, mobile drawer behavior, settings persistence, Demo Center stage navigation/readiness, and surfaced backend errors.
+- Corrected Demo Center readiness so comparison, explainability, and prediction are not marked executable merely because any model record exists. They now require a completed experiment and at least one ready model; dataset-dependent stages stay `NOT YET RUN` without a registered dataset.
+- Surfaced safe query and mutation errors on dataset, Demo Center, comparison, Quantum Lab, explainability, prediction, experiment registry, and experiment detail surfaces.
+- Kept the scientific boundary explicit: local quantum simulation, measured benchmark outputs, research predictions, and feature influence only.
+- Reviewed the existing responsive and reduced-motion rules. No new visual redesign or dependency version change was needed in this pass.
 
-## Exact verification commands
+## Verification matrix
+
+| Area | Result | Evidence |
+|---|---|---|
+| Pinned quantum imports | **PASS** | `qiskit==2.5.2`, `qiskit-machine-learning==0.9.1`, `qiskit-aer==0.17.2` imported successfully |
+| Focused QNN suite | **PASS** | `RUN_QUANTUM_TESTS=1 pytest -q tests/test_qnn.py`: **12 passed** |
+| Full backend regression with quantum enabled | **PASS** | `RUN_QUANTUM_TESTS=1 pytest -q`: **100 passed** |
+| Frontend tests | **PASS** | `npm test`: **2 test files, 9 tests passed** |
+| TypeScript and production build | **PASS** | `npm run build`: typecheck and Vite build passed |
+| Live API smoke | **PASS** | Health, demo registration, validation, three previews, bounded training, comparison, explanation, prediction, circuit retrieval, experiment detail, and JSON report all returned expected success responses |
+| Classical workflow | **PASS** | Bounded live experiment included logistic regression and produced a ready model |
+| Quantum workflow | **PASS** | Bounded live experiment included QNN; job succeeded and circuit/prediction/explanation paths returned successfully |
+| QNN workflow | **PASS** | Bounded live QNN run used 30 samples, 2 qubits, 5 optimizer iterations, local statevector simulation |
+| Route HTTP smoke | **PASS** | `/`, `/datasets`, `/quality`, `/preprocessing`, `/features`, `/pca`, `/training`, `/comparison`, `/quantum`, `/explainability`, `/prediction`, `/experiments`, `/demo`, `/settings` each returned HTTP 200 from Vite |
+| Frontend route rendering in a visible browser | **NOT VERIFIED** | Shared browser could not reach the local Vite server; see Browser QA |
+| Responsive visual QA | **NOT VERIFIED** | Static breakpoint review completed; visible 1440/1280/1024/768/600/390 screenshots could not be captured in the shared browser |
+| Accessibility audit | **PARTIAL** | Focused jsdom interaction coverage passed; axe/visible-browser audit was not available in this environment |
+| Performance | **PASS WITH OBSERVATIONS** | Route splitting remains active; build emitted no >500 kB warning. Largest emitted JS chunk was about 425 kB raw / 117 kB gzip. |
+| Repository hygiene | **PASS** | No secrets, `.env`, runtime DB, uploaded CSV, model artifact, log, `node_modules`, or build output is tracked; generated verification files are ignored |
+| Scientific claim audit | **PASS** | Repository wording continues to reject quantum advantage, clinical validation, diagnosis, and patient-outcome claims |
+
+## Exact commands
 
 ### Frontend
 
 ```bash
 cd frontend
 npm ci
-npm test -- --run
+npm test
 npm run build
 ```
 
-Observed result:
-
-- `1` test file passed
-- `3` tests passed
-- TypeScript check passed
-- Vite production build passed
-- Route-level chunks were emitted; no >500 kB warning was emitted after route splitting
-
-### Backend
+### Backend and quantum
 
 ```bash
 cd backend
-python -m pytest -q
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+RUN_QUANTUM_TESTS=1 pytest -q tests/test_qnn.py
+RUN_QUANTUM_TESTS=1 pytest -q
 ```
 
-Observed result:
+The installed runtime reported:
 
-- `66 passed`
-- `34 skipped`
-- Quantum tests were skipped because optional Qiskit packages were not installed in this environment. The application correctly reported quantum capability as unavailable.
+```text
+qiskit 2.5.2
+qiskit_machine_learning 0.9.1
+qiskit_aer 0.17.2
+```
 
-### Live API smoke
+### Bounded live workflow
 
-A local FastAPI server was started on `127.0.0.1:8000`. The following paths were exercised against the live service:
+The live run used the local simulator and a small configuration: one classical model, one QNN, 30 samples, 2 qubits, 5 optimizer iterations, 2 CV folds, and 128 shots. It registered the public benchmark, validated it, previewed preprocessing/feature selection/PCA, trained both models, then exercised comparison, explanation, prediction, fitted circuit retrieval, experiment detail, and report export.
 
-- `/api/health`
-- `/api/system/status`
-- `/api/summary`
-- `POST /api/datasets/demo`
-- `POST /api/datasets/{id}/validate`
-- `POST /api/training/jobs` with bounded classical configuration
-- `/api/training/jobs`
-- `/api/experiments/{id}/comparison`
-- `/api/models`
-- `/api/models/{id}/input-schema`
-- `/api/models/{id}/demo-sample`
-- `POST /api/models/{id}/predict`
-- `/api/experiments/{id}`
+## Browser QA
 
-Observed live result: the bounded classical job reached `succeeded` at `100%`, persisted three ready models, comparison returned a neutral conclusion with no completed classical–quantum pair, schema and research prediction returned successfully, and experiment detail returned job/model records. Quantum capability returned `available: false` because Qiskit packages were not installed.
+Browser QA was attempted after starting both services with:
 
-## Browser QA status
+```bash
+# backend
+. .venv/bin/activate
+QHEALTH_STORAGE_ROOT=/tmp/qhealth-browser python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
-Browser QA was attempted with the shared browser session using:
+# frontend
+npm run dev -- --host 0.0.0.0 --port 5173
+```
 
-- `http://127.0.0.1:5173/`
-- `http://localhost:5173/`
-- the Vite-exposed network address `http://169.254.0.2:5173/`
+The local shell could reach both services (`curl` returned HTTP 200), and all requested route URLs returned HTTP 200. The shared `agent-browser` session returned `ERR_CONNECTION_REFUSED` for `127.0.0.1:5173` and timed out against the exposed sandbox address. Because the visible browser could not connect, interactive sidebar, drawer, command palette, settings, circuit viewer, forms, chart, mobile, and visual checks are explicitly **not verified**, not marked as passed.
 
-The browser environment returned `ERR_CONNECTION_REFUSED` for loopback and timed out on the exposed network address, even though local `curl` reached the Vite server. Full visible browser route navigation could therefore not be completed in this sandbox. This is an environment limitation, not a claim that browser QA passed.
+## Documentation and demo readiness
 
-## Security and scientific review
+- `docs/SIH_DEMO_VIDEO_SCRIPT.md` remains recording-ready and was checked against the current route names and actions. It correctly states that no video file exists.
+- Demo Center readiness is now based on backend state rather than record existence alone.
+- The product remains a research prototype. Benchmark classifications and research predictions are not diagnoses, treatment guidance, clinical validation, regulatory evidence, or evidence of general quantum advantage.
 
-- No secrets, bearer tokens, `.env` files, uploaded biomedical CSVs, local database files, model artifacts, or debug logs were added to the repository.
-- No unsupported quantum-advantage, diagnosis, clinical-validation, or classical-superiority claims were added.
-- Historical verification files were not rewritten to erase history. In particular, Task 1 documents that predate QNN remain historical records; current QNN support is documented by the newer QNN verification and current code.
+## Remaining limitations
 
-## Demo video status
-
-**VIDEO RECORDING WORKFLOW PREPARED.** A complete recording-ready script is in `docs/SIH_DEMO_VIDEO_SCRIPT.md`. No video file was generated or claimed because a reliable visible recording session was unavailable in the sandbox browser environment.
-
-## Remaining issues
-
-1. Optional Qiskit, Qiskit Machine Learning, and Aer packages were not installed in this environment, so live VQC, QSVC, and QNN execution was not verified here.
-2. Full visible browser QA remains blocked by the sandbox browser’s inability to reach the locally running Vite server.
-3. The production frontend remains a research prototype; external-cohort, clinical, regulatory, and real-hardware validation are intentionally out of scope.
+1. Visible browser QA and screenshot-based responsive/visual review remain blocked by the sandbox browser network boundary.
+2. Accessibility is not fully certified; the current pass has focused interaction tests but no completed visible axe audit.
+3. Quantum runtime is local simulation only; `runtime_verified` remains false for real hardware, and no hardware credentials or hardware execution are used.
+4. `npm audit` still reports two moderate advisories and the dependency install emits existing deprecation warnings; no unsafe forced upgrade was introduced.
+5. External-cohort validation, clinical validation, regulatory review, fairness studies, and deployment hardening remain outside this repository pass.
+6. No video was generated.

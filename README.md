@@ -18,7 +18,7 @@ Task 2 adds genuine QNN support under the existing model, training, registry, pe
 
 ## Current final SIH verification
 
-The latest completion-pass results are recorded in [SIH final verification](docs/SIH_FINAL_VERIFICATION.md). The current frontend adds an interactive research pipeline, measured feature/PCA preview surfaces, Quantum Lab explain/technical modes with backend-driven circuit rendering, Demo Center presentation controls, keyboard command actions, and route-level lazy loading. The current sandbox regression passed `66` backend tests and `3` frontend tests; optional quantum tests and visible browser QA were blocked by the environment as documented there. Use [the recording-ready video script](docs/SIH_DEMO_VIDEO_SCRIPT.md) for a live judge presentation.
+The latest completion-pass results are recorded in [SIH final verification](docs/SIH_FINAL_VERIFICATION.md). The current frontend adds an interactive research pipeline, measured feature/PCA preview surfaces, Quantum Lab explain/technical modes with backend-driven circuit rendering, Demo Center presentation controls, keyboard command actions, focused interaction coverage, and route-level lazy loading. The current hardening pass passed `100` backend tests with quantum enabled, `12` focused QNN tests, and `9` frontend tests; bounded live classical + QNN workflow verification passed. Visible browser QA remains explicitly unverified because the shared browser could not reach the local Vite server. Use [the recording-ready video script](docs/SIH_DEMO_VIDEO_SCRIPT.md) for a live judge presentation.
 
 ## 1. Overview and problem statement
 

@@ -28,6 +28,7 @@ export function Experiments(){
   return <div>
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
     <StageNav current="/experiments"/>
+    <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message}/>
     <div className="stat-grid my-5">
       <MetricCard label="RECORDED" value={list.data?.length??'—'} detail="Backend experiment records"/>
       <MetricCard label="VISIBLE" value={rows.length} detail="Current registry filter"/>
@@ -56,6 +57,7 @@ export function ExperimentDetail(){
   return <div>
     <PageHeader eyebrow="Research Studio · Evidence" title={'Experiment '+shortId(id)} description="Inspect provenance, job state, measured model records and the exact configuration behind one Q‑Health research experiment." actions={<Link className="btn btn-outline" to="/experiments"><ArrowLeft size={13}/>All experiments</Link>}/>
     <StageNav current="/experiments"/>
+    <ErrorBanner error={(action.error as Error)?.message}/>
     <Card className="mt-5" title="Experiment context" description="A drill-down evidence surface modeled on TICTAC-style research detail views.">
       <div className="flex flex-wrap items-center gap-2"><StatusBadge value={detail.experiment.status}/><span className="text-xs muted">{dateTime(detail.experiment.created_at)}</span><span className="mono text-xs muted">Dataset {shortId(detail.experiment.dataset_id)}</span></div>
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
