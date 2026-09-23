@@ -4,6 +4,7 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import App from '../App';
 import {ResearchShell} from '../components/ResearchShell';
+import {ThemeToggle} from '../components/ThemeToggle';
 import {DraftProvider} from '../hooks/useDraft';
 import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
 import {qh} from '../lib/api';
@@ -31,6 +32,8 @@ function renderWithProviders(ui:React.ReactNode,initialEntries=['/']){
 beforeEach(()=>{
   localStorage.clear();
   vi.clearAllMocks();
+  document.documentElement.className='';
+  document.documentElement.removeAttribute('data-theme');
 });
 
 describe('research shell navigation and commands',()=>{
@@ -41,6 +44,15 @@ describe('research shell navigation and commands',()=>{
 
     const fallbackRoute=renderWithProviders(<App/>,['/not-a-real-route']);
     await waitFor(()=>expect(fallbackRoute.getByRole('heading',{name:/Overview/i})).toBeInTheDocument());
+  });
+
+  it('renders a discoverable header theme toggle and persists the chosen theme',async()=>{
+    renderWithProviders(<ResearchShell><ThemeToggle/><div>Shell content</div></ResearchShell>);
+    const toggle=await waitFor(()=>screen.getByRole('button',{name:/Switch to dark theme/i}));
+    fireEvent.click(toggle);
+    await waitFor(()=>expect(screen.getByRole('button',{name:/Switch to light theme/i})).toBeInTheDocument());
+    expect(localStorage.getItem('qhealth-theme')).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   it('opens the command palette, searches, activates with Enter, and closes with Escape',async()=>{
