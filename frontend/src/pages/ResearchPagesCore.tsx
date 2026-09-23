@@ -11,6 +11,7 @@ import {api,qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {shortId,dateTime} from '../utils/format';
 import type {Dataset} from '../types/qhealth';
+import {Reveal,SpotlightCard,Magnet,ClickSpark} from '../components/reactbits';
 
 export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
 export function StageNav({current}:{current:string}){return <div className="flex flex-wrap gap-2 border-y py-3">{stages.map(s=><Link key={s[1]} to={s[1]} className={'stage-chip ' + (current===s[1]?'bg-primary/10 text-primary border-primary/20':'border-border text-muted-foreground')}>{s[0]} <ArrowRight size={10}/></Link>)}</div>}
