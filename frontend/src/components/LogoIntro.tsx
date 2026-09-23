@@ -27,14 +27,21 @@ export function LogoIntro(){
     document.documentElement.classList.add('brand-intro-active');
     document.body.classList.add('brand-intro-active');
 
+    const releaseScrollLock=()=>{
+      document.documentElement.classList.remove('brand-intro-active');
+      document.body.classList.remove('brand-intro-active');
+    };
+
     const exitTimer=window.setTimeout(()=>setExiting(true),exitDelay);
-    const removeTimer=window.setTimeout(()=>setVisible(false),removeDelay);
+    const removeTimer=window.setTimeout(()=>{
+      releaseScrollLock();
+      setVisible(false);
+    },removeDelay);
 
     return()=>{
       window.clearTimeout(exitTimer);
       window.clearTimeout(removeTimer);
-      document.documentElement.classList.remove('brand-intro-active');
-      document.body.classList.remove('brand-intro-active');
+      releaseScrollLock();
       window.removeEventListener('storage',updateTheme);
       window.removeEventListener('qhealth-settings-changed',updateTheme);
     };
