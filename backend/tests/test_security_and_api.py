@@ -25,6 +25,17 @@ def test_health_and_private_origin(client):
     blocked = client.get("/api/datasets", headers={"Origin": "https://untrusted.invalid"})
     assert blocked.status_code == 403
 
+def test_safe_system_status(client):
+    response = client.get("/api/system/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["database_available"] is True
+    assert isinstance(data["storage_available"], bool)
+    assert data["supported_models"]["classical"] == ["logistic_regression", "svm", "random_forest"]
+    assert data["supported_models"]["quantum"] == ["vqc", "qsvc", "qnn"]
+    assert "root" not in response.text
+    assert "token" not in response.text.lower()
+
 def test_cors_credentials_header_and_parsing(client):
     allowed_origin = "http://localhost:5173"
     response = client.options("/api/health", headers={"Origin": allowed_origin, "Access-Control-Request-Method": "GET"})

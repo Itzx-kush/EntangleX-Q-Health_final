@@ -10,6 +10,7 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 |---|---|---|
 | GET | `/health` | Reachability, software mode, token-required flag and quantum package presence; not execution verification |
 | GET | `/summary` | Registry counts and recent experiments |
+| GET | `/system/status` | Safe runtime facts for the workspace shell: database/storage availability, model families, quantum capability, and job counts; no secrets or private paths |
 | GET | `/datasets` | Paginated `DatasetOut[]`; provenance and aggregate quality, no raw table |
 | POST | `/datasets/upload` | Multipart `file` plus JSON string `metadata_json`; returns `DatasetOut` |
 | POST | `/datasets/demo` | Register public sklearn WDBC benchmark, or return existing matching hash |
