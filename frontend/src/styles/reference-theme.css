@@ -17,10 +17,16 @@
   --qh-surface-muted: #f4f5fa;
   --qh-on-surface: #171b26;
   --qh-on-surface-muted: #667085;
-  --qh-sidebar-bg: #ffffff;
-  --qh-sidebar-raised: #f7f8fc;
-  --qh-sidebar-text: #667085;
-  --qh-sidebar-active: rgba(91, 91, 214, .09);
+  --qh-sidebar-bg: #241544;
+  --qh-sidebar-raised: #2d1b52;
+  --qh-sidebar-text: #d9d2ed;
+  --qh-sidebar-foreground: #f7f5ff;
+  --qh-sidebar-muted: #c8bee6;
+  --qh-sidebar-active-accent: #a29dff;
+  --qh-sidebar-border: rgba(255, 255, 255, .12);
+  --qh-sidebar-hover: rgba(255, 255, 255, .07);
+  --qh-sidebar-active-border: rgba(162, 157, 255, .34);
+  --qh-sidebar-active: rgba(138, 131, 255, .18);
   --qh-border: #e2e6ef;
   --qh-border-on-surface: rgba(23, 27, 38, .11);
   --qh-input-bg: #f8f9fc;
@@ -36,6 +42,8 @@
   --qh-radius-panel: 18px;
   --qh-shadow-card: 0 10px 30px rgba(31, 39, 66, .06);
   --qh-shadow-panel: 0 22px 60px rgba(31, 39, 66, .14);
+  --qh-progress-fill: #3b82f6;
+  --qh-progress-track: #edf0f5;
   --qh-space-page: clamp(18px, 2.5vw, 32px);
 
   /* Existing Q-Health utility CSS consumes the hsl variables below. */
@@ -84,6 +92,8 @@
   --qh-danger: #ff8f8f;
   --qh-shadow-card: 0 10px 30px rgba(0, 0, 0, .22);
   --qh-shadow-panel: 0 24px 70px rgba(0, 0, 0, .42);
+  --qh-progress-fill: #3b82f6;
+  --qh-progress-track: #1b2430;
 
   --background: 216 29% 5%;
   --foreground: 216 27% 96%;
@@ -801,4 +811,87 @@ textarea:focus-visible {
     width: 34px;
     min-width: 34px;
   }
+}
+
+/* Micro visual patch: light-theme sidebar contrast and execution progress only. */
+html:not(.dark) .research-sidebar {
+  color: var(--qh-sidebar-foreground) !important;
+  border-color: var(--qh-sidebar-border) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-brand,
+html:not(.dark) .research-sidebar .sidebar-context,
+html:not(.dark) .research-sidebar .sidebar-bottom {
+  border-color: var(--qh-sidebar-border) !important;
+}
+
+html:not(.dark) .research-sidebar .brand-copy strong,
+html:not(.dark) .research-sidebar .brand-copy span,
+html:not(.dark) .research-sidebar .sidebar-context strong {
+  color: var(--qh-sidebar-foreground) !important;
+}
+
+html:not(.dark) .research-sidebar .brand-copy span,
+html:not(.dark) .research-sidebar .sidebar-context span,
+html:not(.dark) .research-sidebar .sidebar-label {
+  color: var(--qh-sidebar-muted) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-context {
+  background: var(--qh-sidebar-raised) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-link {
+  color: var(--qh-sidebar-text) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-link:hover,
+html:not(.dark) .research-sidebar .collapse-button:hover {
+  background: var(--qh-sidebar-hover) !important;
+  color: var(--qh-sidebar-foreground) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-link.active {
+  background: var(--qh-sidebar-active) !important;
+  border-color: var(--qh-sidebar-active-border) !important;
+  color: var(--qh-sidebar-foreground) !important;
+}
+
+html:not(.dark) .research-sidebar .sidebar-link.active svg,
+html:not(.dark) .research-sidebar .sidebar-pulse {
+  color: var(--qh-sidebar-active-accent) !important;
+}
+
+html:not(.dark) .research-sidebar .collapse-button {
+  color: var(--qh-sidebar-text) !important;
+}
+
+.job-progress {
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--qh-progress-track);
+  accent-color: var(--qh-progress-fill);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.job-progress::-webkit-progress-bar {
+  border-radius: 9999px;
+  background: var(--qh-progress-track);
+}
+
+.job-progress::-webkit-progress-value {
+  border-radius: 9999px;
+  background: var(--qh-progress-fill);
+  transition: width 180ms ease;
+}
+
+.job-progress::-moz-progress-bar {
+  border-radius: 9999px;
+  background: var(--qh-progress-fill);
+  transition: width 180ms ease;
 }
