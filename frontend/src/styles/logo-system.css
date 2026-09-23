@@ -94,6 +94,8 @@ body.brand-intro-active { overflow:hidden; }
 
 .brand-intro-logo-wrap{
   position:relative;
+  overflow:hidden;
+  border-radius:10px;
   z-index:5;
   width:min(82vw,620px);
   animation:intro-logo-enter 960ms cubic-bezier(.16,1,.3,1) both;
@@ -149,7 +151,7 @@ body.brand-intro-active { overflow:hidden; }
 @keyframes intro-node-float{to{translate:18px -16px;opacity:.25}}
 @keyframes intro-halo{from{opacity:0;scale:.25}to{opacity:.72;scale:1}}
 @keyframes intro-aura{from{opacity:0;scale:.65}to{opacity:1;scale:1.06}}
-@keyframes intro-subtitle{from{opacity:0;translateY(8px)}to{opacity:1;translateY(0)}}
+@keyframes intro-subtitle{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 @media (max-width:560px){
   .brand-intro-stage{min-height:210px;}
