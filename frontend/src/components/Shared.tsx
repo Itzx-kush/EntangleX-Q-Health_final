@@ -1,6 +1,6 @@
 import type {ReactNode} from 'react';
 import {Link} from 'react-router-dom';
-import {AlertTriangle,Atom,Database,LoaderCircle} from 'lucide-react';
+import {AlertTriangle,ArrowRight,Atom,Database,LoaderCircle} from 'lucide-react';
 import {Card,Badge,Select} from './ui';
 import {modelLabels,metric,shortId} from '../utils/format';
 import type {Dataset,ModelRecord,Metrics,MetricName} from '../types/qhealth';
@@ -19,3 +19,34 @@ export function MetricRow({label,value}:{label:string;value:number|null|undefine
 export const metricNames:MetricName[]=['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'];
 export function MetricGrid({metrics}:{metrics:Metrics}){return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{metricNames.map(name=><div className="rounded-xl border p-3" key={name}><span className="metric-label">{name.replace('_',' ')}</span><strong className="mt-2 block text-lg">{metric(metrics[name],name!=='roc_auc')}</strong></div>)}</div>}
 export function DatasetSelect({value,onChange,datasets}:{value:string;onChange:(v:string)=>void;datasets:Dataset[]}){return <Card className="flex flex-wrap items-end gap-3 py-4"><label className="field min-w-[260px] flex-1"><span>Active research dataset</span><Select value={value} onChange={e=>onChange(e.target.value)}><option value="">Select a dataset</option>{datasets.map(d=><option value={d.id} key={d.id}>{d.name} · {d.provenance.row_count} samples</option>)}</Select></label><Link className="btn btn-outline" to="/datasets"><Database size={14}/>Manage datasets</Link></Card>}
+
+export const researchWorkflow=[
+  {label:'Data',path:'/datasets',caption:'Register a traceable input'},
+  {label:'Quality',path:'/quality',caption:'Validate integrity and balance'},
+  {label:'Preprocess',path:'/preprocessing',caption:'Fit transformations safely'},
+  {label:'Features',path:'/features',caption:'Select the model representation'},
+  {label:'PCA',path:'/pca',caption:'Reduce dimensions where configured'},
+  {label:'Train',path:'/training',caption:'Run classical and quantum models'},
+  {label:'Compare',path:'/comparison',caption:'Evaluate under shared conditions'},
+  {label:'Explain',path:'/explainability',caption:'Measure feature influence'},
+  {label:'Predict',path:'/prediction',caption:'Generate a research output'},
+  {label:'Report',path:'/experiments',caption:'Preserve experiment provenance'},
+] as const;
+
+export function ResearchPipeline({current}:{current?:string}){
+  return <section className="research-pipeline-panel" aria-label="Q-Health research workflow">
+    <div className="flex items-start justify-between gap-3">
+      <div><div className="eyebrow">TRACEABLE WORKFLOW</div><h2 className="section-title mt-1">From evidence to measured output</h2></div>
+      <span className="metric-label hidden sm:block">Select a stage to inspect it</span>
+    </div>
+    <div className="research-pipeline-steps">
+      {researchWorkflow.map((stage,index)=><div className="research-pipeline-step-wrap" key={stage.path}>
+        <Link to={stage.path} className={'research-pipeline-step '+(current===stage.path?'is-current':'')} aria-current={current===stage.path?'page':undefined}>
+          <span className="research-pipeline-index">{String(index+1).padStart(2,'0')}</span>
+          <span><strong>{stage.label}</strong><small>{stage.caption}</small></span>
+        </Link>
+        {index<researchWorkflow.length-1&&<ArrowRight className="research-pipeline-arrow" size={13} aria-hidden="true"/>}
+      </div>)}
+    </div>
+  </section>;
+}

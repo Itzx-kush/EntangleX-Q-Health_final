@@ -1,13 +1,25 @@
+import {lazy,Suspense} from 'react';
 import {Navigate,Route,Routes} from 'react-router-dom';
 import {ResearchShell} from './components/ResearchShell';
-import {Overview,Datasets,Quality,PipelineStage} from './pages/ResearchPagesCore';
-import {Training,Comparison,Quantum,Explainability,PredictionPage} from './pages/ResearchPagesModels';
-import {Experiments,ExperimentDetail} from './pages/ResearchPagesStudio';
-import {DemoCenter,SettingsPage} from './pages/ResearchPagesSystem';
+import {Loading} from './components/Shared';
+
+const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
+const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
+const Quality=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Quality})));
+const PipelineStage=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.PipelineStage})));
+const Training=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Training})));
+const Comparison=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Comparison})));
+const Quantum=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Quantum})));
+const Explainability=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Explainability})));
+const PredictionPage=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.PredictionPage})));
+const Experiments=lazy(()=>import('./pages/ResearchPagesStudio').then(m=>({default:m.Experiments})));
+const ExperimentDetail=lazy(()=>import('./pages/ResearchPagesStudio').then(m=>({default:m.ExperimentDetail})));
+const DemoCenter=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.DemoCenter})));
+const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.SettingsPage})));
 
 export default function App(){
   return <ResearchShell>
-    <Routes>
+    <Suspense fallback={<Loading/>}><Routes>
       <Route path="/" element={<Overview/>}/>
       <Route path="/datasets" element={<Datasets/>}/>
       <Route path="/quality" element={<Quality/>}/>
@@ -24,6 +36,6 @@ export default function App(){
       <Route path="/demo" element={<DemoCenter/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
-    </Routes>
+    </Routes></Suspense>
   </ResearchShell>;
 }

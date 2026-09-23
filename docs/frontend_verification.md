@@ -4,7 +4,9 @@
 **Repository:** `Itzx-kush/EntangleX-Q-Health_final`  
 **Scope:** TypeScript, Vitest, Vite production build, development server, production preview, route rendering, and existing backend API boundary.
 
-This was a stabilization verification only. Existing pages, components, routes, styling, API contracts, and frontend architecture were preserved. No visual redesign, new feature, QNN work, or dependency-version change was made.
+> **Historical record:** This document describes the earlier stabilization pass and is intentionally preserved as history. It predates the Astra SIH shell work and the final inner-page completion pass. For the current repository state, use [`SIH_FINAL_VERIFICATION.md`](SIH_FINAL_VERIFICATION.md).
+
+This was a stabilization verification only. Existing pages, components, routes, styling, API contracts, and frontend architecture were preserved. No visual redesign, new feature, QNN work, or dependency-version change was made **in that historical pass**.
 
 ## Current closure status
 
