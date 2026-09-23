@@ -6,99 +6,100 @@
  * Q-Health keeps its research IA, routes and API-backed content.
  */
 :root {
-  --qh-font-family: "Outfit", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --qh-page-bg: #f7f3eb;
-  --qh-page-bg-soft: #efe8dc;
-  --qh-page-text: #2c211c;
-  --qh-page-muted: #75675d;
-  --qh-surface: #2b1b17;
-  --qh-surface-raised: #38231d;
-  --qh-surface-muted: #50362b;
-  --qh-on-surface: #fff8ed;
-  --qh-on-surface-muted: #d8c8b7;
-  --qh-sidebar-bg: #211410;
-  --qh-sidebar-raised: #352019;
-  --qh-sidebar-text: #d9cabc;
-  --qh-sidebar-active: rgba(79, 148, 255, .18);
-  --qh-border: #dfd3c4;
-  --qh-border-on-surface: rgba(255, 248, 237, .15);
-  --qh-input-bg: #432b23;
-  --qh-accent: #3d8bfd;
-  --qh-accent-strong: #266bd0;
-  --qh-accent-soft: rgba(61, 139, 253, .15);
-  --qh-quantum: #8f7df2;
-  --qh-success: #38bd8a;
-  --qh-warning: #e1a84d;
-  --qh-danger: #eb7272;
-  --qh-radius-control: 10px;
-  --qh-radius-card: 16px;
-  --qh-radius-panel: 20px;
-  --qh-shadow-card: 0 16px 34px rgba(73, 44, 30, .12);
-  --qh-shadow-panel: 0 24px 68px rgba(57, 34, 23, .18);
+  /* qBraid-inspired Q-Health palette: cool, quiet, and research-first. */
+  --qh-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --qh-page-bg: #f8f9fc;
+  --qh-page-bg-soft: #f1f3f9;
+  --qh-page-text: #171b26;
+  --qh-page-muted: #667085;
+  --qh-surface: #ffffff;
+  --qh-surface-raised: #fbfcff;
+  --qh-surface-muted: #f4f5fa;
+  --qh-on-surface: #171b26;
+  --qh-on-surface-muted: #667085;
+  --qh-sidebar-bg: #ffffff;
+  --qh-sidebar-raised: #f7f8fc;
+  --qh-sidebar-text: #667085;
+  --qh-sidebar-active: rgba(91, 91, 214, .09);
+  --qh-border: #e2e6ef;
+  --qh-border-on-surface: rgba(23, 27, 38, .11);
+  --qh-input-bg: #f8f9fc;
+  --qh-accent: #5b5bd6;
+  --qh-accent-strong: #4949b8;
+  --qh-accent-soft: rgba(91, 91, 214, .10);
+  --qh-quantum: #7c4dff;
+  --qh-success: #18865c;
+  --qh-warning: #b97913;
+  --qh-danger: #cf4f55;
+  --qh-radius-control: 9px;
+  --qh-radius-card: 14px;
+  --qh-radius-panel: 18px;
+  --qh-shadow-card: 0 10px 30px rgba(31, 39, 66, .06);
+  --qh-shadow-panel: 0 22px 60px rgba(31, 39, 66, .14);
   --qh-space-page: clamp(18px, 2.5vw, 32px);
 
   /* Existing Q-Health utility CSS consumes the hsl variables below. */
-  --background: 39 37% 95%;
-  --foreground: 27 25% 15%;
-  --card: 19 32% 13%;
-  --card-foreground: 38 50% 95%;
-  --primary: 215 90% 57%;
+  --background: 225 33% 98%;
+  --foreground: 228 24% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 228 24% 12%;
+  --primary: 240 58% 59%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 23 24% 23%;
-  --secondary-foreground: 38 44% 94%;
-  --muted: 34 26% 89%;
-  --muted-foreground: 28 15% 40%;
-  --accent: 178 56% 43%;
+  --secondary: 225 25% 95%;
+  --secondary-foreground: 228 20% 20%;
+  --muted: 225 24% 95%;
+  --muted-foreground: 220 12% 46%;
+  --accent: 188 72% 42%;
   --accent-foreground: 0 0% 100%;
-  --border: 30 19% 82%;
-  --input: 28 20% 69%;
-  --ring: 215 90% 57%;
+  --border: 222 22% 90%;
+  --input: 222 22% 84%;
+  --ring: 240 58% 59%;
   --radius: var(--qh-radius-control);
 }
 
 :root.dark,
 .dark {
-  --qh-page-bg: #0d1014;
-  --qh-page-bg-soft: #131820;
-  --qh-page-text: #f1f5f9;
-  --qh-page-muted: #9ba9b7;
-  --qh-surface: #151b22;
-  --qh-surface-raised: #1c2630;
-  --qh-surface-muted: #26333f;
-  --qh-on-surface: #f5f8fb;
-  --qh-on-surface-muted: #aebdca;
+  --qh-page-bg: #080a0d;
+  --qh-page-bg-soft: #0d1117;
+  --qh-page-text: #f4f7fb;
+  --qh-page-muted: #98a3b3;
+  --qh-surface: #11161d;
+  --qh-surface-raised: #151c25;
+  --qh-surface-muted: #1d2631;
+  --qh-on-surface: #f4f7fb;
+  --qh-on-surface-muted: #a6b0bf;
   --qh-sidebar-bg: #0b0e12;
-  --qh-sidebar-raised: #17212b;
-  --qh-sidebar-text: #afbdc9;
-  --qh-sidebar-active: rgba(71, 145, 255, .2);
-  --qh-border: #27323d;
-  --qh-border-on-surface: rgba(229, 241, 247, .14);
-  --qh-input-bg: #11181f;
-  --qh-accent: #69a7ff;
-  --qh-accent-strong: #8bbaff;
-  --qh-accent-soft: rgba(105, 167, 255, .16);
-  --qh-quantum: #b2a6ff;
-  --qh-success: #71d3a7;
-  --qh-warning: #f0c276;
-  --qh-danger: #f09b9b;
-  --qh-shadow-card: 0 14px 36px rgba(0, 0, 0, .22);
-  --qh-shadow-panel: 0 26px 72px rgba(0, 0, 0, .42);
+  --qh-sidebar-raised: #121923;
+  --qh-sidebar-text: #9aa7b7;
+  --qh-sidebar-active: rgba(138, 131, 255, .18);
+  --qh-border: #202b38;
+  --qh-border-on-surface: rgba(202, 213, 225, .14);
+  --qh-input-bg: #0e141b;
+  --qh-accent: #8a83ff;
+  --qh-accent-strong: #a29dff;
+  --qh-accent-soft: rgba(138, 131, 255, .16);
+  --qh-quantum: #a996ff;
+  --qh-success: #53d48f;
+  --qh-warning: #f0bc6e;
+  --qh-danger: #ff8f8f;
+  --qh-shadow-card: 0 10px 30px rgba(0, 0, 0, .22);
+  --qh-shadow-panel: 0 24px 70px rgba(0, 0, 0, .42);
 
-  --background: 214 26% 7%;
-  --foreground: 210 24% 96%;
-  --card: 213 23% 11%;
-  --card-foreground: 210 24% 96%;
-  --primary: 215 100% 71%;
-  --primary-foreground: 214 26% 7%;
-  --secondary: 214 19% 17%;
-  --secondary-foreground: 210 24% 95%;
-  --muted: 214 20% 16%;
-  --muted-foreground: 214 14% 69%;
-  --accent: 177 57% 51%;
-  --accent-foreground: 214 26% 7%;
-  --border: 214 19% 22%;
-  --input: 214 17% 25%;
-  --ring: 215 100% 71%;
+  --background: 216 29% 5%;
+  --foreground: 216 27% 96%;
+  --card: 215 24% 9%;
+  --card-foreground: 216 27% 96%;
+  --primary: 243 100% 76%;
+  --primary-foreground: 216 29% 5%;
+  --secondary: 215 23% 14%;
+  --secondary-foreground: 216 24% 95%;
+  --muted: 215 22% 13%;
+  --muted-foreground: 216 14% 69%;
+  --accent: 188 80% 54%;
+  --accent-foreground: 216 29% 5%;
+  --border: 215 25% 18%;
+  --input: 215 24% 16%;
+  --ring: 243 100% 76%;
 }
 
 html,
@@ -126,7 +127,7 @@ body {
 .research-sidebar {
   background: var(--qh-sidebar-bg) !important;
   border-color: var(--qh-border-on-surface) !important;
-  box-shadow: 10px 0 34px rgba(42, 24, 16, .14);
+  box-shadow: 10px 0 34px rgba(31, 39, 66, .08);
 }
 
 .sidebar-brand,
@@ -380,7 +381,7 @@ body {
 
 .command-overlay,
 .config-overlay {
-  background: rgba(16, 11, 8, .54) !important;
+  background: rgba(9, 12, 20, .42) !important;
 }
 
 .command-dialog,
@@ -474,5 +475,330 @@ body {
   .glass-card,
   .metric-card {
     transition: none !important;
+  }
+}
+
+/* Final product pass: shared surfaces, responsive shell, and accessible states. */
+:root {
+  color-scheme: light;
+  --qh-focus-ring: 0 0 0 3px color-mix(in srgb, var(--qh-accent) 22%, transparent);
+  --qh-transition-color: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+
+:root.dark,
+.dark {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  overflow-x: hidden;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--qh-font-family);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--qh-focus-ring);
+}
+
+.research-shell,
+.research-sidebar,
+.research-workspace,
+.research-topbar,
+.research-context-bar,
+.glass-card,
+.inspector-card,
+.table-wrap,
+.input,
+.select,
+.textarea,
+.btn,
+.icon-button,
+.command-trigger,
+.context-chip,
+.research-footer {
+  transition: var(--qh-transition-color);
+}
+
+.research-sidebar {
+  box-shadow: 8px 0 28px rgba(25, 35, 58, .06);
+}
+
+.dark .research-sidebar,
+:root.dark .research-sidebar {
+  box-shadow: 8px 0 28px rgba(0, 0, 0, .22);
+}
+
+.research-body {
+  transition: grid-template-columns 260ms cubic-bezier(.2, .7, .2, 1);
+}
+
+.research-body.inspector-closed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.page-hero {
+  padding-top: clamp(24px, 3vw, 36px) !important;
+  padding-bottom: clamp(20px, 2.4vw, 28px) !important;
+}
+
+.page-hero .headline,
+.page-hero h1 {
+  max-width: 18ch;
+  font-size: clamp(1.8rem, 3vw, 2.65rem) !important;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.page-hero .subhead {
+  max-width: 68ch;
+  margin-top: 10px;
+  line-height: 1.55;
+}
+
+.eyebrow,
+.metric-label,
+.sidebar-label,
+.context-kicker,
+.topbar-kicker {
+  letter-spacing: .12em;
+}
+
+.glass-card,
+.inspector-card,
+.table-wrap,
+.demo-hero,
+.demo-spotlight,
+.pipeline-stage a,
+.metric-card {
+  border-radius: var(--qh-radius-card);
+}
+
+.glass-card:hover,
+.metric-card:hover,
+.pipeline-stage a:hover {
+  transform: translateY(-1px);
+}
+
+.btn,
+.input,
+.select,
+.textarea,
+.command-trigger,
+.icon-button {
+  min-height: 36px;
+  border-radius: var(--qh-radius-control);
+}
+
+.input,
+.select,
+.textarea,
+.research-search input,
+.command-search input {
+  background: var(--qh-input-bg) !important;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus,
+.research-search input:focus,
+.command-search input:focus {
+  border-color: var(--qh-accent) !important;
+  box-shadow: var(--qh-focus-ring);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--qh-accent), var(--qh-quantum)) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--qh-accent) 20%, transparent);
+}
+
+.btn-primary:hover {
+  filter: saturate(1.08) brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: var(--qh-surface) !important;
+}
+
+.research-search input {
+  border-color: var(--qh-border) !important;
+  color: var(--qh-page-text) !important;
+}
+
+.research-search input::placeholder {
+  color: var(--qh-page-muted) !important;
+}
+
+.research-search .search-kbd {
+  border-color: var(--qh-border) !important;
+  color: var(--qh-page-muted) !important;
+  background: var(--qh-surface-muted);
+}
+
+.command-overlay,
+.config-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(9, 12, 20, .42) !important;
+  backdrop-filter: blur(8px);
+}
+
+.config-drawer {
+  z-index: 95;
+  background: var(--qh-surface) !important;
+  border-left-color: var(--qh-border) !important;
+}
+
+.config-drawer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--qh-border-on-surface);
+}
+
+.config-drawer-actions .btn {
+  flex: 1;
+}
+
+.table-wrap {
+  background: var(--qh-surface) !important;
+  box-shadow: var(--qh-shadow-card);
+}
+
+.table-wrap th {
+  background: var(--qh-surface-muted) !important;
+  color: var(--qh-page-muted) !important;
+}
+
+.table-wrap tr:hover td {
+  background: var(--qh-accent-soft) !important;
+}
+
+.research-shell .sidebar-bottom {
+  background: color-mix(in srgb, var(--qh-sidebar-bg) 96%, var(--qh-sidebar-raised));
+}
+
+.research-shell .sidebar-link:hover {
+  background: var(--qh-accent-soft) !important;
+}
+
+.research-shell .sidebar-link.active {
+  background: var(--qh-sidebar-active) !important;
+  border-color: color-mix(in srgb, var(--qh-accent) 30%, transparent) !important;
+}
+
+@media (max-width: 1080px) {
+  .research-body,
+  .research-body.inspector-closed {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Override the inset variant's desktop margin with equal specificity. */
+  .research-shell .research-sidebar.variant-floating,
+  .research-shell .research-sidebar.variant-inset,
+  .research-shell .research-sidebar.variant-sidebar {
+    margin: 0;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .research-shell:not(.is-collapsed) .research-sidebar:not(.is-mobile-open) {
+    transform: translateX(-110%);
+  }
+
+  .research-shell:not(.is-collapsed) .research-workspace,
+  .research-shell.is-collapsed .research-workspace {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .research-topbar {
+    gap: 10px;
+  }
+
+  .topbar-left {
+    min-width: 0;
+  }
+
+  .topbar-left > div {
+    min-width: 0;
+  }
+
+  .topbar-kicker {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-left h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .research-context-bar {
+    min-height: 42px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .page-hero .headline,
+  .page-hero h1 {
+    font-size: clamp(1.7rem, 8vw, 2.25rem) !important;
+  }
+
+  .glass-card {
+    padding: 16px !important;
+  }
+
+  .config-drawer {
+    width: min(100vw, 390px);
+  }
+}
+
+@media (max-width: 420px) {
+  .research-topbar {
+    padding-inline: 12px !important;
+  }
+
+  .research-context-bar,
+  .research-body {
+    padding-inline: 12px !important;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .icon-button,
+  .command-trigger {
+    width: 34px;
+    min-width: 34px;
   }
 }
