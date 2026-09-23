@@ -64,14 +64,14 @@ export function PipelineStage({endpoint,title,eyebrow,description}:{endpoint:str
  const numeric=dataset?.provenance.numeric_features||[];
  const selected=draft.features||sourceFeatures;
  const addRatio=()=>pipeline({ratios:[...draft.pipeline.ratios,{name:'ratio_'+(draft.pipeline.ratios.length+1),numerator:'',denominator:''}]});
- return <div>
-  <PageHeader eyebrow={eyebrow} title={title} description={description} actions={<Button disabled={!draft.dataset_id||m.isPending} onClick={()=>m.mutate()}><Play size={14}/>{m.isPending?'Calculating…':'Request backend preview'}</Button>}/>
+ return <ClickSpark><div>
+  <PageHeader eyebrow={eyebrow} title={title} description={description} actions={<Magnet strength={3}><Button disabled={!draft.dataset_id||m.isPending} onClick={()=>m.mutate()}><Play size={14}/>{m.isPending?'Calculating…':'Request backend preview'}</Button></Magnet>}/>
   <StageNav current={stage==='preprocessing'?'/preprocessing':stage==='features'?'/features':'/pca'}/>
   {datasetQuery.isLoading?<div className="mt-5"><Loading/></div>:!dataset?<div className="mt-5"><EmptyState title="Select a dataset">Choose an input in Data Lab first.</EmptyState></div>:<div className="mt-5">
-   <Card title="Research input" description="The selected dataset and feature representation remain shared across the downstream Q‑Health workflow.">
+   <Reveal><SpotlightCard><Card title="Research input" description="The selected dataset and feature representation remain shared across the downstream Q‑Health workflow.">
     <div className="grid gap-4 md:grid-cols-3"><MetricCard label="SAMPLES" value={dataset.provenance.row_count.toLocaleString()} detail="Registered rows"/><MetricCard label="FEATURES" value={dataset.provenance.feature_count} detail="Source dimensions"/><MetricCard label="TARGET" value={dataset.provenance.target} detail={'Positive: '+dataset.provenance.positive_label}/></div>
     {stage!=='pca'&&<label className="field mt-5"><span>Selected input features</span><select multiple size={8} className="select min-h-[180px]" value={selected} onChange={e=>update({features:Array.from(e.target.selectedOptions,o=>o.value)})}>{sourceFeatures.map(f=><option key={f} value={f}>{f}</option>)}</select><small>Target column is excluded by the backend. Review Data Quality before narrowing this list.</small></label>}
-   </Card>
+   </Card></SpotlightCard></Reveal>
    {stage==='preprocessing'&&<div className="two-grid mt-5">
     <Card title="Core transformations" description="These settings map directly to the backend PipelineConfig contract."><div className="grid gap-4 md:grid-cols-2">
      <label className="field"><span>Imputation</span><Select value={draft.pipeline.imputer} onChange={e=>pipeline({imputer:e.target.value as any})}><option value="median">Median</option><option value="mean">Mean</option><option value="most_frequent">Most frequent</option></Select></label>
