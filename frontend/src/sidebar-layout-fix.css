@@ -1,0 +1,16 @@
+/* Sidebar edge-to-edge fix: preserve the current UI while removing the inset gutter. */
+.research-shell .research-sidebar.variant-inset {
+  margin: 0 !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
