@@ -895,3 +895,12 @@ html:not(.dark) .research-sidebar .collapse-button {
   background: var(--qh-progress-fill);
   transition: width 180ms ease;
 }
+
+/* Desktop geometry only: keep the approved inset sidebar flush to the viewport. */
+@media (min-width: 901px) {
+  .research-shell .research-sidebar.variant-inset {
+    margin: 0;
+    height: 100vh;
+    border-radius: 0;
+  }
+}
