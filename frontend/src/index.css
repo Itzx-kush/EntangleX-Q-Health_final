@@ -185,3 +185,44 @@
 
 .demo-spotlight{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px;border:1px solid hsl(var(--primary)/.3);border-radius:13px;background:linear-gradient(120deg,hsl(var(--primary)/.09),hsl(var(--card)/.8))}.demo-spotlight h2{margin-top:4px;font-size:20px;letter-spacing:-.03em}.demo-spotlight p{margin-top:6px;color:hsl(var(--muted-foreground));font-size:11px;line-height:1.5}.demo-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:15px 0;padding-bottom:14px;border-bottom:1px solid hsl(var(--border))}.demo-step-count{color:hsl(var(--muted-foreground));font:700 10px ui-monospace,monospace}.demo-step.is-selected .demo-step-marker{background:hsl(var(--primary)/.18);border-color:hsl(var(--primary));box-shadow:0 0 0 4px hsl(var(--primary)/.08)}.demo-step-marker{cursor:pointer}.demo-step-copy .badge{white-space:nowrap}
 @media(max-width:620px){.demo-spotlight{display:grid}.demo-controls{flex-wrap:wrap}.demo-step-copy>div{align-items:flex-start;flex-direction:column}.demo-step-copy .flex.items-center{align-items:flex-start}}
+
+
+/* shadcn-admin inspired workspace configuration layer */
+.config-drawer{position:fixed;inset:0 0 0 auto;z-index:95;width:min(390px,calc(100vw - 22px));display:flex;flex-direction:column;border-left:1px solid hsl(var(--border));background:hsl(var(--card)/.98);box-shadow:-30px 0 90px rgba(8,15,30,.18);backdrop-filter:blur(18px)}
+.config-drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px;border-bottom:1px solid hsl(var(--border))}
+.config-drawer-head h2{margin-top:4px;font-size:18px;letter-spacing:-.03em}
+.config-drawer-body{flex:1;overflow:auto;padding:18px 20px}
+.config-section{padding:16px 0;border-bottom:1px solid hsl(var(--border)/.72)}
+.config-section:first-child{padding-top:0}
+.config-section:last-child{border-bottom:0}
+.config-section-title{margin-bottom:9px;color:hsl(var(--muted-foreground));font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.config-choice-grid{display:grid;gap:7px}
+.config-choice-grid.two{grid-template-columns:1fr 1fr}
+.config-choice{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:9px 11px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--background));color:hsl(var(--muted-foreground));font-size:11px;text-align:left;cursor:pointer;transition:.18s ease}
+.config-choice:hover{border-color:hsl(var(--primary)/.42);color:hsl(var(--foreground));background:hsl(var(--primary)/.045)}
+.config-choice.is-selected{border-color:hsl(var(--primary)/.5);background:hsl(var(--primary)/.09);color:hsl(var(--foreground));box-shadow:inset 0 0 0 1px hsl(var(--primary)/.18)}
+.config-drawer-footer{padding:16px 20px;border-top:1px solid hsl(var(--border))}
+.research-shell .research-sidebar.variant-floating{margin:12px;border:1px solid hsl(var(--border));border-radius:18px;height:calc(100vh - 24px);box-shadow:0 18px 50px rgba(15,23,42,.07)}
+.research-shell .research-sidebar.variant-inset{margin:10px 0 10px 10px;height:calc(100vh - 20px);border-radius:16px 0 0 16px}
+.research-shell .research-sidebar.variant-sidebar{margin:0;height:100vh;border-radius:0}
+.research-shell[data-layout="offcanvas"]{}
+[data-layout="offcanvas"] .research-sidebar{transform:translateX(-110%)}
+[data-layout="offcanvas"] .research-workspace{margin-left:0!important}
+[data-layout="offcanvas"] .research-sidebar.is-mobile-open{transform:translateX(0)}
+[data-layout="icon"] .research-sidebar{width:76px}
+[data-layout="icon"] .research-workspace{margin-left:76px}
+[data-layout="icon"] .research-sidebar .brand-copy,
+[data-layout="icon"] .research-sidebar .sidebar-context,
+[data-layout="icon"] .research-sidebar .sidebar-label,
+[data-layout="icon"] .research-sidebar .sidebar-link span,
+[data-layout="icon"] .research-sidebar .sidebar-link kbd,
+[data-layout="icon"] .research-sidebar .collapse-button span{display:none}
+[data-layout="icon"] .research-sidebar .sidebar-link{justify-content:center;padding-inline:0}
+[data-layout="icon"] .research-sidebar .sidebar-brand{justify-content:center}
+[data-layout="icon"] .research-sidebar .sidebar-nav{padding-inline:10px}
+@media(max-width:900px){
+  .config-drawer{width:min(360px,calc(100vw - 14px))}
+  .research-sidebar.variant-floating,.research-sidebar.variant-inset,.research-sidebar.variant-sidebar{margin:0;height:100vh;border-radius:0}
+  [data-layout="icon"] .research-workspace{margin-left:0}
+}
+@media(max-width:520px){.config-choice-grid.two{grid-template-columns:1fr}.config-drawer{width:100vw}}
