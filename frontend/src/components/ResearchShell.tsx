@@ -1,27 +1,133 @@
-import {useEffect,useState,type ReactNode} from 'react';
-import {Link,NavLink,useLocation} from 'react-router-dom';
-import {Atom,ChevronDown,Menu,Moon,Search,Settings2,Sun,Wifi} from 'lucide-react';
+import {useEffect,useMemo,useState,type ReactNode} from 'react';
+import {NavLink,useLocation,useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {SearchBar} from './SearchBar';
+import {
+  Activity,Atom,BarChart3,Brain,ChevronLeft,ChevronRight,Command,Database,
+  FlaskConical,LayoutDashboard,Menu,PanelRight,PlayCircle,Search,Settings2,
+  ShieldCheck,SlidersHorizontal,X,Zap
+} from 'lucide-react';
 import {qh,setSessionToken} from '../lib/api';
+import {Badge,Button} from './ui';
+import {SearchBar} from './SearchBar';
+import {StatusBadge} from './Shared';
 import {AmbientBackground} from './reactbits';
+import type {Health,Job,SystemStatus} from '../types/qhealth';
 
-type NavItem =
-  | {label:string;path:string;children?:never}
-  | {label:string;children:readonly (readonly [string,string])[];path?:never};
+type NavEntry={label:string;path:string;icon:typeof Activity};
+type NavGroup={label:string;items:NavEntry[]};
+type SummaryData={counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number}};
 
-const nav:readonly NavItem[]=[
-  {label:'Overview',path:'/'},
-  {label:'Data Lab',children:[['Datasets','/datasets'],['Data quality','/quality'],['Preprocessing','/preprocessing'],['Feature selection','/features'],['PCA','/pca']]},
-  {label:'Model Lab',children:[['Training','/training'],['Comparison','/comparison'],['Explainability','/explainability'],['Prediction','/prediction']]},
-  {label:'Quantum',path:'/quantum'},
-  {label:'Experiments',path:'/experiments'},
+const navGroups:NavGroup[]=[
+  {label:'Research',items:[
+    {label:'Overview',path:'/',icon:LayoutDashboard},
+    {label:'Datasets',path:'/datasets',icon:Database},
+    {label:'Data quality',path:'/quality',icon:ShieldCheck},
+    {label:'Preprocessing',path:'/preprocessing',icon:SlidersHorizontal},
+    {label:'Feature selection',path:'/features',icon:BarChart3},
+    {label:'PCA / dimensions',path:'/pca',icon:BarChart3},
+  ]},
+  {label:'Modeling',items:[
+    {label:'Training',path:'/training',icon:PlayCircle},
+    {label:'Comparison',path:'/comparison',icon:BarChart3},
+    {label:'Quantum Lab',path:'/quantum',icon:Atom},
+  ]},
+  {label:'Interpretation',items:[
+    {label:'Explainability',path:'/explainability',icon:Brain},
+    {label:'Research prediction',path:'/prediction',icon:Zap},
+  ]},
+  {label:'Experiments',items:[
+    {label:'Experiment registry',path:'/experiments',icon:FlaskConical},
+  ]},
 ];
 
+const pageNames:Record<string,string>=Object.fromEntries(
+  navGroups.flatMap(group=>group.items.map(item=>[item.path,item.label]))
+);
+
+function readSettings(){
+  const storedTheme=localStorage.getItem('qhealth-theme')||localStorage.getItem('qhealth-tictac-theme');
+  return {
+    theme:(storedTheme==='dark'?'dark':'research') as 'dark'|'research',
+    density:(localStorage.getItem('qhealth-density')||'comfortable') as 'comfortable'|'compact',
+    motion:(localStorage.getItem('qhealth-motion')||'full') as 'full'|'reduced',
+  };
+}
+
+function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken:(v:string)=>void;onApply:()=>void;onClose:()=>void}){
+  return <div className="shell-popover settings-panel" role="dialog" aria-label="Connection settings">
+    <div className="flex items-start justify-between gap-3"><div><p className="eyebrow">Connection</p><h2 className="section-title mt-1">Session settings</h2></div><button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close settings"><X size={15}/></button></div>
+    <label className="field mt-4"><span>Optional local API token</span><input className="input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Bearer token"/><small>Kept in memory only. Never stored in local storage.</small></label>
+    <Button className="mt-3 w-full" onClick={onApply}>Apply connection token</Button>
+    <NavLink className="btn btn-outline mt-2 w-full" to="/settings" onClick={onClose}><Settings2 size={14}/>Open settings center</NavLink>
+  </div>;
+}
+
+function CommandPalette({onClose}:{onClose:()=>void}){
+  const navigate=useNavigate(); const [query,setQuery]=useState('');
+  const commands=[
+    ['Open Overview','/'],['Open Datasets','/datasets'],['Open Training','/training'],
+    ['Open Comparison','/comparison'],['Open Quantum Lab','/quantum'],
+    ['Open Explainability','/explainability'],['Open Research Prediction','/prediction'],
+    ['Open Experiments','/experiments'],['Launch SIH Demo','/demo'],['Open Settings','/settings'],
+  ] as const;
+  const filtered=commands.filter(([label])=>label.toLowerCase().includes(query.toLowerCase()));
+  return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
+    <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
+      <div className="command-search"><Search size={17}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands"/><kbd>ESC</kbd></div>
+      <div className="command-list">{filtered.map(([label,path])=><button key={path} onClick={()=>{navigate(path);onClose()}}><span className="command-icon"><Command size={14}/></span><span>{label}</span><ChevronRight size={14} className="ml-auto muted"/></button>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
+      <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
+    </div>
+  </div>;
+}
+
+function ContextInspector({summary,health,status,jobs,visible,onClose}:{summary:SummaryData|undefined;health:Health|undefined;status:SystemStatus|undefined;jobs:Job[]|undefined;visible:boolean;onClose:()=>void}){
+  if(!visible)return null;
+  const active=(jobs||[]).filter(job=>['queued','running','cancel_requested'].includes(job.status));
+  return <aside className="context-inspector" aria-label="Research context inspector">
+    <div className="inspector-head"><div><p className="eyebrow">Live context</p><h2>Workspace state</h2></div><button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close context inspector"><X size={15}/></button></div>
+    <div className="inspector-card"><div className="inspector-label"><Activity size={13}/> System status</div><div className="inspector-status"><span className={'status-dot '+(health?'is-live':'is-offline')}/><strong>{health?'Backend connected':'Backend unavailable'}</strong></div><p className="inspector-copy">{health?.mode||'Start the FastAPI service to load live research state.'}</p></div>
+    <div className="inspector-card"><div className="inspector-label"><Database size={13}/> Registry</div><dl className="inspector-facts"><div><dt>Datasets</dt><dd>{summary?.counts.datasets??'—'}</dd></div><div><dt>Experiments</dt><dd>{summary?.counts.experiments??'—'}</dd></div><div><dt>Ready models</dt><dd>{summary?.counts.ready_models??'—'}</dd></div><div><dt>Storage</dt><dd>{status?.storage_available?'Ready':'Not reported'}</dd></div></dl></div>
+    <div className="inspector-card"><div className="inspector-label"><Zap size={13}/> Quantum boundary</div><div className="inspector-status"><Badge tone={health?.quantum.available?'purple':'amber'}>{health?.quantum.available?'Available':'Not available'}</Badge></div><p className="inspector-copy">{health?.quantum.execution||'Capability is reported by the backend, not assumed by the UI.'}</p></div>
+    <div className="inspector-card"><div className="inspector-label"><PlayCircle size={13}/> Active jobs <span className="ml-auto">{active.length}</span></div>{active.length?<ul className="inspector-jobs">{active.slice(0,4).map(job=><li key={job.id}><StatusBadge value={job.status}/><span>{job.state}</span></li>)}</ul>:<p className="inspector-copy">No queued or running jobs.</p>}</div>
+    <p className="inspector-note"><ShieldCheck size={13}/> Metrics, status and quantum availability are shown only when returned by the live backend.</p>
+  </aside>;
+}
+
 export function ResearchShell({children}:{children:ReactNode}){
- const {pathname}=useLocation();const [mobile,setMobile]=useState(false);const [dark,setDark]=useState(()=>localStorage.getItem('qhealth-tictac-theme')==='dark');const [settings,setSettings]=useState(false);const [token,setToken]=useState('');const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
- useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('qhealth-tictac-theme',dark?'dark':'light')},[dark]);
- useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.querySelector<HTMLInputElement>('.research-search input')?.focus()}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
- const isGroup=(item:NavItem):item is Extract<NavItem,{children:readonly (readonly [string,string])[]}>=>'children' in item;
- return <div className="tictac-shell"><AmbientBackground/><header className="tictac-nav"><div className="tictac-container tictac-nav-inner"><Link to="/" className="tictac-brand"><span className="tictac-brand-mark"><Atom size={18}/></span><span><strong className="block text-sm tracking-[.12em]">Q-HEALTH</strong><small className="block text-[9px] muted tracking-[.14em]">CLINICAL ML RESEARCH</small></span></Link><nav className="tictac-nav-links">{nav.map(item=>isGroup(item)?<details className="relative" key={item.label}><summary className="list-none cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold muted hover:bg-muted hover:text-foreground"><span className="inline-flex items-center gap-1">{item.label}<ChevronDown size={13}/></span></summary><div className="absolute left-0 top-10 z-50 min-w-[220px] rounded-xl border bg-card p-1 shadow-2xl">{item.children.map(([label,path])=><NavLink key={path} to={path} className={({isActive})=>'block rounded-lg px-3 py-2 text-xs hover:bg-muted '+(isActive?'bg-muted font-semibold text-foreground':'muted')}>{label}</NavLink>)}</div></details>:<NavLink key={item.path} end={item.path==='/' } to={item.path} className={({isActive})=>isActive?'active':''}>{item.label}</NavLink>)}</nav><div className="tictac-spacer"/><SearchBar compact/><button className="btn btn-ghost px-2" aria-label="Toggle theme" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={15}/>:<Moon size={15}/>}</button><div className="relative"><button className="btn btn-outline px-2" aria-label="Settings" onClick={()=>setSettings(v=>!v)}><Settings2 size={15}/></button>{settings&&<div className="absolute right-0 top-11 z-50 w-[280px] rounded-xl border bg-card p-4 shadow-2xl"><label className="field"><span>Optional local API token</span><input className="input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Bearer token"/><small>Stored in memory only.</small></label><button className="btn btn-primary mt-3 w-full" onClick={()=>{setSessionToken(token);setSettings(false)}}>Apply token</button></div>}</div><span className="hidden items-center gap-1 text-[10px] muted md:flex"><Wifi size={13}/><span className={health.isError?'text-red-600':health.data?'text-emerald-600':'text-amber-600'}>{health.isError?'Offline':health.data?'Connected':'Checking'}</span></span><button className="btn btn-ghost px-2 md:hidden" onClick={()=>setMobile(v=>!v)} aria-label="Open navigation"><Menu size={18}/></button></div>{mobile&&<div className="border-t bg-card md:hidden"><div className="tictac-container grid gap-1 py-2">{nav.flatMap(item=>isGroup(item)?[{label:item.label,path:'#'},...item.children.map(([label,path])=>({label,path}))]:[{label:item.label,path:item.path}]).map(item=><Link key={item.label+item.path} onClick={()=>setMobile(false)} to={item.path} className="rounded-lg px-3 py-2 text-sm hover:bg-muted">{item.label}</Link>)}</div></div>}</header><main className="tictac-container tictac-main">{children}</main><footer className="border-t py-8"><div className="tictac-container flex flex-col gap-2 text-xs muted md:flex-row md:items-center md:justify-between"><span>EntangleX Q-Health · Research prototype</span><span>Biomedical ML ≠ clinical validation · No quantum advantage is presumed</span></div></footer></div>
+  const {pathname}=useLocation(); const navigate=useNavigate();
+  const [collapsed,setCollapsed]=useState(()=>localStorage.getItem('qhealth-sidebar')==='collapsed');
+  const [mobile,setMobile]=useState(false); const [palette,setPalette]=useState(false); const [settings,setSettings]=useState(false);
+  const [showInspector,setShowInspector]=useState(()=>localStorage.getItem('qhealth-inspector')!=='hidden');
+  const [token,setToken]=useState(''); const [uiSettings,setUiSettings]=useState(readSettings);
+  const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:10000});
+  const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
+  const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:10000});
+  const status=useQuery({queryKey:['system-status'],queryFn:qh.systemStatus,refetchInterval:15000});
+  const title=pageNames[pathname]|| (pathname.startsWith('/experiments/')?'Experiment detail':'Research workspace');
+  const isActiveGroup=useMemo(()=>navGroups.find(group=>group.items.some(item=>item.path===pathname))?.label,[pathname]);
+
+  useEffect(()=>{document.documentElement.classList.toggle('dark',uiSettings.theme==='dark');document.documentElement.dataset.density=uiSettings.density;document.documentElement.dataset.motion=uiSettings.motion;localStorage.setItem('qhealth-theme',uiSettings.theme);localStorage.setItem('qhealth-density',uiSettings.density);localStorage.setItem('qhealth-motion',uiSettings.motion)},[uiSettings]);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
+  useEffect(()=>{const handler=()=>setUiSettings(readSettings());window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
+  useEffect(()=>{setMobile(false);setSettings(false)},[pathname]);
+  const toggleSidebar=()=>{setCollapsed(v=>{const next=!v;localStorage.setItem('qhealth-sidebar',next?'collapsed':'expanded');return next})};
+  const toggleInspector=()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next});
+
+  return <div className={'research-shell '+(collapsed?'is-collapsed':'')}>
+    <AmbientBackground/>
+    <aside className={'research-sidebar '+(mobile?'is-mobile-open':'')} aria-label="Primary navigation">
+      <div className="sidebar-brand"><NavLink to="/" className="brand-mark" aria-label="Q-Health overview"><Atom size={18}/></NavLink><div className="brand-copy"><strong>ENTANGLEX</strong><span>Q-HEALTH</span></div><button className="sidebar-close btn btn-ghost" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={16}/></button></div>
+      <div className="sidebar-context"><span className="context-kicker">Research workspace</span><strong>SIH 2026 · PS 26139</strong><span>Hybrid biomedical ML</span></div>
+      <nav className="sidebar-nav">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} className={({isActive})=>'sidebar-link '+(isActive?'active':'')} title={collapsed?label:undefined}><Icon size={16}/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse"/>}</NavLink>)}</div>)}<div className="sidebar-group sidebar-special"><p className="sidebar-label">Presentation</p><NavLink to="/demo" className={({isActive})=>'sidebar-link demo-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span></NavLink></div></nav>
+      <div className="sidebar-bottom"><button className="sidebar-link" onClick={()=>setPalette(true)}><Command size={16}/><span>Command palette</span><kbd>⌘K</kbd></button><NavLink to="/settings" className="sidebar-link"><Settings2 size={16}/><span>Settings</span></NavLink><button className="collapse-button" onClick={toggleSidebar} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'}>{collapsed?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
+    </aside>
+    {mobile&&<button className="navigation-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
+    <div className="research-workspace">
+      <header className="research-topbar"><div className="topbar-left"><button className="mobile-menu btn btn-ghost" onClick={()=>setMobile(true)} aria-label="Open navigation"><Menu size={18}/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> EntangleX workspace</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15}/><span>Search commands</span><kbd>⌘K</kbd></button><span className={'connection-indicator '+(health.data?'is-live':'') }><span className="status-dot"/><span>{health.data?'Connected':'Offline'}</span></span><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16}/></button><button className="icon-button" onClick={()=>setSettings(v=>!v)} aria-label="Open connection settings"><Settings2 size={16}/></button>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
+      <div className="research-context-bar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={13}/><strong>{title}</strong></div><div className="context-actions"><span className="context-chip"><span className="status-dot is-live"/> Research prototype</span><NavLink className="context-demo-link" to="/demo"><PlayCircle size={13}/> Presentation mode</NavLink></div></div>
+      <div className="research-body"><main className="research-main">{children}<div className="bottom-status"><span><span className={'status-dot '+(health.data?'is-live':'is-offline')}/>{health.data?'Backend connected':'Backend unavailable'}</span><span>Quantum: {health.data?.quantum.available?'available':'not reported'}</span><span>Jobs: {status.data?.jobs.active??summary.data?.counts.active_jobs??'—'} active</span><span className="ml-auto">Research prototype · no clinical diagnosis</span></div></main><ContextInspector summary={summary.data} health={health.data} status={status.data} jobs={jobs.data} visible={showInspector} onClose={()=>setShowInspector(false)}/></div>
+      <footer className="research-footer"><span>EntangleX Q-Health · Hybrid quantum–classical research platform</span><span>Measured outputs only · <NavLink to="/settings">Settings</NavLink></span></footer>
+    </div>
+    {palette&&<CommandPalette onClose={()=>setPalette(false)}/>}
+  </div>;
 }

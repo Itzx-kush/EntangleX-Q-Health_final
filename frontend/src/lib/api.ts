@@ -1,4 +1,4 @@
-import type {Comparison,Circuit,Dataset,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,TrainingConfig} from '../types/qhealth';
+import type {Comparison,Circuit,Dataset,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,SystemStatus,TrainingConfig} from '../types/qhealth';
 
 const base=(import.meta.env.VITE_API_BASE as string|undefined)||'/api';
 let token='';
@@ -25,6 +25,7 @@ export const api={
 
 export const qh={
   health:()=>api.get<Health>('/health'),
+  systemStatus:()=>api.get<SystemStatus>('/system/status'),
   summary:()=>api.get<{counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number};recent_experiments:Experiment[];disclaimer:string}>('/summary'),
   datasets:()=>api.get<Dataset[]>('/datasets'),
   dataset:(id:string)=>api.get<Dataset>(`/datasets/${id}`),

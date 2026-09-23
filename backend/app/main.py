@@ -105,4 +105,30 @@ def summary():
         experiments_recent = [ExperimentOut.model_validate(e).model_dump(mode="json") for e in recent(session, Experiment, 5)]
     return {"counts": counts, "recent_experiments": experiments_recent, "disclaimer": DISCLAIMER}
 
+@api.get("/system/status", tags=["dashboard"])
+def system_status():
+    """Expose safe, read-only runtime facts for the research workspace shell."""
+    with session_scope() as session:
+        jobs = list(session.scalars(select(Job)))
+        database_available = True
+    root = settings.root
+    storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
+    return {
+        "status": "ok",
+        "version": "0.1.0",
+        "mode": "single-workstation research prototype",
+        "database_available": database_available,
+        "storage_available": storage_available,
+        "quantum": availability(),
+        "supported_models": {
+            "classical": ["logistic_regression", "svm", "random_forest"],
+            "quantum": ["vqc", "qsvc", "qnn"],
+        },
+        "jobs": {
+            "queued": sum(job.status == "queued" for job in jobs),
+            "running": sum(job.status == "running" for job in jobs),
+            "active": sum(job.status in {"queued", "running", "cancel_requested"} for job in jobs),
+        },
+    }
+
 app.include_router(api)

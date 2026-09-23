@@ -3,6 +3,7 @@ import {ResearchShell} from './components/ResearchShell';
 import {Overview,Datasets,Quality,PipelineStage} from './pages/ResearchPagesCore';
 import {Training,Comparison,Quantum,Explainability,PredictionPage} from './pages/ResearchPagesModels';
 import {Experiments,ExperimentDetail} from './pages/ResearchPagesStudio';
+import {DemoCenter,SettingsPage} from './pages/ResearchPagesSystem';
 
 export default function App(){
   return <ResearchShell>
@@ -20,6 +21,8 @@ export default function App(){
       <Route path="/prediction" element={<PredictionPage/>}/>
       <Route path="/experiments" element={<Experiments/>}/>
       <Route path="/experiments/:id" element={<ExperimentDetail/>}/>
+      <Route path="/demo" element={<DemoCenter/>}/>
+      <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes>
   </ResearchShell>;
