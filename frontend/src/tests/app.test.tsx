@@ -35,11 +35,12 @@ beforeEach(()=>{
 
 describe('research shell navigation and commands',()=>{
   it('marks the active route and redirects unknown routes to overview',async()=>{
-    renderWithProviders(<ResearchShell><div>Shell content</div></ResearchShell>,['/datasets']);
-    expect(screen.getByRole('link',{name:/Datasets/i})).toHaveClass('active');
+    const activeRoute=renderWithProviders(<ResearchShell><div>Shell content</div></ResearchShell>,['/datasets']);
+    expect(activeRoute.getByRole('link',{name:/Datasets/i})).toHaveClass('active');
+    activeRoute.unmount();
 
-    renderWithProviders(<App/>,['/not-a-real-route']);
-    await waitFor(()=>expect(screen.getByRole('heading',{name:/Overview/i})).toBeInTheDocument());
+    const fallbackRoute=renderWithProviders(<App/>,['/not-a-real-route']);
+    await waitFor(()=>expect(fallbackRoute.getByRole('heading',{name:/Overview/i})).toBeInTheDocument());
   });
 
   it('opens the command palette, searches, activates with Enter, and closes with Escape',async()=>{
