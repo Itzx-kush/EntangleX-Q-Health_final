@@ -63,18 +63,33 @@ function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken
 }
 
 function CommandPalette({onClose}:{onClose:()=>void}){
-  const navigate=useNavigate(); const [query,setQuery]=useState('');
+  const navigate=useNavigate(); const [query,setQuery]=useState(''); const [activeIndex,setActiveIndex]=useState(0);
+  const applyLocal=(key:string,value:string)=>{localStorage.setItem(key,value);window.dispatchEvent(new Event('qhealth-settings-changed'));onClose()};
   const commands=[
-    ['Open Overview','/'],['Open Datasets','/datasets'],['Open Training','/training'],
-    ['Open Comparison','/comparison'],['Open Quantum Lab','/quantum'],
-    ['Open Explainability','/explainability'],['Open Research Prediction','/prediction'],
-    ['Open Experiments','/experiments'],['Launch SIH Demo','/demo'],['Open Settings','/settings'],
-  ] as const;
-  const filtered=commands.filter(([label])=>label.toLowerCase().includes(query.toLowerCase()));
+    {label:'Open Overview',hint:'Navigation',run:()=>navigate('/')},
+    {label:'Open Datasets',hint:'Navigation',run:()=>navigate('/datasets')},
+    {label:'Open Training',hint:'Navigation',run:()=>navigate('/training')},
+    {label:'Open Comparison',hint:'Navigation',run:()=>navigate('/comparison')},
+    {label:'Open Quantum Lab',hint:'Navigation',run:()=>navigate('/quantum')},
+    {label:'Open Explainability',hint:'Navigation',run:()=>navigate('/explainability')},
+    {label:'Open Research Prediction',hint:'Navigation',run:()=>navigate('/prediction')},
+    {label:'Open Experiments',hint:'Navigation',run:()=>navigate('/experiments')},
+    {label:'Launch SIH Demo',hint:'Presentation',run:()=>navigate('/demo')},
+    {label:'Open Settings',hint:'Workspace',run:()=>navigate('/settings')},
+    {label:'Use research light theme',hint:'Appearance',run:()=>applyLocal('qhealth-theme','research')},
+    {label:'Use deep research theme',hint:'Appearance',run:()=>applyLocal('qhealth-theme','dark')},
+    {label:'Use compact density',hint:'Layout',run:()=>applyLocal('qhealth-density','compact')},
+    {label:'Use comfortable density',hint:'Layout',run:()=>applyLocal('qhealth-density','comfortable')},
+    {label:'Show context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','visible')},
+    {label:'Hide context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','hidden')},
+  ];
+  const filtered=commands.filter(command=>command.label.toLowerCase().includes(query.toLowerCase())||command.hint.toLowerCase().includes(query.toLowerCase()));
+  useEffect(()=>setActiveIndex(0),[query]);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if(e.key==='ArrowDown'){e.preventDefault();setActiveIndex(i=>Math.min(i+1,Math.max(filtered.length-1,0)))}else if(e.key==='ArrowUp'){e.preventDefault();setActiveIndex(i=>Math.max(i-1,0))}else if(e.key==='Enter'&&filtered[activeIndex]){e.preventDefault();filtered[activeIndex].run();onClose()} };window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[activeIndex,filtered,onClose]);
   return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
     <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
       <div className="command-search"><Search size={17}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands"/><kbd>ESC</kbd></div>
-      <div className="command-list">{filtered.map(([label,path])=><button key={path} onClick={()=>{navigate(path);onClose()}}><span className="command-icon"><Command size={14}/></span><span>{label}</span><ChevronRight size={14} className="ml-auto muted"/></button>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
+      <div className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><button key={command.label} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
       <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
     </div>
   </div>;
@@ -106,7 +121,7 @@ export function ResearchShell({children}:{children:ReactNode}){
   const title=pageNames[pathname]|| (pathname.startsWith('/experiments/')?'Experiment detail':'Research workspace');
   const isActiveGroup=useMemo(()=>navGroups.find(group=>group.items.some(item=>item.path===pathname))?.label,[pathname]);
 
-  useEffect(()=>{document.documentElement.classList.toggle('dark',uiSettings.theme==='dark');document.documentElement.dataset.density=uiSettings.density;document.documentElement.dataset.motion=uiSettings.motion;localStorage.setItem('qhealth-theme',uiSettings.theme);localStorage.setItem('qhealth-density',uiSettings.density);localStorage.setItem('qhealth-motion',uiSettings.motion)},[uiSettings]);
+  useEffect(()=>{document.documentElement.classList.toggle('dark',uiSettings.theme==='dark');document.documentElement.dataset.theme=uiSettings.theme;document.documentElement.dataset.density=uiSettings.density;document.documentElement.dataset.motion=uiSettings.motion;localStorage.setItem('qhealth-theme',uiSettings.theme);localStorage.setItem('qhealth-density',uiSettings.density);localStorage.setItem('qhealth-motion',uiSettings.motion)},[uiSettings]);
   useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
   useEffect(()=>{const handler=()=>setUiSettings(readSettings());window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
   useEffect(()=>{setMobile(false);setSettings(false)},[pathname]);

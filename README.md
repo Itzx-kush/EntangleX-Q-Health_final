@@ -6,15 +6,19 @@
 
 ## Source-generation status
 
-This repository contains generated application source, configuration, tests, and documentation. **The application, dependency installation, frontend/backend integration, Docker, automated tests, and quantum execution were not run or independently verified during generation.** Static source checks, when recorded in `docs/generation_status.json`, are not runtime tests. No model, benchmark result, performance screenshot, or fabricated prediction is bundled.
+This repository contains generated application source, configuration, tests, and documentation. The paragraph below is a **historical source-generation record**, not the current verification state. No model, benchmark result, performance screenshot, or fabricated prediction is bundled in the repository.
 
-## Current Task 1 verification status
+## Historical Task 1 verification status
 
 The source-generation statement above is historical. Post-generation Task 1 verification subsequently established the pinned Python/Node dependency baseline, backend startup and API workflows, frontend typecheck/tests/build/runtime checks, classical ML, bounded VQC/QSVC and circuit execution, model persistence/reload, security/storage hardening, and the final native regression. The bounded live API smoke also covered demo registration, provenance, training, prediction, reports, comparison, rerun, and referenced-dataset retention. Docker build/runtime could not be executed in the final closure environment because the Docker CLI/daemon was unavailable; see [Task 1 final verification](docs/task1_final_verification.md).
 
-## Current Task 2 verification status
+## Historical Task 2 verification status
 
 Task 2 adds genuine QNN support under the existing model, training, registry, persistence, API, comparison, report and frontend selector architecture. Logistic Regression, SVM, Random Forest, VQC and QSVC remain available. The focused QNN suite passed 12 tests; the complete backend regression with quantum tests enabled passed 79 tests; frontend typecheck, tests and production build passed; and a bounded live QNN API smoke passed. QNN uses local simulation and does not establish quantum advantage or clinical validation. See [Task 2 QNN verification](docs/task2_qnn_verification.md).
+
+## Current final SIH verification
+
+The latest completion-pass results are recorded in [SIH final verification](docs/SIH_FINAL_VERIFICATION.md). The current frontend adds an interactive research pipeline, measured feature/PCA preview surfaces, Quantum Lab explain/technical modes with backend-driven circuit rendering, Demo Center presentation controls, keyboard command actions, and route-level lazy loading. The current sandbox regression passed `66` backend tests and `3` frontend tests; optional quantum tests and visible browser QA were blocked by the environment as documented there. Use [the recording-ready video script](docs/SIH_DEMO_VIDEO_SCRIPT.md) for a live judge presentation.
 
 ## 1. Overview and problem statement
 
@@ -221,6 +225,6 @@ See [limitations](docs/limitations.md) for unsupported grouped/time-series valid
 
 ## 19. Documentation map and dataset attribution
 
-[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md) | [Task 2 QNN verification](docs/task2_qnn_verification.md)
+[Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md) | [Task 2 QNN verification](docs/task2_qnn_verification.md) | [SIH final verification](docs/SIH_FINAL_VERIFICATION.md) | [SIH demo video script](docs/SIH_DEMO_VIDEO_SCRIPT.md)
 
 The WDBC source is UCI Machine Learning Repository, DOI **10.24432/C5DW2B**, attributed to Wolberg, Mangasarian, Street and Street (1993), under **CC BY 4.0** as described by UCI. The actual application copy is reconstructed from the installed scikit-learn dataset and hashed at registration; the sklearn version and transformation are recorded. Original supplied specifications are retained under `docs/specifications/`.

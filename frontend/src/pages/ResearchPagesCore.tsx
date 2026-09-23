@@ -5,12 +5,12 @@ import {ArrowRight,Atom,BarChart3,Brain,Database,FlaskConical,GitCompareArrows,P
 import {MolecularBackground} from '../components/MolecularBackground';
 import {SearchBar} from '../components/SearchBar';
 import {Button,Card,Badge,Input,Select} from '../components/ui';
-import {ErrorBanner,EmptyState,Loading,MetricCard,Notice,PageHeader,StatusBadge,JsonDisclosure} from '../components/Shared';
-import {ClassBalance} from '../components/Charts';
+import {ErrorBanner,EmptyState,Loading,MetricCard,Notice,PageHeader,StatusBadge,JsonDisclosure,ResearchPipeline} from '../components/Shared';
+import {ClassBalance,ValueBars} from '../components/Charts';
 import {api,qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {shortId,dateTime} from '../utils/format';
-import type {Dataset} from '../types/qhealth';
+import type {Dataset,Preview} from '../types/qhealth';
 import {AnimatedSection,BlurText,BorderGlow,ClickSpark,GlareHover,GradientText,Magnet,QuantumVisual,Reveal,ShinyText,SpotlightPanel} from '../components/reactbits';
 
 export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
@@ -24,6 +24,7 @@ export function Overview(){
    <BorderGlow className="hero-visual"><div className="hero-visual-grid"/><MolecularBackground/><div className="hero-visual-content"><div className="text-center"><div className="stage-chip mx-auto mb-6"><ShinyText>RESEARCH PATHWAY</ShinyText></div><QuantumVisual/><div className="hero-orbit"><div className="hero-core grid place-items-center"><Atom size={30}/></div></div><div className="mt-5 grid grid-cols-2 gap-2 text-[10px] font-semibold"><span className="stage-chip">DATA</span><span className="stage-chip">CLASSICAL</span><span className="stage-chip">QUANTUM</span><span className="stage-chip">EVALUATION</span></div></div></div></BorderGlow>
   </section>
   <StageNav current="/"/>
+  <ResearchPipeline/>
   <div className="stat-grid my-6">
    <MetricCard label="DATASETS" value={summary.data?.counts.datasets ?? '—'} detail="Registered biomedical inputs" icon={<Database size={16}/>}/>
    <MetricCard label="EXPERIMENTS" value={summary.data?.counts.experiments ?? '—'} detail="Recorded research runs" icon={<FlaskConical size={16}/>}/>
@@ -55,7 +56,7 @@ export function Quality(){const {draft}=useDraft();const [checked,setChecked]=us
 
 export function PipelineStage({endpoint,title,eyebrow,description}:{endpoint:string;title:string;eyebrow:string;description:string}){
  const {draft,pipeline,update}=useDraft();
- const [preview,setPreview]=useState<any>();
+ const [preview,setPreview]=useState<Preview>();
  const m=useMutation({mutationFn:()=>qh.pipelinePreview(draft,endpoint),onSuccess:setPreview});
  const datasetQuery=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});
  const dataset=datasetQuery.data;
@@ -85,7 +86,7 @@ export function PipelineStage({endpoint,title,eyebrow,description}:{endpoint:str
    </div>}
    {stage==='features'&&<Card className="mt-5" title="Feature selection controls" description="Selection remains training-only and is evaluated by the backend."><div className="grid gap-4 md:grid-cols-3"><label className="field"><span>Selection method</span><Select value={draft.pipeline.selection} onChange={e=>pipeline({selection:e.target.value as any})}><option value="anova">ANOVA F score</option><option value="mutual_info">Mutual information</option><option value="variance">Variance threshold</option><option value="none">No selection</option></Select></label><label className="field"><span>Maximum retained features</span><Input type="number" min="1" max="400" value={draft.pipeline.k_features} onChange={e=>pipeline({k_features:Number(e.target.value)})}/></label><label className="field"><span>Variance threshold</span><Input type="number" step=".001" min="0" max="10" value={draft.pipeline.variance_threshold} onChange={e=>pipeline({variance_threshold:Number(e.target.value)})}/></label></div><Notice>Selection scores are benchmark diagnostics, not biological feature importance.</Notice></Card>}
    {stage==='pca'&&<Card className="mt-5" title="Dimensionality reduction" description="For quantum comparisons, the backend requires PCA components to match the configured qubit count and shared angle scaling to remain enabled."><div className="grid gap-4 md:grid-cols-3"><label className="field"><span>PCA components</span><Input type="number" min="1" max="100" value={draft.pipeline.pca_components??''} onChange={e=>pipeline({pca_components:e.target.value?Number(e.target.value):null})}/></label><label className="flex items-center gap-2 pt-6 text-xs"><input type="checkbox" checked={draft.pipeline.pca_whiten} onChange={e=>pipeline({pca_whiten:e.target.checked})}/>Whiten components</label><label className="flex items-center gap-2 pt-6 text-xs"><input type="checkbox" checked={draft.pipeline.angle_scaling} onChange={e=>pipeline({angle_scaling:e.target.checked})}/>Shared angle scaling</label></div></Card>}
-   {preview?<div className="two-grid mt-5"><Card title="Backend preview"><div className="grid grid-cols-2 gap-3"><MetricCard label="TRAIN" value={preview.train_count} detail="samples"/><MetricCard label="TEST" value={preview.test_count} detail="held-out samples"/></div><div className="mt-4 flex flex-wrap gap-1">{preview.stages.map((x:string)=><Badge tone="green" key={x}>{x}</Badge>)}</div><JsonDisclosure label="Selection scores, PCA loadings and split metadata" value={preview}/></Card><Card title="Warnings">{preview.warnings?.length?preview.warnings.map((w:string)=><Notice tone="amber" key={w}>{w}</Notice>):<Notice tone="green">No warning was returned.</Notice>}</Card></div>:<div className="mt-5"><EmptyState title="No backend preview yet">Request a real backend preview when the research stage configuration is ready.</EmptyState></div>}
+   {preview?<div className="two-grid mt-5"><Card title="Backend preview" description="This preview is returned by the configured backend pipeline; it is not a client-side estimate."><div className="grid grid-cols-2 gap-3"><MetricCard label="TRAIN" value={preview.train_count} detail="samples"/><MetricCard label="TEST" value={preview.test_count} detail="held-out samples"/></div><div className="mt-4 flex flex-wrap gap-1">{preview.stages.map((x:string)=><Badge tone="green" key={x}>{x}</Badge>)}</div>{stage==='features'&&preview.selection_scores?.length>0&&<div className="mt-5"><div className="metric-label mb-2">MEASURED SELECTION SCORES</div><ValueBars items={preview.selection_scores.slice().sort((a,b)=>(b.score??-Infinity)-(a.score??-Infinity)).slice(0,12).map(x=>({name:x.feature,value:Number(x.score??0)}))}/><div className="mt-2 flex flex-wrap gap-1">{preview.selection_scores.filter(x=>x.selected).map(x=><Badge tone="green" key={x.feature}>{x.feature}</Badge>)}</div></div>}{stage==='pca'&&<div className="mt-5"><div className="metric-label mb-2">EXPLAINED VARIANCE BY COMPONENT</div><ValueBars items={preview.pca_explained_variance.map((value,i)=>({name:`PC${i+1}`,value}))}/></div>}<JsonDisclosure label="Selection scores, PCA loadings and split metadata" value={preview}/></Card><Card title="Warnings">{preview.warnings?.length?preview.warnings.map((w:string)=><Notice tone="amber" key={w}>{w}</Notice>):<Notice tone="green">No warning was returned.</Notice>}<Notice>Preview output describes the configured research transform. It does not establish clinical validity.</Notice></Card></div>:<div className="mt-5"><EmptyState title="No backend preview yet">Request a real backend preview when the research stage configuration is ready.</EmptyState></div>}
   </div>}
  </div>;
 }
