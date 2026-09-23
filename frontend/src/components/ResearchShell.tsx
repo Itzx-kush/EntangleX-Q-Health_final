@@ -109,7 +109,7 @@ function ContextInspector({summary,health,status,jobs,visible,onClose}:{summary:
 }
 
 export function ResearchShell({children}:{children:ReactNode}){
-  const {pathname}=useLocation(); const navigate=useNavigate();
+  const {pathname}=useLocation();
   const [collapsed,setCollapsed]=useState(()=>localStorage.getItem('qhealth-sidebar')==='collapsed');
   const [mobile,setMobile]=useState(false); const [palette,setPalette]=useState(false); const [settings,setSettings]=useState(false);
   const [showInspector,setShowInspector]=useState(()=>localStorage.getItem('qhealth-inspector')!=='hidden');
