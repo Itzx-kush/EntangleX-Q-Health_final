@@ -11,7 +11,6 @@ import {Badge,Button} from './ui';
 import {SearchBar} from './SearchBar';
 import {StatusBadge} from './Shared';
 import {AmbientBackground} from './reactbits';
-import {useDialogFocus} from '../hooks/useDialogFocus';
 import type {Health,Job,SystemStatus} from '../types/qhealth';
 
 type NavEntry={label:string;path:string;icon:typeof Activity};
@@ -69,8 +68,7 @@ function readSettings():UiSettings{
 }
 
 function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken:(v:string)=>void;onApply:()=>void;onClose:()=>void}){
-  const dialogRef=useDialogFocus<HTMLDivElement>();
-  return <div ref={dialogRef} className="shell-popover settings-panel" role="dialog" aria-label="Connection settings">
+  return <div className="shell-popover settings-panel" role="dialog" aria-label="Connection settings">
     <div className="flex items-start justify-between gap-3"><div><p className="eyebrow">Connection</p><h2 className="section-title mt-1">Session settings</h2></div><button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close settings"><X size={15}/></button></div>
     <label className="field mt-4"><span>Optional local API token</span><input className="input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Bearer token"/><small>Kept in memory only. Never stored in local storage.</small></label>
     <Button className="mt-3 w-full" onClick={onApply}>Apply connection token</Button>
@@ -80,7 +78,6 @@ function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken
 
 function CommandPalette({onClose}:{onClose:()=>void}){
   const navigate=useNavigate(); const [query,setQuery]=useState(''); const [activeIndex,setActiveIndex]=useState(0);
-  const dialogRef=useDialogFocus<HTMLDivElement>();
   const applyLocal=(key:string,value:string)=>{localStorage.setItem(key,value);window.dispatchEvent(new Event('qhealth-settings-changed'));onClose()};
   const commands=[
     {label:'Open Overview',hint:'Navigation',run:()=>navigate('/')},
@@ -104,7 +101,7 @@ function CommandPalette({onClose}:{onClose:()=>void}){
   useEffect(()=>setActiveIndex(0),[query]);
   useEffect(()=>{const handler=(e:KeyboardEvent)=>{if(e.key==='ArrowDown'){e.preventDefault();setActiveIndex(i=>Math.min(i+1,Math.max(filtered.length-1,0)))}else if(e.key==='ArrowUp'){e.preventDefault();setActiveIndex(i=>Math.max(i-1,0))}else if(e.key==='Enter'&&filtered[activeIndex]){e.preventDefault();filtered[activeIndex].run();onClose()} };window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[activeIndex,filtered,onClose]);
   return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
-    <div ref={dialogRef} className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
+    <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
       <div className="command-search"><Search size={17}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands"/><kbd>ESC</kbd></div>
       <div className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><button key={command.label} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
       <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
@@ -113,11 +110,10 @@ function CommandPalette({onClose}:{onClose:()=>void}){
 }
 
 function ConfigDrawer({prefs,onChange,onReset,onClose}:{prefs:UiSettings;onChange:(patch:Partial<UiSettings>)=>void;onReset:()=>void;onClose:()=>void}){
-  const dialogRef=useDialogFocus<HTMLElement>();
   const choice=(label:string,active:boolean,patch:Partial<UiSettings>)=>
     <button type="button" className={'config-choice '+(active?'is-active':'')} onClick={()=>onChange(patch)} aria-pressed={active}>{label}</button>;
   return <div className="config-overlay" role="presentation" onMouseDown={onClose}>
-    <aside ref={dialogRef} className="config-drawer" role="dialog" aria-modal="true" aria-label="Theme and layout settings" onMouseDown={e=>e.stopPropagation()}>
+    <aside className="config-drawer" role="dialog" aria-modal="true" aria-label="Theme and layout settings" onMouseDown={e=>e.stopPropagation()}>
       <div className="config-drawer-head">
         <div><p className="eyebrow">Workspace</p><h2>Theme &amp; layout</h2><p className="muted">Customize the research shell without changing the research workflow.</p></div>
         <button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close theme and layout"><X size={15}/></button>
