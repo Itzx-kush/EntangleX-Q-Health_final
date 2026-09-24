@@ -29,9 +29,143 @@
   box-sizing: border-box;
 }
 
-/* Tablet + mobile off-canvas navigation. The high-specificity selectors
-   intentionally override the older sidebar edge-alignment stylesheet. */
-@media (max-width: 1023px) {
+/* Narrow desktop: keep a compact, persistent rail in layout. The main
+   workspace explicitly reserves the rail width so headings never begin
+   underneath the navigation. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #root .research-shell .research-sidebar,
+  #root .research-shell .research-sidebar.variant-floating,
+  #root .research-shell .research-sidebar.variant-inset,
+  #root .research-shell .research-sidebar.variant-sidebar {
+    width: 76px !important;
+    max-width: 76px !important;
+    margin: 0 !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    visibility: visible;
+    z-index: 60 !important;
+    box-shadow: none;
+    transition: width .22s ease;
+  }
+
+  #root .research-shell .research-sidebar .brand-copy,
+  #root .research-shell .research-sidebar .sidebar-context,
+  #root .research-shell .research-sidebar .sidebar-label,
+  #root .research-shell .research-sidebar .sidebar-link span,
+  #root .research-shell .research-sidebar .sidebar-link kbd,
+  #root .research-shell .research-sidebar .collapse-button span {
+    display: none !important;
+  }
+
+  .research-workspace,
+  .research-shell.is-collapsed .research-workspace,
+  [data-layout="icon"] .research-workspace,
+  [data-layout="offcanvas"] .research-workspace {
+    width: auto;
+    margin-left: 76px !important;
+  }
+
+  .research-sidebar .sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .research-sidebar .sidebar-nav {
+    min-height: 0;
+    padding-inline: 10px;
+  }
+
+  .research-sidebar .sidebar-link {
+    justify-content: center;
+    min-height: 42px;
+    padding-inline: 0;
+  }
+
+  .research-sidebar .sidebar-link.active {
+    box-shadow: none;
+  }
+
+  .research-sidebar .collapse-button {
+    min-height: 42px;
+  }
+
+  .mobile-menu,
+  .sidebar-close {
+    display: none !important;
+  }
+
+  .research-topbar {
+    gap: 12px;
+    padding-inline: 20px;
+  }
+
+  .topbar-left > div {
+    min-width: 0;
+  }
+
+  .topbar-kicker,
+  .topbar-left h1 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .topbar-actions .research-search,
+  .connection-indicator,
+  .command-trigger span,
+  .command-trigger kbd {
+    display: none;
+  }
+
+  .command-trigger {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .research-body,
+  .research-body.inspector-closed {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 20px;
+  }
+
+  .context-inspector {
+    display: none;
+  }
+
+  .research-context-bar {
+    padding-inline: 20px;
+    flex-wrap: wrap;
+  }
+
+  .navigation-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(8, 15, 30, .46);
+    cursor: default;
+  }
+
+  .sidebar-nav {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Mobile keeps the existing closed-by-default drawer behavior. */
   #root .research-shell .research-sidebar,
   #root .research-shell .research-sidebar.variant-floating,
   #root .research-shell .research-sidebar.variant-inset,
@@ -63,11 +197,6 @@
   [data-layout="offcanvas"] .research-workspace {
     width: 100%;
     margin-left: 0 !important;
-  }
-
-  .research-topbar {
-    gap: 12px;
-    padding-inline: 20px;
   }
 
   .mobile-brand-mark {
@@ -168,9 +297,7 @@
   .sidebar-nav {
     min-height: 0;
   }
-}
 
-@media (max-width: 767px) {
   .research-topbar {
     min-height: 66px;
     gap: 7px;

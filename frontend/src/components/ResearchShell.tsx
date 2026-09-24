@@ -198,7 +198,7 @@ export function ResearchShell({children}:{children:ReactNode}){
   useEffect(()=>{const handler=()=>setUiSettings(readSettings());window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
   useEffect(()=>{
     if(!window.matchMedia)return;
-    const media=window.matchMedia('(max-width: 1023px)');
+    const media=window.matchMedia('(max-width: 767px)');
     const update=()=>setIsOffcanvasViewport(media.matches);
     update();
     media.addEventListener?.('change',update);
