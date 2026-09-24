@@ -89,8 +89,13 @@ class DatasetUploadMetadata(Schema):
     version: str = Field(default="unspecified", max_length=80)
     target: str = Field(min_length=1, max_length=100)
     positive_label: str = Field(min_length=1, max_length=64)
+    negative_label: str | None = Field(default=None, max_length=64)
     deidentified: Literal[True]
     sampling_unit: Literal["independent_samples"] = "independent_samples"
+    metadata_confirmed: bool = False
+    metadata_sources: dict[str, str] = Field(default_factory=dict, max_length=32)
+    metadata_suggestions: dict[str, Any] = Field(default_factory=dict)
+    metadata_warnings: list[str] = Field(default_factory=list, max_length=20)
     @field_validator("name", "domain", "source", "version", "target", "positive_label")
     @classmethod
     def clean_text(cls, value):

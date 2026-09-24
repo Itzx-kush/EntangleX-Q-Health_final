@@ -56,7 +56,7 @@ async def inspect_dataset(file: UploadFile = File(...), target: str | None = For
         await file.close()
 
 
-async def _register_upload(metadata_json: str, file: UploadFile, *, legacy_csv_only: bool = False):
+async def _register_upload(metadata_json: str, file: UploadFile, *, legacy_csv_only: bool = False, require_metadata_confirmation: bool = False):
     try:
         try:
             metadata = DatasetUploadMetadata.model_validate_json(metadata_json)
@@ -64,6 +64,8 @@ async def _register_upload(metadata_json: str, file: UploadFile, *, legacy_csv_o
             raise AppError("metadata_invalid", "Upload metadata is invalid. Supply name, target, positive_label, source information and deidentified=true.") from exc
         if not file.filename:
             raise AppError("filename_required", "Choose a dataset file to register.")
+        if require_metadata_confirmation and not metadata.metadata_confirmed:
+            raise AppError("metadata_confirmation_required", "Review and confirm the detected dataset metadata before registration.")
         if legacy_csv_only and not file.filename.lower().endswith(".csv"):
             raise AppError("extension_not_allowed", "The legacy upload route accepts CSV files; use the dataset registration flow for other formats.")
         content = await _read_upload(file)
@@ -74,7 +76,7 @@ async def _register_upload(metadata_json: str, file: UploadFile, *, legacy_csv_o
 
 @router.post("/register", response_model=DatasetOut, status_code=201)
 async def register_dataset(metadata_json: str = Form(...), file: UploadFile = File(...)):
-    return await _register_upload(metadata_json, file)
+    return await _register_upload(metadata_json, file, require_metadata_confirmation=True)
 
 
 @router.post("/upload", response_model=DatasetOut, status_code=201)

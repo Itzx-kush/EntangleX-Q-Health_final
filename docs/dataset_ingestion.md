@@ -33,3 +33,9 @@ The flow is:
 Compatibility is reported as `READY`, `WARNING`, or `BLOCKED` with individual checks. Missing targets, missing target values, one-class targets, multiclass targets, infinite numeric values, datetime-like columns, and unsupported complex values are blocked. Identifier-like fields, small samples, and high-cardinality categoricals are warnings for review. Q-Health never silently merges classes, fabricates labels, fetches remote files, or claims clinical validity.
 
 Categorical and boolean scalar columns use the existing categorical encoding path. Datetime-like columns are not automatically converted into temporal features. Existing CSV clients can continue using `/api/datasets/upload`; `/api/datasets/inspect` and `/api/datasets/register` provide the explicit inspection-first flow.
+
+## Automatic metadata profile
+
+After inspection, Q-Health returns a deterministic `suggested_metadata` profile. It can suggest a readable name from the filename, a high-confidence target candidate, observed target classes and counts, a positive class only when a numeric or semantic rule is defensible, the remaining binary class as negative, a filename version or generated snapshot identifier, a conservative domain, and the `User-provided` source default.
+
+Each suggestion has an origin such as `filename`, `inspection.target_candidates[0]`, `binary_numeric_rule`, `semantic_label_rule`, `remaining_binary_class`, `filename`, `generated_snapshot`, `filename_keyword`, `catalog`, or `default_user_upload`. Ambiguous labels such as `case/control`, `A/B`, `X/Y`, or `0/2` are left unset and require user confirmation. The profile is editable in the existing Data Lab card. The new registration route also requires an explicit metadata-review confirmation; compatibility remains the final gate.

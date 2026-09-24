@@ -19,6 +19,7 @@ from ..storage.repository import require
 from ..utils.errors import AppError
 from ..utils.serialization import utcnow
 from .catalog import benchmark_bytes, get_benchmark, list_benchmarks
+from .metadata import suggest_metadata
 from .quality import compatibility_report, inspection_report, quality_report
 
 SUPPORTED_FORMATS = {".csv", ".tsv", ".xlsx", ".xls", ".parquet"}
@@ -183,6 +184,15 @@ def inspect_file(content: bytes, filename: str, target: str | None = None, posit
     extension = detect_file_format(content, filename)
     frame = parse_tabular(content, filename, target, positive_label)
     report = inspection_report(frame, target, positive_label)
+    suggestions, metadata_warnings = suggest_metadata(
+        filename,
+        report,
+        content_hash=hashlib.sha256(content).hexdigest(),
+        selected_target=target,
+        selected_positive=positive_label,
+    )
+    report["suggested_metadata"] = suggestions
+    report["metadata_warnings"] = metadata_warnings
     report["file_format"] = extension.lstrip(".")
     report["filename"] = sanitize_filename(filename)
     report["file_size_bytes"] = len(content)
@@ -194,6 +204,18 @@ def _register_frame(content: bytes, filename: str, metadata: DatasetUploadMetada
     frame = parse_tabular(content, filename, metadata.target, metadata.positive_label)
     quality = quality_report(frame, metadata.target, metadata.positive_label)
     compatibility = compatibility_report(frame, metadata.target, metadata.positive_label)
+    inspection = inspection_report(frame, metadata.target, metadata.positive_label)
+    catalog = get_benchmark(catalog_slug) if catalog_slug else None
+    suggested_metadata, inferred_warnings = suggest_metadata(
+        filename,
+        inspection,
+        content_hash=hashlib.sha256(content).hexdigest(),
+        catalog=catalog,
+        selected_target=metadata.target,
+        selected_positive=metadata.positive_label,
+    )
+    if metadata.negative_label is not None and metadata.negative_label not in quality["target_classes"]:
+        raise AppError("negative_label_unknown", "The configured negative label is not present in the target.")
     identity = str(uuid4())
     timestamp = utcnow()
     sha = hashlib.sha256(content).hexdigest()
@@ -207,10 +229,14 @@ def _register_frame(content: bytes, filename: str, metadata: DatasetUploadMetada
         "feature_count": len(frame.columns) - 1, "features": [c for c in frame if c != metadata.target],
         "numeric_features": quality["numeric_features"], "categorical_features": quality["categorical_features"],
         "class_distribution": quality["class_distribution"], "target_classes": quality["target_classes"],
-        "negative_label": next(c for c in quality["target_classes"] if c != metadata.positive_label),
+        "negative_label": metadata.negative_label or next(c for c in quality["target_classes"] if c != metadata.positive_label),
         "license": license_info, "is_demo": is_demo, "catalog_slug": catalog_slug,
         "deidentification_asserted_by_uploader": not is_demo,
         "compatibility_findings": compatibility,
+        "metadata_suggestions": metadata.metadata_suggestions or suggested_metadata,
+        "metadata_warnings": list(dict.fromkeys(metadata.metadata_warnings + inferred_warnings)),
+        "metadata_sources": metadata.metadata_sources or {key: value for key, value in suggested_metadata.items() if key.endswith("_source")},
+        "metadata_confirmed": metadata.metadata_confirmed,
         "transformations_applied": ["Parsed into the internal pandas dataframe workflow; source bytes retained unchanged."],
         "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
     }
