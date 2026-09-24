@@ -50,7 +50,7 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     if derived_readmission_target:
         frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
-        frame = frame.drop(columns=["readmitted"])
+        frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
     for col in frame.select_dtypes(exclude=np.number):
         # Object arrays use np.nan (not pd.NA) for sklearn's imputers.
         frame[col] = frame[col].map(lambda v: str(v) if pd.notna(v) else np.nan).astype(object)
