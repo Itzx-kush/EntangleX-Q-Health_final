@@ -33,19 +33,24 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
         raise AppError("invalid_csv", "Upload a nonempty UTF-8 comma-separated CSV file.") from exc
     if len(header) < 2 or len(header) > settings.max_columns:
         raise AppError("column_limit", "The CSV must contain a target and input features within the column limit.")
+    derived_readmission_target = target == "readmitted_30d" and target not in header and "readmitted" in header
     if len(set(header)) != len(header) or any(not h.strip() or h != h.strip() or len(h) > 100 or any(ord(c) < 32 for c in h) for h in header):
         raise AppError("invalid_header", "Column names must be unique, trimmed, nonempty, and at most 100 characters.")
     if any(row and len(row) != len(header) for row in rows[1:]):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     try:
         # Preserve target labels exactly; infer input numeric types for review.
-        frame = pd.read_csv(io.StringIO(text), dtype={target: "string"}, nrows=settings.max_rows + 1, on_bad_lines="error")
+        source_target = "readmitted" if derived_readmission_target else target
+        frame = pd.read_csv(io.StringIO(text), dtype={source_target: "string"}, nrows=settings.max_rows + 1, on_bad_lines="error")
     except (ValueError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
         raise AppError("invalid_csv", "CSV parsing failed; check quoting, delimiters, and the table schema.") from exc
     if len(frame) < 10 or len(frame) > settings.max_rows:
         raise AppError("row_limit", "The dataset must have at least 10 rows and remain within the configured row limit.")
     if list(frame.columns) != header or not isinstance(frame.index, pd.RangeIndex):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
+    if derived_readmission_target:
+        frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
+        frame = frame.drop(columns=["readmitted"])
     for col in frame.select_dtypes(exclude=np.number):
         # Object arrays use np.nan (not pd.NA) for sklearn's imputers.
         frame[col] = frame[col].map(lambda v: str(v) if pd.notna(v) else np.nan).astype(object)
@@ -71,6 +76,7 @@ def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata,
         "negative_label": next(c for c in quality["target_classes"] if c != metadata.positive_label),
         "license": license_info, "is_demo": license_info is not None, "deidentification_asserted_by_uploader": True,
         "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
+        "target_transformation": "readmitted -> readmitted_30d (1 for <30, 0 for NO or >30)" if metadata.target == "readmitted_30d" and "readmitted" in quality.get("source_columns", []) else None,
     }
     path = safe_path("data/datasets", identity, ".csv")
     atomic_bytes(path, content)
