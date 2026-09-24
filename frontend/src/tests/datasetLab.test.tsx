@@ -16,7 +16,12 @@ vi.mock('../lib/api',()=>({
   api:{remove:vi.fn(()=>Promise.resolve(undefined))},
   qh:{
     datasets:vi.fn(()=>Promise.resolve([])),datasetLibrary:vi.fn(()=>Promise.resolve(library)),useLibraryDataset:vi.fn(()=>Promise.resolve(dataset)),
-    inspect:vi.fn((form:FormData)=>Promise.resolve(form.get('target')?readyInspection:initialInspection)),
+    inspect:vi.fn((form:FormData)=>{
+     const requestedTarget=form.get('target');
+     if(requestedTarget==='target')return Promise.resolve(readyInspection);
+     if(requestedTarget)return Promise.resolve({...initialInspection,target:String(requestedTarget),compatibility:{status:'BLOCKED',checks:[{code:'positive_label',status:'BLOCKED',message:'Select a positive class.'}],blockers:['Select a positive class.'],warnings:[]}});
+     return Promise.resolve(initialInspection);
+    }),
     register:vi.fn(()=>Promise.resolve(dataset)),
   },
 }));
@@ -36,18 +41,69 @@ describe('Dataset Lab library and inspector',()=>{
   await waitFor(()=>expect(qh.useLibraryDataset).toHaveBeenCalledWith('pima-diabetes',expect.anything()));
  });
 
- it('requires inspection and explicit target selection before compatibility is ready',async()=>{
+ it('synchronizes an auto-detected target with compatibility',async()=>{
   renderLab();
   const file=new File(['glucose,group,target\n1,A,positive\n'], 'fixture.csv', {type:'text/csv'});
   fireEvent.change(document.querySelector('input[type="file"]')!,{target:{files:[file]}});
   fireEvent.click(screen.getByRole('button',{name:'Inspect dataset'}));
   await screen.findByText('Potential target columns');
   expect(screen.getByText('AUTO-DETECTED DATASET PROFILE')).toBeInTheDocument();
-  const targetSelect=screen.getByRole('combobox',{name:/Target column/i});
-  fireEvent.change(targetSelect,{target:{value:'target'}});
-  fireEvent.change(screen.getByRole('combobox',{name:/Positive class/i}),{target:{value:'positive'}});
-  fireEvent.click(screen.getByRole('button',{name:'Analyze compatibility'}));
   await waitFor(()=>expect(screen.getByText('READY')).toBeInTheDocument());
   expect(qh.inspect).toHaveBeenCalledTimes(2);
+  const compatibilityRequest=vi.mocked(qh.inspect).mock.calls[1][0] as FormData;
+  expect(compatibilityRequest.get('target')).toBe('target');
+  expect(compatibilityRequest.get('positive_label')).toBe('positive');
+ });
+
+ it('recomputes compatibility when the target changes and clears it for a new file',async()=>{
+  renderLab();
+  const input=document.querySelector('input[type="file"]')!;
+  const first=new File(['glucose,group,target\n1,A,positive\n'], 'first.csv', {type:'text/csv'});
+  fireEvent.change(input,{target:{files:[first]}});
+  fireEvent.click(screen.getByRole('button',{name:'Inspect dataset'}));
+  await waitFor(()=>expect(screen.getByText('READY')).toBeInTheDocument());
+
+  fireEvent.change(screen.getByRole('combobox',{name:/Target column/i}),{target:{value:'group'}});
+  await waitFor(()=>expect(screen.getByText('BLOCKED')).toBeInTheDocument());
+  const targetChangeRequest=vi.mocked(qh.inspect).mock.calls.at(-1)?.[0] as FormData;
+  expect(targetChangeRequest.get('target')).toBe('group');
+
+  const second=new File(['glucose,group,target\n2,B,negative\n'], 'second.csv', {type:'text/csv'});
+  fireEvent.change(input,{target:{files:[second]}});
+  expect(screen.queryByText('AUTO-DETECTED DATASET PROFILE')).not.toBeInTheDocument();
+  expect(screen.queryByText('BLOCKED')).not.toBeInTheDocument();
+ });
+
+ it('clears inspection state when the selected file is removed',async()=>{
+  renderLab();
+  const input=document.querySelector('input[type="file"]')!;
+  const file=new File(['glucose,group,target\n1,A,positive\n'], 'fixture.csv', {type:'text/csv'});
+  fireEvent.change(input,{target:{files:[file]}});
+  fireEvent.click(screen.getByRole('button',{name:'Inspect dataset'}));
+  await waitFor(()=>expect(screen.getByText('AUTO-DETECTED DATASET PROFILE')).toBeInTheDocument());
+  fireEvent.change(input,{target:{files:[]}});
+  expect(screen.queryByText('AUTO-DETECTED DATASET PROFILE')).not.toBeInTheDocument();
+  expect(screen.queryByText('READY')).not.toBeInTheDocument();
+ });
+
+ it('keeps user upload inspection usable when the benchmark library fails',async()=>{
+  vi.mocked(qh.datasetLibrary).mockRejectedValueOnce(new Error('A curated benchmark asset is unavailable · 685c2397-7031-4ae4-bcc4-849201e2608e'));
+  renderLab();
+  expect(await screen.findByText(/A curated benchmark asset is unavailable/)).toBeInTheDocument();
+  const file=new File(['glucose,group,target\n1,A,positive\n'], 'fixture.csv', {type:'text/csv'});
+  fireEvent.change(document.querySelector('input[type="file"]')!,{target:{files:[file]}});
+  fireEvent.click(screen.getByRole('button',{name:'Inspect dataset'}));
+  expect(await screen.findByText('AUTO-DETECTED DATASET PROFILE')).toBeInTheDocument();
+ });
+
+ it('rejects an incomplete inspection response without creating registration state',async()=>{
+  vi.mocked(qh.inspect).mockResolvedValueOnce({} as any);
+  renderLab();
+  const file=new File(['glucose,target\n1,positive\n'], 'fixture.csv', {type:'text/csv'});
+  fireEvent.change(document.querySelector('input[type="file"]')!,{target:{files:[file]}});
+  fireEvent.click(screen.getByRole('button',{name:'Inspect dataset'}));
+  expect(await screen.findByText(/Dataset inspection response is incomplete/)).toBeInTheDocument();
+  expect(screen.queryByText('AUTO-DETECTED DATASET PROFILE')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Register inspected dataset'})).toBeDisabled();
  });
 });
