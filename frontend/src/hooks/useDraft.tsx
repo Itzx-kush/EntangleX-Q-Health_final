@@ -13,19 +13,6 @@ const DraftContext=createContext<Ctx|null>(null);
 export function DraftProvider({children}:{children:ReactNode}){
   const [draft,setDraft]=useState<TrainingConfig>(()=>{try{const raw=localStorage.getItem('qhealth-tictac-draft');if(raw){const v=JSON.parse(raw) as Partial<TrainingConfig>;return {...defaultDraft,...v,pipeline:{...defaultDraft.pipeline,...v.pipeline},quantum:{...defaultDraft.quantum,...v.quantum},parameters:{...defaultDraft.parameters,...v.parameters}}}}catch{}return defaultDraft});
   useEffect(()=>{try{localStorage.setItem('qhealth-tictac-draft',JSON.stringify(draft))}catch{}},[draft]);
-  const update=(patch:Partial<TrainingConfig>)=>setDraft(v=>{
-    const next={...v,...patch};
-    if(Object.prototype.hasOwnProperty.call(patch,'dataset_id')&&patch.dataset_id!==v.dataset_id){
-      next.features=null;
-      next.pipeline={...next.pipeline,log_features:[],ratios:[]};
-    }
-    return next;
-  });
-  const quantum=(patch:Partial<QuantumConfig>)=>setDraft(v=>{
-    const next={...v.quantum,...patch};
-    if(next.backend==='statevector') next.noise_probability=0;
-    return {...v,quantum:next};
-  });
-  return <DraftContext.Provider value={{draft,update,pipeline:p=>setDraft(v=>({...v,pipeline:{...v.pipeline,...p}})),quantum,reset:()=>setDraft(defaultDraft)}}>{children}</DraftContext.Provider>;
+  return <DraftContext.Provider value={{draft,update:p=>setDraft(v=>({...v,...p})),pipeline:p=>setDraft(v=>({...v,pipeline:{...v.pipeline,...p}})),quantum:p=>setDraft(v=>({...v,quantum:{...v.quantum,...p}})),reset:()=>setDraft(defaultDraft)}}>{children}</DraftContext.Provider>;
 }
 export function useDraft(){const v=useContext(DraftContext);if(!v)throw new Error('DraftProvider missing');return v;}
