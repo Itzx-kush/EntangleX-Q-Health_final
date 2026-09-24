@@ -5,61 +5,34 @@ import os
 import pickle
 import re
 from pathlib import Path
-from threading import Lock
 from uuid import UUID, uuid4
 import dill
 from ..config import get_settings
 from ..utils.errors import AppError
 
 
-_artifact_key_lock = Lock()
-
-
 def get_artifact_key() -> bytes:
-    """Read or create the signing key without silently rotating identity."""
-    with _artifact_key_lock:
-        root = get_settings().root.resolve()
-        key_path = root / ".artifact_key"
-        if key_path.is_symlink():
-            raise AppError("artifact_key_invalid", "Artifact signing key is unavailable or unsafe.", 503)
+    key_path = (get_settings().root / ".artifact_key").resolve()
+    if key_path.is_file():
         try:
-            if key_path.exists():
-                key = key_path.read_bytes()
-                if len(key) < 32:
-                    raise AppError(
-                        "artifact_key_invalid",
-                        "Artifact signing key is invalid; restore the original key from backup.",
-                        503,
-                    )
+            key = key_path.read_bytes()
+            if len(key) >= 32:
                 return key
-
-            key_path.parent.mkdir(parents=True, exist_ok=True)
-            key = os.urandom(32)
-            try:
-                descriptor = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            except FileExistsError:
-                # Another process won the creation race; use its identity.
-                existing = key_path.read_bytes()
-                if len(existing) < 32:
-                    raise AppError(
-                        "artifact_key_invalid",
-                        "Artifact signing key is invalid; restore the original key from backup.",
-                        503,
-                    )
-                return existing
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(key)
-                stream.flush()
-                os.fsync(stream.fileno())
-            return key
-        except AppError:
-            raise
-        except OSError as exc:
-            raise AppError(
-                "artifact_key_unavailable",
-                "Artifact signing key could not be read or persisted.",
-                503,
-            ) from exc
+        except OSError:
+            pass
+    key = os.urandom(32)
+    try:
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        temp = key_path.with_name(f".{uuid4().hex}.tmp")
+        temp.write_bytes(key)
+        try:
+            temp.chmod(0o600)
+        except OSError:
+            pass
+        temp.replace(key_path)
+    except OSError:
+        pass
+    return key
 
 
 class RestrictedUnpickler(dill.Unpickler):
@@ -115,10 +88,7 @@ def safe_path(area: str, identity: str, suffix: str) -> Path:
         identity = str(UUID(str(identity)))
     except ValueError as exc:
         raise AppError("invalid_id", "Resource IDs must be UUIDs.") from exc
-    root = get_settings().root.resolve()
-    base = (root / area).resolve()
-    if not base.is_relative_to(root):
-        raise AppError("invalid_path", "Unsafe storage path.")
+    base = (get_settings().root / area).resolve()
     path = (base / f"{identity}{suffix}").resolve()
     if path.parent != base:
         raise AppError("invalid_path", "Unsafe storage path.")

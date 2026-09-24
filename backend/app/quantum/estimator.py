@@ -49,7 +49,7 @@ class QuantumClassifier(ClassifierMixin, BaseEstimator):
             kernel = FidelityQuantumKernel(feature_map=fmap, fidelity=fidelity, enforce_psd=True)
             self.model_ = QSVC(quantum_kernel=kernel, C=self.c, probability=False, random_state=self.seed)
         elif self.kind == "qnn":
-            # SamplerQNN aggregates computational-basis probabilities by the least-significant bit into
+            # SamplerQNN aggregates computational-basis probabilities by parity into
             # two classes. NeuralNetworkClassifier then optimizes the trainable
             # ansatz weights while preserving a sklearn-compatible adapter.
             from qiskit_machine_learning.algorithms import NeuralNetworkClassifier
@@ -89,7 +89,7 @@ class QuantumClassifier(ClassifierMixin, BaseEstimator):
             "circuit": circuit_description(config, self.kind, self.seed),
             "objective_evaluations": len(self.loss_curve_),
             "trainable_parameter_count": int(ansatz.num_parameters) if self.kind in {"vqc", "qnn"} else 0,
-            "output_semantics": "SamplerQNN computational-basis probabilities grouped by the least-significant bit (bitstring % 2) for classes 0 and 1; not full bitstring parity." if self.kind == "qnn" else None,
+            "output_semantics": "SamplerQNN parity-aggregated computational-basis probabilities for classes 0 and 1." if self.kind == "qnn" else None,
         }
         return self
 

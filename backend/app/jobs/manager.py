@@ -1,7 +1,7 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from threading import RLock
+from threading import Lock
 from uuid import uuid4
 from sqlalchemy import select
 from ..api.schemas import TrainingConfig
@@ -23,7 +23,7 @@ class TrainingManager:
     """Single-process MVP worker with persistent state, not a distributed queue."""
     def __init__(self):
         self.executor = None
-        self.lock = RLock()
+        self.lock = Lock()
 
     def start(self):
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="qhealth-training")
@@ -76,7 +76,7 @@ class TrainingManager:
         return job, experiment
 
     def cancel(self, identity: str):
-        with self.lock, session_scope() as session:
+        with session_scope() as session:
             job = require(session, Job, identity)
             if job.status in ACTIVE:
                 job.status = "cancel_requested"
@@ -85,7 +85,7 @@ class TrainingManager:
             return job
 
     def _checkpoint(self, job_id: str, state: str, progress: int):
-        with self.lock, session_scope() as session:
+        with session_scope() as session:
             job = require(session, Job, job_id)
             if job.status == "cancel_requested":
                 raise CancelledError()
@@ -93,10 +93,8 @@ class TrainingManager:
             job.updated_at = utcnow()
 
     def _finish(self, job_id: str, experiment_id: str, status: str, state: str):
-        with self.lock, session_scope() as session:
+        with session_scope() as session:
             job = require(session, Job, job_id)
-            if job.status == "cancel_requested" and status in {"succeeded", "partial"}:
-                status, state = "cancelled", "Stopped at completion boundary; completed model records are retained."
             job.status, job.state, job.updated_at = status, state, utcnow()
             if status in {"succeeded", "partial"}:
                 job.progress = 100
