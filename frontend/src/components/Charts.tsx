@@ -29,10 +29,9 @@ export function ScoreLandscape({data}:{data:{score:number,y:number,label:string,
 }
 
 export function RocChart({models}:{models:ModelRecord[]}){
- const curves=models.flatMap(model=>{
-  const curve=model.metrics.test?.roc_curve;
-  return curve&&curve.fpr.length>0&&curve.tpr.length>0?[{name:modelLabels[model.model_type],kind:model.model_type,curve}]:[];
- });
+ const curves=models.flatMap(model=>model.metrics.test?.roc_curve?[{name:modelLabels[model.model_type],kind:model.model_type,curve:model.metrics.test.roc_curve}]:[]);
  if(!curves.length)return <div className="h-[300px] grid place-items-center text-sm muted">No measured ROC curve is available.</div>;
- return <div className="h-[320px]" role="img" aria-label="Measured ROC curves: false positive rate versus true positive rate"><ResponsiveContainer width="100%" height="100%"><ScatterChart margin={{top:10,right:16,left:8,bottom:24}}><CartesianGrid stroke="hsl(var(--border))"/><XAxis type="number" dataKey="fpr" name="False positive rate" domain={[0,1]} tickLine={false} axisLine={false}/><YAxis type="number" dataKey="tpr" name="True positive rate" domain={[0,1]} tickLine={false} axisLine={false}/><Tooltip contentStyle={{borderRadius:12,border:'1px solid hsl(var(--border))',background:'hsl(var(--card))',fontSize:12}}/>{curves.map(c=><Scatter key={c.name} name={c.name} data={c.curve.fpr.map((fpr,i)=>({fpr,tpr:c.curve.tpr[i]})).filter(point=>Number.isFinite(point.fpr)&&Number.isFinite(point.tpr))} line={{stroke:modelColors[c.kind]||'#2563eb',strokeWidth:2}} fill={modelColors[c.kind]||'#2563eb'} isAnimationActive={false}/>)}</ScatterChart></ResponsiveContainer></div>;
+ const count=Math.max(...curves.map(c=>c.curve.fpr.length));
+ const rows=Array.from({length:count},(_,i)=>{const row:Record<string,number>={x:i/Math.max(count-1,1)};curves.forEach((c,j)=>row['c'+j]=c.curve.tpr[i]??c.curve.tpr.at(-1)??0);return row});
+ return <div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={rows} margin={{top:10,right:10,left:0,bottom:18}}><CartesianGrid stroke="hsl(var(--border))" vertical={false}/><XAxis dataKey="x" domain={[0,1]} tickLine={false} axisLine={false} tickFormatter={v=>Number(v).toFixed(1)}/><YAxis domain={[0,1]} tickLine={false} axisLine={false}/><Tooltip contentStyle={{borderRadius:12,border:'1px solid hsl(var(--border))',background:'hsl(var(--card))',fontSize:12}}/><Line type="monotone" dataKey="chance" stroke="transparent" dot={false}/>{curves.map((c,i)=><Line key={c.name} type="monotone" dataKey={'c'+i} name={c.name} stroke={modelColors[c.kind]||'#2563eb'} dot={false} strokeWidth={2}/>)}</LineChart></ResponsiveContainer></div>;
 }
