@@ -1,10 +1,10 @@
 FROM python:3.11.16-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
-WORKDIR /app/backend
-COPY backend/requirements*.txt ./
-RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+WORKDIR /app
+COPY requirements*.txt /app/
+RUN python -m pip install --upgrade pip && python -m pip install -r /app/requirements.txt
 RUN useradd --uid 10001 --create-home qhealth && mkdir -p /runtime/data/datasets /runtime/models /runtime/experiments && chown -R qhealth:qhealth /runtime /app
-COPY --chown=qhealth:qhealth backend/app ./app
+COPY --chown=qhealth:qhealth app /app/app
 USER qhealth
 ENV QHEALTH_STORAGE_ROOT=/runtime
 EXPOSE 8000
