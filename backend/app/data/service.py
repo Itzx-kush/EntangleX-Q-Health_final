@@ -76,7 +76,6 @@ def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata,
         "negative_label": next(c for c in quality["target_classes"] if c != metadata.positive_label),
         "license": license_info, "is_demo": license_info is not None, "deidentification_asserted_by_uploader": True,
         "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
-        "target_transformation": "readmitted -> readmitted_30d (1 for <30, 0 for NO or >30)" if metadata.target == "readmitted_30d" and "readmitted" in quality.get("source_columns", []) else None,
     }
     path = safe_path("data/datasets", identity, ".csv")
     atomic_bytes(path, content)
