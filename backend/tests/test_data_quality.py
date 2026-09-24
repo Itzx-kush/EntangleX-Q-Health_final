@@ -32,6 +32,13 @@ def test_invalid_csv_rejected(content):
     with pytest.raises(AppError):
         parse_csv(content, "target")
 
+def test_diabetes_readmission_target_derivation():
+    content = b"encounter_id,readmitted,age\n1,<30,[30-40)\n2,NO,[40-50)\n3,>30,[50-60)\n4,NO,[60-70)\n"
+    frame = parse_csv(content, "readmitted_30d")
+    assert frame["readmitted_30d"].tolist() == [1, 0, 0, 0]
+    assert "readmitted" not in frame.columns
+    assert "encounter_id" in frame.columns
+
 def test_missing_target(biomedical_frame):
     with pytest.raises(AppError, match="absent"):
         validate_target(biomedical_frame, "nonexistent", "positive")
