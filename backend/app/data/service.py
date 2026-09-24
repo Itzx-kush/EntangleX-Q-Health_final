@@ -27,16 +27,23 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
         raise AppError("invalid_csv", "Binary/NUL content is not supported.")
     try:
         text = content.decode("utf-8-sig")
-        rows = list(csv.reader(io.StringIO(text), strict=True))
-        header = rows[0]
+        reader = csv.reader(io.StringIO(text), strict=True)
+        header = next(reader)
+        row_count = 0
+        for row in reader:
+            if not row:
+                continue
+            row_count += 1
+            if row_count > settings.max_rows:
+                raise AppError("row_limit", "The dataset exceeds the configured row limit.")
+            if len(row) != len(header):
+                raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     except (UnicodeDecodeError, StopIteration, csv.Error) as exc:
         raise AppError("invalid_csv", "Upload a nonempty UTF-8 comma-separated CSV file.") from exc
     if len(header) < 2 or len(header) > settings.max_columns:
         raise AppError("column_limit", "The CSV must contain a target and input features within the column limit.")
     if len(set(header)) != len(header) or any(not h.strip() or h != h.strip() or len(h) > 100 or any(ord(c) < 32 for c in h) for h in header):
         raise AppError("invalid_header", "Column names must be unique, trimmed, nonempty, and at most 100 characters.")
-    if any(row and len(row) != len(header) for row in rows[1:]):
-        raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     try:
         # Preserve target labels exactly; infer input numeric types for review.
         frame = pd.read_csv(io.StringIO(text), dtype={target: "string"}, nrows=settings.max_rows + 1, on_bad_lines="error")

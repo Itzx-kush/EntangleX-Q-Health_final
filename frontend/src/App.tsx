@@ -3,6 +3,7 @@ import {Navigate,Route,Routes} from 'react-router-dom';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
+import {ErrorBoundary} from './components/ErrorBoundary';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -19,7 +20,7 @@ const DemoCenter=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({defaul
 const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.SettingsPage})));
 
 export default function App(){
-  return <ResearchShell>
+  return <ErrorBoundary><ResearchShell>
     <ThemeToggle/>
     <Suspense fallback={<Loading/>}><Routes>
       <Route path="/" element={<Overview/>}/>
@@ -39,5 +40,5 @@ export default function App(){
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
-  </ResearchShell>;
+  </ResearchShell></ErrorBoundary>;
 }

@@ -1,5 +1,5 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
 import {ArrowLeft,Copy,Download,ExternalLink,RotateCcw} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
@@ -10,6 +10,7 @@ import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
 import type {Experiment} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
+import {RegistryControls} from '../components/RegistryControls';
 
 export function Experiments(){
   const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
@@ -18,6 +19,7 @@ export function Experiments(){
   const navigate=useNavigate();
   const [query,setQuery]=useState('');
   const [status,setStatus]=useState('all');
+  const [page,setPage]=useState(0);
   const [selected,setSelected]=useState<Experiment|null>(null);
   const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});navigate('/experiments/'+r.experiment.id)}});
   const statuses=Array.from(new Set((list.data||[]).map(e=>e.status)));
@@ -25,6 +27,11 @@ export function Experiments(){
     const hay=(e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
     return hay.includes(query.toLowerCase())&&(status==='all'||e.status===status);
   });
+  const sortedRows=rows.slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id));
+  const pages=Math.max(1,Math.ceil(sortedRows.length/10));
+  const safePage=Math.min(page,pages-1);
+  const visibleRows=sortedRows.slice(safePage*10,(safePage+1)*10);
+  useEffect(()=>setPage(0),[query,status]);
   return <div>
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
     <StageNav current="/experiments"/>
@@ -40,7 +47,7 @@ export function Experiments(){
         <label className="field min-w-[240px] flex-1"><span>Search</span><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Experiment, dataset, model…"/></label>
         <label className="field min-w-[180px]"><span>Status</span><Select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All states</option>{statuses.map(s=><option value={s} key={s}>{s.replaceAll('_',' ')}</option>)}</Select></label>
       </div>
-      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{rows.map((e,i)=><tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{shortId(e.id)}</button><small className="block muted">{e.parent_id?'Parent '+shortId(e.parent_id):'Root experiment'}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button></div></td></tr>)}</tbody></table>{!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
+      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{visibleRows.map((e,i)=><tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{shortId(e.id)}</button><small className="block muted">{e.parent_id?'Parent '+shortId(e.parent_id):'Root experiment'}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button></div></td></tr>)}</tbody></table>{rows.length>0&&<RegistryControls page={safePage} pages={pages} total={rows.length} setPage={setPage}/>} {!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
     </Card>
     {selected&&<div className="mt-5 two-grid"><Card title={'Experiment '+shortId(selected.id)} description="Registry detail"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="muted">Status</span><StatusBadge value={selected.status}/></div><div className="flex justify-between"><span className="muted">Dataset</span><span className="mono text-xs">{selected.dataset_id}</span></div><div className="flex justify-between"><span className="muted">Created</span><span>{dateTime(selected.created_at)}</span></div><div><span className="muted">Models</span><div className="mt-2 flex flex-wrap gap-1">{selected.config.models.map(m=><Badge key={m}>{modelLabels[m]}</Badge>)}</div></div></div></Card><Card title="Exact configuration"><JsonDisclosure label="Open JSON configuration" value={selected.config}/><Link className="btn btn-outline mt-3" to={'/experiments/'+selected.id}>Open full evidence <ExternalLink size={13}/></Link></Card></div>}
   </div>
