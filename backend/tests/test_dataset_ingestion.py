@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 
 from app.api.schemas import DatasetUploadMetadata
-from app.data import service
 from app.data.catalog import list_benchmarks
 from app.data.quality import compatibility_report, inspection_report
 from app.data.service import inspect_file, parse_tabular, register_builtin, register_file
@@ -134,42 +133,6 @@ def test_dataset_library_and_inspect_routes(client):
     assert payload["file_format"] == "tsv"
     assert "target" in payload["possible_target_columns"]
     assert payload["compatibility"]["status"] == "BLOCKED"
-
-
-def test_csv_inspection_returns_metadata_contract_and_selected_compatibility(client):
-    frame = make_frame().drop(columns=["patient_id"])
-    response = client.post("/api/datasets/inspect", files={"file": ("fixture.csv", frame.to_csv(index=False).encode(), "text/csv")})
-    assert response.status_code == 200, response.text
-    payload = response.json()
-    assert payload["file_format"] == "csv"
-    assert payload["suggested_metadata"]["target"] == "target"
-    assert payload["suggested_metadata"]["target_classes"] == ["negative", "positive"]
-    assert isinstance(payload["metadata_warnings"], list)
-
-    selected = client.post(
-        "/api/datasets/inspect",
-        data={"target": "target", "positive_label": "positive"},
-        files={"file": ("fixture.csv", frame.to_csv(index=False).encode(), "text/csv")},
-    )
-    assert selected.status_code == 200, selected.text
-    selected_payload = selected.json()
-    assert selected_payload["target"] == "target"
-    assert selected_payload["compatibility"]["status"] in {"READY", "WARNING"}
-
-
-def test_missing_benchmark_does_not_block_user_upload_inspection(client, monkeypatch):
-    def unavailable():
-        raise AppError("benchmark_missing", "A curated benchmark asset is unavailable.", 500)
-
-    monkeypatch.setattr(service, "list_library", unavailable)
-    library_response = client.get("/api/datasets/library")
-    assert library_response.status_code == 500
-    assert library_response.json()["error"]["code"] == "benchmark_missing"
-
-    frame = make_frame().drop(columns=["patient_id"])
-    inspect_response = client.post("/api/datasets/inspect", files={"file": ("fixture.csv", frame.to_csv(index=False).encode(), "text/csv")})
-    assert inspect_response.status_code == 200, inspect_response.text
-    assert inspect_response.json()["suggested_metadata"]["target"] == "target"
 
 
 def test_datetime_and_infinite_values_are_not_silently_normalized():

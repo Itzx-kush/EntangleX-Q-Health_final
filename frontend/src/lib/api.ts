@@ -35,23 +35,7 @@ export const qh={
   demo:()=>api.post<Dataset>('/datasets/demo'),
   upload:(form:FormData)=>api.upload<Dataset>('/datasets/upload',form),
   inspect:(form:FormData)=>api.upload<DatasetInspection>('/datasets/inspect',form),
-  register:(form:FormData)=>{
-    const metadataJson=form.get('metadata_json');
-    if(typeof metadataJson==='string'){
-      try{
-        const metadata=JSON.parse(metadataJson) as Record<string,unknown>;
-        for(const key of ['metadata_sources','metadata_suggestions','metadata_warnings']){
-          if(typeof metadata[key]==='string'){
-            try{metadata[key]=JSON.parse(metadata[key] as string);}catch{ /* preserve malformed values for backend validation */ }
-          }
-        }
-        const normalized=new FormData();
-        for(const [key,value] of form.entries()) normalized.append(key,key==='metadata_json'?JSON.stringify(metadata):value);
-        form=normalized;
-      }catch{ /* preserve original payload for normal backend error handling */ }
-    }
-    return api.upload<Dataset>('/datasets/register',form);
-  },
+  register:(form:FormData)=>api.upload<Dataset>('/datasets/register',form),
   jobs:()=>api.get<Job[]>('/training/jobs'),
   createJob:(config:TrainingConfig)=>api.post<{job:Job;experiment:Experiment}>('/training/jobs',config),
   cancelJob:(id:string)=>api.post<Job>(`/training/jobs/${id}/cancel`),
@@ -63,7 +47,8 @@ export const qh={
   models:()=>api.get<ModelRecord[]>('/models'),
   model:(id:string)=>api.get<ModelRecord>(`/models/${id}`),
   schema:(id:string)=>api.get<{model_id:string;features:{name:string;type:string;nullable:boolean}[];positive_label:string;negative_label:string}>(`/models/${id}/input-schema`),
-  sample:(id:string)=>api.get<{features:Record<string,string|number|null>;sample:string;source:string}>(`/models/${id}/demo-sample`),
+  sample:(id:string)=>api.get<{features:Record<string,string|number|null>;
+sample:string;source:string}>(`/models/${id}/demo-sample`),
   predict:(id:string,body:unknown)=>api.post<Prediction>(`/models/${id}/predict`,body),
   explain:(id:string,body:unknown)=>api.post<Explanation>(`/models/${id}/explain`,body),
   explanations:(id:string)=>api.get<Explanation[]>(`/models/${id}/explanations`),
