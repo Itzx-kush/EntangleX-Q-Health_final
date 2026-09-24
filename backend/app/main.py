@@ -109,7 +109,7 @@ def summary():
 def system_status():
     """Expose safe, read-only runtime facts for the research workspace shell."""
     with session_scope() as session:
-        jobs = list(session.scalars(select(Job)))
+        job_counts = dict(session.execute(select(Job.status, func.count()).group_by(Job.status)).all())
         database_available = True
     root = settings.root
     storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
@@ -125,9 +125,9 @@ def system_status():
             "quantum": ["vqc", "qsvc", "qnn"],
         },
         "jobs": {
-            "queued": sum(job.status == "queued" for job in jobs),
-            "running": sum(job.status == "running" for job in jobs),
-            "active": sum(job.status in {"queued", "running", "cancel_requested"} for job in jobs),
+            "queued": job_counts.get("queued", 0),
+            "running": job_counts.get("running", 0),
+            "active": sum(job_counts.get(state, 0) for state in {"queued", "running", "cancel_requested"}),
         },
     }
 
