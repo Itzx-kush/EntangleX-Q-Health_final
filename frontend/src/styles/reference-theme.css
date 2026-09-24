@@ -721,26 +721,6 @@ textarea:focus-visible {
   }
 }
 
-@media (max-width: 900px) {
-  /* Override the inset variant's desktop margin with equal specificity. */
-  .research-shell .research-sidebar.variant-floating,
-  .research-shell .research-sidebar.variant-inset,
-  .research-shell .research-sidebar.variant-sidebar {
-    margin: 0;
-    height: 100vh;
-    border-radius: 0;
-  }
-
-  .research-shell:not(.is-collapsed) .research-sidebar:not(.is-mobile-open) {
-    transform: translateX(-110%);
-  }
-
-  .research-shell:not(.is-collapsed) .research-workspace,
-  .research-shell.is-collapsed .research-workspace {
-    margin-left: 0;
-  }
-}
-
 @media (max-width: 760px) {
   .research-topbar {
     gap: 10px;
