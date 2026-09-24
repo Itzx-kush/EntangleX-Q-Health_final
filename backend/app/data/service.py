@@ -19,7 +19,7 @@ from .quality import quality_report
 _demo_registration_lock = Lock()
 _dataset_delete_lock = Lock()
 
-def parse_csv(content: bytes, target: str) -> pd.DataFrame:
+def parse_csv(content: bytes, target: str, positive_label: str | None = None) -> pd.DataFrame:
     settings = get_settings()
     if len(content) > settings.upload_limit:
         raise AppError("upload_too_large", "The upload exceeds the configured size limit.", 413)
@@ -36,14 +36,15 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
     normalized_header = [h.lstrip("\ufeff") for h in header]
     if normalized_header != header:
         header = normalized_header
-    derived_readmission_target = target.strip() == "readmitted_30d" and target not in header and "readmitted" in header
+    diabetes_readmission_source = "readmitted" in header and target.strip() in {"readmitted", "readmitted_30d"}
+    derived_readmission_target = target.strip() == "readmitted_30d" and target not in header and diabetes_readmission_source
     if len(set(header)) != len(header) or any(not h.strip() or h != h.strip() or len(h) > 100 or any(ord(c) < 32 for c in h) for h in header):
         raise AppError("invalid_header", "Column names must be unique, trimmed, nonempty, and at most 100 characters.")
     if any(row and len(row) != len(header) for row in rows[1:]):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     try:
         # Preserve target labels exactly; infer input numeric types for review.
-        source_target = "readmitted" if derived_readmission_target else target
+        source_target = "readmitted" if diabetes_readmission_source else target
         frame = pd.read_csv(io.StringIO(text), dtype={source_target: "string"}, nrows=settings.max_rows + 1, on_bad_lines="error")
     except (ValueError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
         raise AppError("invalid_csv", "CSV parsing failed; check quoting, delimiters, and the table schema.") from exc
@@ -52,11 +53,12 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
     frame.columns = [str(c).lstrip("\ufeff").strip() for c in frame.columns]
     if list(frame.columns) != header or not isinstance(frame.index, pd.RangeIndex):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
-    if derived_readmission_target:
-        frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
-        frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
-    elif target not in frame.columns and "readmitted" in frame.columns and target.strip() == "readmitted_30d":
-        frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
+    if diabetes_readmission_source:
+        within_30 = frame["readmitted"].astype("string").str.strip().eq("<30")
+        if target.strip() == "readmitted_30d" or positive_label == "1":
+            frame[target] = within_30.astype(int)
+        else:
+            frame[target] = np.where(within_30, "<30", "not_within_30d")
         frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
     for col in frame.select_dtypes(exclude=np.number):
         # Object arrays use np.nan (not pd.NA) for sklearn's imputers.
@@ -66,7 +68,7 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
 def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata, *, license_info: str | None = None) -> Dataset:
     if not filename.lower().endswith(".csv"):
         raise AppError("extension_not_allowed", "Only UTF-8 .csv uploads are accepted.")
-    frame = parse_csv(content, metadata.target)
+    frame = parse_csv(content, metadata.target, metadata.positive_label)
     quality = quality_report(frame, metadata.target, metadata.positive_label)
     identity = str(uuid4())
     timestamp = utcnow()
@@ -100,7 +102,7 @@ def load_frame(identity: str) -> tuple[Dataset, pd.DataFrame]:
         record = require(session, Dataset, identity)
     path = safe_path("data/datasets", identity, ".csv")
     verify(path, record.sha256)
-    return record, parse_csv(path.read_bytes(), record.provenance["target"])
+    return record, parse_csv(path.read_bytes(), record.provenance["target"], record.provenance["positive_label"])
 
 def register_demo() -> Dataset:
     with _demo_registration_lock:
