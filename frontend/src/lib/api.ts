@@ -1,4 +1,4 @@
-import type {Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,SystemStatus,TrainingConfig} from '../types/qhealth';
+import type {Comparison,Circuit,Dataset,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,SystemStatus,TrainingConfig} from '../types/qhealth';
 
 const base=(import.meta.env.VITE_API_BASE as string|undefined)||'/api';
 let token='';
@@ -28,14 +28,10 @@ export const qh={
   systemStatus:()=>api.get<SystemStatus>('/system/status'),
   summary:()=>api.get<{counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number};recent_experiments:Experiment[];disclaimer:string}>('/summary'),
   datasets:()=>api.get<Dataset[]>('/datasets'),
-  datasetLibrary:()=>api.get<DatasetLibraryItem[]>('/datasets/library'),
-  useLibraryDataset:(slug:string)=>api.post<Dataset>(`/datasets/library/${slug}`),
   dataset:(id:string)=>api.get<Dataset>(`/datasets/${id}`),
   validate:(id:string,features:string[]|null)=>api.post<Quality>(`/datasets/${id}/validate`,{features}),
   demo:()=>api.post<Dataset>('/datasets/demo'),
   upload:(form:FormData)=>api.upload<Dataset>('/datasets/upload',form),
-  inspect:(form:FormData)=>api.upload<DatasetInspection>('/datasets/inspect',form),
-  register:(form:FormData)=>api.upload<Dataset>('/datasets/register',form),
   jobs:()=>api.get<Job[]>('/training/jobs'),
   createJob:(config:TrainingConfig)=>api.post<{job:Job;experiment:Experiment}>('/training/jobs',config),
   cancelJob:(id:string)=>api.post<Job>(`/training/jobs/${id}/cancel`),
