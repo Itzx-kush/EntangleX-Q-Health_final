@@ -82,7 +82,7 @@ def sanitize_filename(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", name)[:160] or "dataset.csv"
 
 def safe_path(area: str, identity: str, suffix: str) -> Path:
-    if area not in {"data/datasets", "models", "experiments"} or suffix not in {".csv", ".tsv", ".xlsx", ".xls", ".parquet", ".dill", ".json", ".html"}:
+    if area not in {"data/datasets", "models", "experiments"} or suffix not in {".csv", ".dill", ".json", ".html"}:
         raise AppError("invalid_path", "Unsupported storage location.")
     try:
         identity = str(UUID(str(identity)))
