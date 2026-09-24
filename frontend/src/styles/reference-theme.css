@@ -500,12 +500,6 @@ body {
   color-scheme: dark;
 }
 
-html,
-body,
-#root {
-  overflow-x: hidden;
-}
-
 body,
 button,
 input,

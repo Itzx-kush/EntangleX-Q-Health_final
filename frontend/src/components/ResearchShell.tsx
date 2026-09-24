@@ -3,7 +3,7 @@ import {NavLink,useLocation,useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {
   Activity,Atom,BarChart3,Brain,ChevronLeft,ChevronRight,Command,Database,
-  FlaskConical,LayoutDashboard,Menu,PanelRight,PlayCircle,Search,Settings2,
+  FlaskConical,LayoutDashboard,Menu,MoreHorizontal,PanelRight,PlayCircle,Search,Settings2,
   ShieldCheck,SlidersHorizontal,X,Zap
 } from 'lucide-react';
 import {qh,setSessionToken} from '../lib/api';
@@ -53,6 +53,13 @@ const navGroups:NavGroup[]=[
 const pageNames:Record<string,string>=Object.fromEntries(
   navGroups.flatMap(group=>group.items.map(item=>[item.path,item.label]))
 );
+
+const mobilePrimaryNav:NavEntry[]=[
+  navGroups[0].items[0],
+  navGroups[0].items[1],
+  navGroups[1].items[2],
+  navGroups[3].items[0],
+];
 
 function readSettings():UiSettings{
   const storedTheme=localStorage.getItem('qhealth-theme')||localStorage.getItem('qhealth-tictac-theme')||'research';
@@ -162,9 +169,47 @@ function ContextInspector({summary,health,status,jobs,visible,onClose}:{summary:
   </aside>;
 }
 
+function MobileBottomNavigation({onMore}:{onMore:()=>void}){
+  return <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+    <div className="mobile-bottom-nav-inner">
+      {mobilePrimaryNav.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} className={({isActive})=>'mobile-nav-link '+(isActive?'active':'')} aria-label={label}>
+        <Icon size={18}/><span>{label==='Quantum Lab'?'Quantum':label}</span>
+      </NavLink>)}
+      <button className="mobile-nav-link" type="button" onClick={onMore} aria-label="Open more navigation">
+        <MoreHorizontal size={18}/><span>More</span>
+      </button>
+    </div>
+  </nav>;
+}
+
+function MobileMoreSheet({onClose}:{onClose:()=>void}){
+  return <div className="mobile-more-overlay" role="presentation" onMouseDown={onClose}>
+    <aside className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More research navigation" onMouseDown={e=>e.stopPropagation()}>
+      <div className="mobile-more-head">
+        <div><p className="eyebrow">EntangleX Q-Health</p><h2>Research navigation</h2><p className="muted">Open any existing workspace route.</p></div>
+        <button className="btn btn-ghost px-2" type="button" onClick={onClose} aria-label="Close more navigation"><X size={17}/></button>
+      </div>
+      <nav className="mobile-more-groups">
+        {navGroups.map(group=><div className="mobile-more-group" key={group.label}>
+          <p className="sidebar-label">{group.label}</p>
+          {group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}>
+            <Icon size={16}/><span>{label}</span><ChevronRight size={14} className="ml-auto"/>
+          </NavLink>)}
+        </div>)}
+        <div className="mobile-more-group">
+          <p className="sidebar-label">Workspace</p>
+          <NavLink to="/demo" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span><ChevronRight size={14} className="ml-auto"/></NavLink>
+          <NavLink to="/settings" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><Settings2 size={16}/><span>Settings</span><ChevronRight size={14} className="ml-auto"/></NavLink>
+        </div>
+      </nav>
+    </aside>
+  </div>;
+}
+
 export function ResearchShell({children}:{children:ReactNode}){
   const {pathname}=useLocation();
-  const [mobile,setMobile]=useState(false); const [palette,setPalette]=useState(false); const [settings,setSettings]=useState(false); const [config,setConfig]=useState(false);
+  const [mobile,setMobile]=useState(false); const [mobileMore,setMobileMore]=useState(false); const [palette,setPalette]=useState(false); const [settings,setSettings]=useState(false); const [config,setConfig]=useState(false);
+  const [isMobileViewport,setIsMobileViewport]=useState(false);
   const [showInspector,setShowInspector]=useState(()=>localStorage.getItem('qhealth-inspector')!=='hidden');
   const [token,setToken]=useState(''); const [uiSettings,setUiSettings]=useState<UiSettings>(readSettings);
   const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:10000});
@@ -191,9 +236,17 @@ export function ResearchShell({children}:{children:ReactNode}){
     localStorage.setItem('qhealth-motion',uiSettings.motion);
   },[uiSettings]);
 
-  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false);setMobileMore(false);setMobile(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
   useEffect(()=>{const handler=()=>setUiSettings(readSettings());window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
-  useEffect(()=>{setMobile(false);setSettings(false)},[pathname]);
+  useEffect(()=>{
+    if(!window.matchMedia)return;
+    const media=window.matchMedia('(max-width: 767px)');
+    const update=()=>setIsMobileViewport(media.matches);
+    update();
+    media.addEventListener?.('change',update);
+    return()=>media.removeEventListener?.('change',update);
+  },[]);
+  useEffect(()=>{setMobile(false);setMobileMore(false);setSettings(false)},[pathname]);
   const updatePrefs=(patch:Partial<UiSettings>)=>setUiSettings(prev=>({...prev,...patch}));
   const resetPrefs=()=>setUiSettings({theme:'research',sidebar:'inset',layout:'default',density:'comfortable',motion:'full'});
 
@@ -202,17 +255,19 @@ export function ResearchShell({children}:{children:ReactNode}){
     <aside className={'research-sidebar variant-'+uiSettings.sidebar+' '+(uiSettings.layout==='icon'?'is-collapsed ':'')+(mobile?'is-mobile-open ':'')+(uiSettings.layout==='offcanvas'?'is-offcanvas':'')} aria-label="Primary navigation">
       <div className="sidebar-brand"><NavLink to="/" className="brand-mark" aria-label="Q-Health overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><div className="brand-copy"><img className="brand-logo brand-logo-light" src="/entanglex-logo-dark.svg" alt="EntangleX"/><img className="brand-logo brand-logo-dark" src="/entanglex-logo-dark.svg" alt="EntangleX"/><span>Q-HEALTH</span></div><button className="sidebar-close btn btn-ghost" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={16}/></button></div>
       <div className="sidebar-context"><span className="context-kicker">Research workspace</span><strong>SIH 2026 · PS 26139</strong><span>Hybrid biomedical ML</span></div>
-      <nav className="sidebar-nav">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} className={({isActive})=>'sidebar-link '+(isActive?'active':'')} title={uiSettings.layout==='icon'?label:undefined}><Icon size={16}/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse"/>}</NavLink>)}</div>)}<div className="sidebar-group sidebar-special"><p className="sidebar-label">Presentation</p><NavLink to="/demo" className={({isActive})=>'sidebar-link demo-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span></NavLink></div></nav>
-      <div className="sidebar-bottom"><button className="sidebar-link" onClick={()=>setPalette(true)}><Command size={16}/><span>Command palette</span><kbd>⌘K</kbd></button><NavLink to="/settings" className="sidebar-link"><Settings2 size={16}/><span>Settings</span></NavLink><button className="sidebar-link" onClick={()=>setConfig(true)}><Settings2 size={16}/><span>Theme & Layout</span></button><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
+      <nav className="sidebar-nav">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} aria-label={label} title={label} className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Icon size={16}/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse"/>}</NavLink>)}</div>)}<div className="sidebar-group sidebar-special"><p className="sidebar-label">Presentation</p><NavLink to="/demo" aria-label="SIH Demo Center" title="SIH Demo Center" className={({isActive})=>'sidebar-link demo-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span></NavLink></div></nav>
+      <div className="sidebar-bottom"><button className="sidebar-link" onClick={()=>setPalette(true)} aria-label="Command palette"><Command size={16}/><span>Command palette</span><kbd>⌘K</kbd></button><NavLink to="/settings" aria-label="Settings" title="Settings" className="sidebar-link"><Settings2 size={16}/><span>Settings</span></NavLink><button className="sidebar-link" onClick={()=>setConfig(true)} aria-label="Open theme and layout settings"><Settings2 size={16}/><span>Theme & Layout</span></button><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
     </aside>
     {mobile&&<button className="navigation-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
-    <div className="research-workspace">
-      <header className="research-topbar"><div className="topbar-left"><button className="mobile-menu btn btn-ghost" onClick={()=>setMobile(true)} aria-label="Open navigation"><Menu size={18}/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> EntangleX workspace</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15}/><span>Search commands</span><kbd>⌘K</kbd></button><span className={'connection-indicator '+(health.data?'is-live':'') }><span className="status-dot"/><span>{health.data?'Connected':'Offline'}</span></span><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16}/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme settings"><Settings2 size={16}/></button>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
+      <div className="research-workspace">
+      <header className="research-topbar"><div className="topbar-left"><NavLink to="/" className="mobile-brand-mark" aria-label="Q-Health overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><button className="mobile-menu btn btn-ghost" onClick={()=>{if(isMobileViewport)setMobileMore(true);else setMobile(true)}} aria-label="Open navigation"><Menu size={18}/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> EntangleX workspace</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15}/><span>Search commands</span><kbd>⌘K</kbd></button><span className={'connection-indicator '+(health.data?'is-live':'') }><span className="status-dot"/><span>{health.data?'Connected':'Offline'}</span></span><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16}/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme settings"><Settings2 size={16}/></button>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
       <div className="research-context-bar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={13}/><strong>{title}</strong></div><div className="context-actions"><span className="context-chip"><span className="status-dot is-live"/> Research prototype</span><NavLink className="context-demo-link" to="/demo"><PlayCircle size={13}/> Presentation mode</NavLink></div></div>
       <div className={'research-body '+(!showInspector?'inspector-closed':'')}><main className="research-main">{children}<div className="bottom-status"><span><span className={'status-dot '+(health.data?'is-live':'is-offline')}/>{health.data?'Backend connected':'Backend unavailable'}</span><span>Quantum: {health.data?.quantum.available?'available':'not reported'}</span><span>Jobs: {status.data?.jobs.active??summary.data?.counts.active_jobs??'—'} active</span><span className="ml-auto">Research prototype · no clinical diagnosis</span></div></main><ContextInspector summary={summary.data} health={health.data} status={status.data} jobs={jobs.data} visible={showInspector} onClose={()=>setShowInspector(false)}/></div>
       <footer className="research-footer"><span>EntangleX Q-Health · Hybrid quantum–classical research platform</span><span>Measured outputs only · <NavLink to="/settings">Settings</NavLink></span></footer>
     </div>
+    {isMobileViewport&&<MobileBottomNavigation onMore={()=>setMobileMore(true)}/>}
     {palette&&<CommandPalette onClose={()=>setPalette(false)}/>}
     {config&&<ConfigDrawer prefs={uiSettings} onChange={patch=>updatePrefs(patch)} onReset={resetPrefs} onClose={()=>setConfig(false)}/>}
+    {isMobileViewport&&mobileMore&&<MobileMoreSheet onClose={()=>setMobileMore(false)}/>}
   </div>;
 }

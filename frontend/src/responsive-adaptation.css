@@ -1,0 +1,495 @@
+/*
+ * EntangleX Q-Health responsive adaptation
+ *
+ * Desktop remains the source of truth. The rules below only activate for
+ * narrow laptop/tablet and mobile widths; they adapt layout and navigation
+ * without changing data, routing, theme tokens, or backend behavior.
+ */
+
+.mobile-brand-mark,
+.mobile-bottom-nav,
+.mobile-more-overlay {
+  display: none;
+}
+
+/* Prevent flex/grid descendants from establishing a wider page than their
+   available column. Legitimate wide content is handled by its own container
+   (for example .table-wrap and .circuit-view). */
+.research-shell,
+.research-workspace,
+.research-body,
+.research-main,
+.glass-card,
+.topbar-left,
+.topbar-actions {
+  min-width: 0;
+}
+
+.research-workspace,
+.research-body,
+.research-main {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Narrow laptop / tablet: use a deliberate compact rail rather than
+   squeezing or off-canvas hiding the desktop sidebar. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .research-sidebar,
+  .research-shell.is-collapsed .research-sidebar,
+  [data-layout="icon"] .research-sidebar {
+    width: 76px !important;
+    margin: 0 !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    transform: none !important;
+  }
+
+  .research-workspace,
+  .research-shell.is-collapsed .research-workspace,
+  [data-layout="icon"] .research-workspace {
+    margin-left: 76px !important;
+  }
+
+  .research-sidebar .brand-copy,
+  .research-sidebar .sidebar-context,
+  .research-sidebar .sidebar-label,
+  .research-sidebar .sidebar-link span,
+  .research-sidebar .sidebar-link kbd,
+  .research-sidebar .collapse-button span {
+    display: none !important;
+  }
+
+  .research-sidebar .sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .research-sidebar .sidebar-nav {
+    padding-inline: 10px;
+  }
+
+  .research-sidebar .sidebar-link {
+    justify-content: center;
+    min-height: 42px;
+    padding-inline: 0;
+  }
+
+  .research-sidebar .sidebar-link.active {
+    box-shadow: none;
+  }
+
+  .research-sidebar .collapse-button {
+    min-height: 42px;
+  }
+
+  .research-topbar {
+    gap: 14px;
+    padding-inline: 20px;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+  }
+
+  .topbar-actions .research-search {
+    display: none;
+  }
+
+  .command-trigger span,
+  .command-trigger kbd,
+  .connection-indicator span:last-child {
+    display: none;
+  }
+
+  .command-trigger {
+    width: 38px;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .mobile-menu {
+    display: none;
+  }
+
+  .research-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 20px;
+  }
+
+  .context-inspector {
+    display: none;
+  }
+
+  .research-context-bar {
+    padding-inline: 20px;
+    flex-wrap: wrap;
+  }
+
+  .research-context-bar .context-actions {
+    margin-left: auto;
+  }
+}
+
+/* Mobile: replace the desktop rail with an application-style bottom
+   navigation and a sheet for the remaining existing routes. */
+@media (max-width: 767px) {
+  .research-sidebar {
+    display: none !important;
+  }
+
+  .research-workspace,
+  .research-shell.is-collapsed .research-workspace,
+  [data-layout="icon"] .research-workspace,
+  [data-layout="offcanvas"] .research-workspace {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .research-topbar {
+    min-height: 66px;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .mobile-brand-mark {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    box-shadow: 0 8px 18px hsl(var(--primary) / .18);
+  }
+
+  .mobile-brand-mark img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-menu {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  .topbar-left > div {
+    min-width: 0;
+  }
+
+  .topbar-kicker,
+  .topbar-left h1 {
+    max-width: min(46vw, 220px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-left h1 {
+    font-size: 16px;
+  }
+
+  .topbar-actions {
+    gap: 5px;
+    flex: 0 0 auto;
+  }
+
+  .topbar-actions .research-search,
+  .connection-indicator,
+  .command-trigger span,
+  .command-trigger kbd {
+    display: none;
+  }
+
+  .command-trigger {
+    width: 36px;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .icon-button {
+    width: 36px;
+    flex: 0 0 auto;
+  }
+
+  .research-context-bar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .breadcrumbs {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .breadcrumbs strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .context-actions {
+    width: 100%;
+  }
+
+  .context-chip {
+    display: none;
+  }
+
+  .research-body,
+  .research-body.inspector-closed {
+    display: block;
+    padding: 0 12px 18px;
+  }
+
+  .context-inspector {
+    display: none;
+  }
+
+  .research-main {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .research-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 15px 14px calc(90px + env(safe-area-inset-bottom));
+  }
+
+  .bottom-status {
+    gap: 9px;
+  }
+
+  .bottom-status .ml-auto {
+    margin-left: 0;
+  }
+
+  .page-hero {
+    padding: 24px 0 18px;
+  }
+
+  .page-hero .headline,
+  .page-hero h1 {
+    font-size: clamp(1.7rem, 8vw, 2.25rem);
+  }
+
+  .page-hero .flex.items-end {
+    align-items: flex-start;
+  }
+
+  .page-hero .flex.items-end > .flex {
+    width: 100%;
+  }
+
+  .page-hero .flex.items-end > .flex .btn {
+    flex: 1 1 auto;
+  }
+
+  .glass-card {
+    padding: 16px !important;
+  }
+
+  .stat-grid,
+  .content-grid,
+  .two-grid,
+  .three-grid,
+  .settings-grid,
+  .demo-hero {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .stat-grid {
+    gap: 10px;
+  }
+
+  .research-pipeline-panel {
+    padding: 14px;
+  }
+
+  .research-pipeline-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    overflow: visible;
+  }
+
+  .research-pipeline-step-wrap {
+    min-width: 0;
+  }
+
+  .research-pipeline-arrow {
+    display: none;
+  }
+
+  .field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .btn {
+    min-height: 40px;
+  }
+
+  .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table {
+    min-width: 620px;
+  }
+
+  .circuit-view {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 70;
+    display: block;
+    padding: 7px 10px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid hsl(var(--border));
+    background: hsl(var(--card) / .96);
+    box-shadow: 0 -12px 30px rgba(8, 15, 30, .12);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-bottom-nav-inner {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .mobile-nav-link {
+    display: grid;
+    place-items: center;
+    gap: 3px;
+    min-height: 48px;
+    padding: 6px 3px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .mobile-nav-link.active,
+  .mobile-nav-link:hover {
+    color: hsl(var(--primary));
+    background: hsl(var(--primary) / .1);
+  }
+
+  .mobile-more-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(8, 15, 30, .42);
+    backdrop-filter: blur(7px);
+  }
+
+  .mobile-more-sheet {
+    width: 100%;
+    max-height: min(82vh, 720px);
+    overflow-y: auto;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    border: 1px solid hsl(var(--border));
+    border-radius: 20px 20px 0 0;
+    background: hsl(var(--card) / .98);
+    box-shadow: 0 -24px 80px rgba(8, 15, 30, .22);
+  }
+
+  .mobile-more-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .mobile-more-head h2 {
+    margin-top: 4px;
+    font-size: 18px;
+    letter-spacing: -.03em;
+  }
+
+  .mobile-more-groups {
+    display: grid;
+    gap: 12px;
+    padding: 8px 12px 14px;
+  }
+
+  .mobile-more-group {
+    display: grid;
+    gap: 4px;
+  }
+
+  .mobile-more-group .sidebar-label {
+    padding: 4px 8px 3px;
+    margin: 0;
+  }
+
+  .mobile-more-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: hsl(var(--muted-foreground));
+    font-size: 12px;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .mobile-more-link.active,
+  .mobile-more-link:hover {
+    border-color: hsl(var(--primary) / .2);
+    background: hsl(var(--primary) / .09);
+    color: hsl(var(--primary));
+  }
+}
+
+@media (max-width: 420px) {
+  .research-topbar {
+    padding-inline: 10px;
+  }
+
+  .research-body {
+    padding-inline: 10px;
+  }
+
+  .topbar-kicker,
+  .topbar-left h1 {
+    max-width: 38vw;
+  }
+
+  .mobile-brand-mark,
+  .mobile-menu,
+  .command-trigger,
+  .icon-button {
+    width: 34px;
+    min-width: 34px;
+  }
+}
