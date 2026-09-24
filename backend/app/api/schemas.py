@@ -116,6 +116,30 @@ class DatasetOut(Schema):
     quality: dict[str, Any]
     created_at: datetime
 
+
+class DatasetLibraryItem(Schema):
+    slug: str
+    name: str
+    domain: str
+    description: str
+    source: str
+    source_url: str
+    version: str
+    license: str
+    task: str
+    target: str
+    positive_label: str
+    negative_label: str
+    rows: int
+    features: int
+    numeric_feature_count: int
+    categorical_feature_count: int
+    filename: str
+    is_demo: bool
+    dataset_hash: str
+    hash_algorithm: str
+    hash_scope: str
+
 class ExperimentOut(Schema):
     id: str
     dataset_id: str
