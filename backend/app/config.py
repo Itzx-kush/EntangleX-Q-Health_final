@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080"
     trusted_hosts: str = "localhost,127.0.0.1,backend,testserver"
     upload_limit_mb: int = Field(default=20, ge=1, le=100)
-    max_rows: int = Field(default=100000, ge=20, le=1000000)
+    max_rows: int = Field(default=150000, ge=20, le=1000000)
     max_columns: int = Field(default=200, ge=2, le=500)
     quantum_max_samples: int = Field(default=256, ge=20, le=1024)
     max_queued_jobs: int = Field(default=3, ge=1, le=10)
