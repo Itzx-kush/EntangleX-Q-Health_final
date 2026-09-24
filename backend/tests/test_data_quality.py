@@ -37,7 +37,7 @@ def test_diabetes_readmission_target_derivation():
     frame = parse_csv(content, "readmitted_30d")
     assert frame["readmitted_30d"].tolist() == [1, 0, 0, 0]
     assert "readmitted" not in frame.columns
-    assert "encounter_id" in frame.columns
+    assert "encounter_id" not in frame.columns
 
 def test_missing_target(biomedical_frame):
     with pytest.raises(AppError, match="absent"):
