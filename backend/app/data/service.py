@@ -33,7 +33,10 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
         raise AppError("invalid_csv", "Upload a nonempty UTF-8 comma-separated CSV file.") from exc
     if len(header) < 2 or len(header) > settings.max_columns:
         raise AppError("column_limit", "The CSV must contain a target and input features within the column limit.")
-    derived_readmission_target = target == "readmitted_30d" and target not in header and "readmitted" in header
+    normalized_header = [h.lstrip("\ufeff") for h in header]
+    if normalized_header != header:
+        header = normalized_header
+    derived_readmission_target = target.strip() == "readmitted_30d" and target not in header and "readmitted" in header
     if len(set(header)) != len(header) or any(not h.strip() or h != h.strip() or len(h) > 100 or any(ord(c) < 32 for c in h) for h in header):
         raise AppError("invalid_header", "Column names must be unique, trimmed, nonempty, and at most 100 characters.")
     if any(row and len(row) != len(header) for row in rows[1:]):
@@ -46,9 +49,13 @@ def parse_csv(content: bytes, target: str) -> pd.DataFrame:
         raise AppError("invalid_csv", "CSV parsing failed; check quoting, delimiters, and the table schema.") from exc
     if len(frame) < 10 or len(frame) > settings.max_rows:
         raise AppError("row_limit", "The dataset must have at least 10 rows and remain within the configured row limit.")
+    frame.columns = [str(c).lstrip("\ufeff").strip() for c in frame.columns]
     if list(frame.columns) != header or not isinstance(frame.index, pd.RangeIndex):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     if derived_readmission_target:
+        frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
+        frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
+    elif target not in frame.columns and "readmitted" in frame.columns and target.strip() == "readmitted_30d":
         frame[target] = (frame["readmitted"].astype("string").str.strip() == "<30").astype(int)
         frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
     for col in frame.select_dtypes(exclude=np.number):
