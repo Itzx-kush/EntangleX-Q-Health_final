@@ -34,10 +34,14 @@ def test_invalid_csv_rejected(content):
 
 def test_diabetes_readmission_target_derivation():
     content = b"encounter_id,readmitted,age\n1,<30,[30-40)\n2,NO,[40-50)\n3,>30,[50-60)\n4,NO,[60-70)\n5,NO,[70-80)\n6,<30,[30-40)\n7,NO,[40-50)\n8,>30,[50-60)\n9,NO,[60-70)\n10,<30,[70-80)\n"
-    frame = parse_csv(content, "readmitted_30d")
-    assert frame["readmitted_30d"].tolist() == [1, 0, 0, 0]
-    assert "readmitted" not in frame.columns
-    assert "encounter_id" not in frame.columns
+    numeric_target = parse_csv(content, "readmitted_30d", "1")
+    assert numeric_target["readmitted_30d"].tolist() == [1, 0, 0, 0, 0, 1, 0, 0, 0, 1]
+    assert "readmitted" not in numeric_target.columns
+    assert "encounter_id" not in numeric_target.columns
+
+    original_target = parse_csv(content, "readmitted", "<30")
+    assert set(original_target["readmitted"].unique()) == {"<30", "not_within_30d"}
+    assert original_target["readmitted"].tolist() == ["<30", "not_within_30d", "not_within_30d", "not_within_30d", "not_within_30d", "<30", "not_within_30d", "not_within_30d", "not_within_30d", "<30"]
 
 def test_missing_target(biomedical_frame):
     with pytest.raises(AppError, match="absent"):
