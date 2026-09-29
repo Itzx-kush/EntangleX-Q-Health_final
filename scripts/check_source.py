@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKIP = {".venv", "node_modules", ".git", "__pycache__", "dist"}
 REQUIRED = ["README.md", ".env.example", "docker-compose.yml", "backend/requirements.txt",
     "backend/Dockerfile", "backend/app/main.py", "frontend/Dockerfile", "frontend/package.json",
-    "frontend/src/App.tsx", "frontend/src/styles.css", "docs/architecture.md", "docs/limitations.md"]
+    "frontend/src/App.tsx", "frontend/src/index.css", "docs/architecture.md", "docs/limitations.md"]
 
 def main():
     failures, python_count, json_count = [], 0, 0

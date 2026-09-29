@@ -4,6 +4,7 @@ from ..api.schemas import PredictionRequest
 from ..config import DISCLAIMER
 from ..data.service import load_frame
 from ..database import session_scope
+from ..demo_readiness import verify_installed_model
 from ..evaluation.metrics import score_outputs
 from ..storage.entities import ModelRecord
 from ..storage.files import load_model
@@ -15,6 +16,7 @@ def get_bundle(identity: str):
         record = require(session, ModelRecord, identity)
     if record.status != "ready" or not record.artifact_sha256:
         raise AppError("model_not_ready", "This model has no completed training artifact.", 409)
+    verify_installed_model(record)
     return record, load_model(identity, record.artifact_sha256)
 
 def prediction_frame(samples, features, numeric):

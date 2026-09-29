@@ -141,6 +141,16 @@ class DatasetInspectionOut(Schema):
     heuristic_notice: str
     candidates: list[TargetCandidateOut]
 
+class DemoReadinessOut(Schema):
+    status: Literal["ready", "requires_processing"]
+    instant_demo_available: bool
+    artifact_version: str | None
+    experiment_id: str | None
+    model_ids: list[str]
+    verified_dataset_hash: str | None
+    verified_artifact_manifest_hash: str | None
+    unavailable_reason: str | None = None
+
 class DatasetLibraryItem(Schema):
     slug: str
     name: str
@@ -164,6 +174,7 @@ class DatasetLibraryItem(Schema):
     recommended_duplicate_policy: Literal["reject", "drop_exact"]
     origin: Literal["built_in"]
     dataset_status: Literal["available"]
+    demo_readiness: DemoReadinessOut
 
 class BuiltInRegistrationRequest(Schema):
     target: str | None = Field(default=None, max_length=100)

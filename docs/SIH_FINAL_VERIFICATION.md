@@ -244,3 +244,7 @@ A real local Uvicorn server was exercised over HTTP. The run verified health, fi
 - Existing package-contained datasets and Docker copy behavior were unchanged; no runtime dataset download or database seed was introduced.
 - Render itself was not redeployed or smoke-tested in this pass.
 - Visible-browser and screenshot-based responsive QA were not performed, so they are not marked as passed. Existing jsdom interaction tests, route assertions, theme/mobile regression tests, and the production build passed.
+
+## Prompt 5 — Verified instant demo readiness
+
+The deployable backend now validates and hydrates two repository-packaged, genuine benchmark experiments on startup. See [Verified Instant Demo](VERIFIED_INSTANT_DEMO.md) for the exact dataset selection, immutable configuration, manifest layout, integrity checks, and operational boundary. The remaining three built-in datasets keep the complete live workflow and do not receive synthetic experiment or model records.

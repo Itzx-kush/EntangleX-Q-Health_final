@@ -29,6 +29,7 @@ export const qh={
   summary:()=>api.get<{counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number};recent_experiments:Experiment[];disclaimer:string}>('/summary'),
   datasets:()=>api.get<Dataset[]>('/datasets'),
   datasetLibrary:()=>api.get<DatasetLibraryItem[]>('/datasets/library'),
+  datasetReadiness:()=>api.get<{total:number;verified_demo_ready:number;requires_processing:number;datasets:{slug:string;dataset_status:string;demo_readiness:DatasetLibraryItem['demo_readiness']}[]}>('/datasets/readiness'),
   registerBuiltIn:(slug:string,body?:{target?:string;positive_label?:string})=>api.post<Dataset>(`/datasets/library/${slug}`,body||{}),
   inspectDataset:(form:FormData)=>api.upload<DatasetInspection>('/datasets/inspect',form),
   dataset:(id:string)=>api.get<Dataset>(`/datasets/${id}`),
