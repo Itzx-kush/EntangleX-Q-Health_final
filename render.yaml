@@ -5,7 +5,36 @@ services:
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE
+        value: https://entanglex-q-health-api.onrender.com/api
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://entanglex-q-health-api.onrender.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+
+  - type: web
+    runtime: docker
+    name: entanglex-q-health-api
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: QHEALTH_DEPLOYMENT_MODE
+        value: production
+      - key: QHEALTH_STORAGE_ROOT
+        value: /runtime
+      - key: QHEALTH_CORS_ORIGINS
+        value: https://entanglex-q-health.onrender.com
+      - key: QHEALTH_TRUSTED_HOSTS
+        value: entanglex-q-health-api.onrender.com,localhost,127.0.0.1
