@@ -248,3 +248,10 @@ A real local Uvicorn server was exercised over HTTP. The run verified health, fi
 ## Prompt 5 — Verified instant demo readiness
 
 The deployable backend now validates and hydrates two repository-packaged, genuine benchmark experiments on startup. See [Verified Instant Demo](VERIFIED_INSTANT_DEMO.md) for the exact dataset selection, immutable configuration, manifest layout, integrity checks, and operational boundary. The remaining three built-in datasets keep the complete live workflow and do not receive synthetic experiment or model records.
+
+### Prompt 5 hardening
+
+- Full manifest, dataset-byte, model SHA-256, safe-bundle, and relationship verification runs once per process and is retained in a fail-closed in-memory readiness cache. Normal library/readiness requests reuse verified metadata; tests and maintenance code can explicitly refresh the cache.
+- Manifest schema v2 restores the genuine completed `Job` for each packaged experiment (`succeeded`, 100% progress, source final-state text, and source timestamps).
+- Packaged model integrity is explicitly SHA-256 over decoded raw dill bytes. This is separate from the unchanged HMAC integrity used when normal live-trained models are saved at runtime.
+- Uploaded/custom datasets resolve to `requires_processing` at the registered-dataset readiness boundary and remain eligible for the normal live pipeline. Public samples remain allowed for built-in benchmarks and the legacy demo, and blocked for uploaded datasets.

@@ -9,7 +9,7 @@ from ..data.quality import quality_report
 from ..storage.entities import Dataset
 from ..storage.repository import recent, require
 from ..utils.errors import AppError
-from ..demo_readiness import readiness_summary
+from ..demo_readiness import readiness_for_registered_dataset, readiness_summary
 from .schemas import (
     BuiltInRegistrationRequest,
     DatasetInspectionOut,
@@ -78,6 +78,11 @@ async def upload_dataset(metadata_json: str = Form(...), file: UploadFile = File
 @router.post("/demo", response_model=DatasetOut, status_code=201)
 def load_demo():
     return service.register_demo()
+
+@router.get("/{identity}/readiness", response_model=dict)
+def registered_dataset_readiness(identity: UUID):
+    with session_scope() as session:
+        return readiness_for_registered_dataset(require(session, Dataset, str(identity)))
 
 @router.get("/{identity}", response_model=DatasetOut)
 def get_dataset(identity: UUID):

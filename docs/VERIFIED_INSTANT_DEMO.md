@@ -33,13 +33,15 @@ The committed metrics are the outputs measured by that existing backend workflow
 backend/app/demo_artifacts/
 ├── manifest.json
 └── models/
-    ├── <real-model-id>.dill
+    ├── <real-model-id>.dill.b64
     └── ...
 ```
 
-The versioned manifest contains each dataset slug and SHA-256, immutable dataset registry record, real experiment metadata and configuration, real model metadata and metrics, model artifact filename/SHA-256, prediction-sample policy, explanation mode, and report mode. It contains no filesystem paths, secrets, uploaded data, or runtime SQLite database.
+The versioned manifest contains each dataset slug and SHA-256, immutable dataset registry record, real experiment metadata and configuration, the genuine completed source `Job`, real model metadata and metrics, model artifact filename/SHA-256 contract, prediction-sample policy, explanation mode, and report mode. It contains no filesystem paths, secrets, uploaded data, or runtime SQLite database.
 
-On a fresh process, the backend validates the package and idempotently hydrates the normal SQLite registry and normal runtime artifact locations. Startup never trains models, downloads resources, or depends on a pre-seeded database. Models are loaded only on demand.
+On a fresh process, the backend performs the full package verification once, caches only successfully verified readiness metadata in memory, and idempotently hydrates the normal SQLite registry and runtime artifact locations. Normal Dataset Library/readiness requests reuse that cache and do not repeatedly unpickle every packaged model. Failed verification is cached closed, never as ready; an explicit refresh hook exists for tests and maintenance. Startup never trains models, downloads resources, or depends on a pre-seeded database. Models are loaded only on demand.
+
+Each restored precomputed experiment has its genuine completed source job: `succeeded`, 100% progress, truthful final state, original errors, and source `created_at`/`updated_at` timestamps. It never appears as a running job.
 
 ## Integrity and isolation
 
@@ -51,15 +53,20 @@ Before installation or use, the backend checks:
 4. dataset ID, catalog slug, target/label provenance, and experiment dataset relationship;
 5. exact `TrainingConfig` compatibility and dataset ID;
 6. model-to-experiment and model-to-dataset relationships;
-7. SHA-256 of every serialized model artifact;
+7. explicit packaged hash metadata (`sha256`, scope `raw_dill_payload`) and SHA-256 of every decoded raw dill payload;
 8. serialized bundle dataset ID, dataset hash, and exact experiment configuration;
-9. runtime model SHA-256 and registry relationships again before model loading.
+9. completed-job identity, status, progress, errors, final state, and timestamps;
+10. runtime model SHA-256 and registry relationships again before model loading.
+
+The packaged hash is deliberately different from normal runtime storage integrity: live-trained models continue to use the existing HMAC value, while packaged verified-demo models use manifest SHA-256 over raw dill bytes. No broad storage change was made.
 
 Any mismatch prevents instant-demo loading and degrades that dataset to unavailable/requires-processing metadata. There is no cross-dataset fallback. Live training remains available.
 
 ## Frontend behavior
 
 The Medical Dataset Library, Demo Center, Training, Prediction, and Experiments views consume backend readiness metadata. The Demo Center computes its ready/processing counts from the returned five records. Ready records are labeled **Verified Demo Ready** and **Precomputed research result**; other records say **Requires Processing** and retain the live Training action.
+
+Uploaded/custom registry records are explicitly excluded at the backend readiness boundary: they return `requires_processing`, `instant_demo_available=false`, no experiment ID, and no model IDs while retaining the normal live pipeline.
 
 Public benchmark sample policy remains provenance-based: built-in public benchmarks and the legacy demo are allowed; uploaded/custom datasets are blocked. `BrowserRouter` and the Render `/* -> /index.html` rewrite remain unchanged.
 

@@ -9,17 +9,29 @@ import pytest
 from app.data.catalog import builtin_bytes, list_builtin_datasets
 from app.demo_readiness import (
     READY_DEMO_DATASETS,
+    PACKAGED_ARTIFACT_HASH_ALGORITHM,
+    PACKAGED_ARTIFACT_HASH_SCOPE,
     _artifact_path,
     _load_manifest,
     _read_bundle,
     _validate_entry,
+    clear_verified_readiness_cache,
+    packaged_artifact_sha256,
     readiness_summary,
     validate_packaged_dataset,
     validate_readiness_configuration,
 )
 from app.utils.errors import AppError
+import app.demo_readiness as demo_readiness
 
 PROCESSING = {"cleveland-heart-disease", "chronic-kidney-disease", "ilpd-liver"}
+
+
+@pytest.fixture(autouse=True)
+def reset_verified_cache():
+    clear_verified_readiness_cache(clear_manifest=True)
+    yield
+    clear_verified_readiness_cache(clear_manifest=True)
 
 
 def test_readiness_configuration_is_exact_and_invalid_selection_fails():
@@ -44,17 +56,21 @@ def test_manifest_and_every_packaged_artifact_have_real_matching_hashes():
         _, content = builtin_bytes(slug)
         assert hashlib.sha256(content).hexdigest() == checked["catalog"]["sha256"]
         for model in checked["models"]:
-            artifact = _artifact_path(model["artifact"]["filename"])
-            assert hashlib.sha256(base64.b64decode(artifact.read_bytes(), validate=True)).hexdigest() == model["artifact_sha256"]
+            artifact_meta = model["artifact"]
+            artifact = _artifact_path(artifact_meta["filename"])
+            raw_dill = base64.b64decode(artifact.read_bytes(), validate=True)
+            assert artifact_meta["hash_algorithm"] == PACKAGED_ARTIFACT_HASH_ALGORITHM == "sha256"
+            assert artifact_meta["hash_scope"] == PACKAGED_ARTIFACT_HASH_SCOPE == "raw_dill_payload"
+            assert packaged_artifact_sha256(raw_dill) == model["artifact_sha256"] == artifact_meta["sha256"]
             bundle = _read_bundle(artifact, model["artifact_sha256"])
             assert bundle["dataset_id"] == checked["dataset"]["id"]
             assert bundle["dataset_hash"] == checked["catalog"]["sha256"]
 
 
 def test_corrupted_artifact_and_cross_dataset_relationships_are_rejected(tmp_path):
-    corrupted = tmp_path / "corrupted.dill"
-    corrupted.write_bytes(b"not a trained artifact")
-    with pytest.raises(AppError, match="invalid|integrity"):
+    corrupted = tmp_path / "corrupted.dill.b64"
+    corrupted.write_bytes(base64.b64encode(b"corrupted raw dill payload"))
+    with pytest.raises(AppError, match="SHA-256 integrity"):
         _read_bundle(corrupted, "0" * 64)
     manifest = _load_manifest()
     slug = "wdbc"
@@ -66,6 +82,10 @@ def test_corrupted_artifact_and_cross_dataset_relationships_are_rejected(tmp_pat
     entry = copy.deepcopy(manifest["datasets"][slug])
     entry["experiment"]["dataset_id"] = other["dataset"]["id"]
     with pytest.raises(AppError, match="experiment identity"):
+        _validate_entry(slug, entry, manifest)
+    entry = copy.deepcopy(manifest["datasets"][slug])
+    entry["models"][0]["experiment_id"] = other["experiment"]["id"]
+    with pytest.raises(AppError, match="relationship"):
         _validate_entry(slug, entry, manifest)
 
 
@@ -83,6 +103,12 @@ def test_readiness_endpoint_and_seeded_records_are_genuine_and_dataset_specific(
             experiment = detail.json()["experiment"]
             assert experiment["summary"]["experiment_kind"] == "precomputed_verified_demo"
             assert experiment["dataset_id"] == detail.json()["models"][0]["dataset_id"]
+            assert len(detail.json()["jobs"]) == 1
+            completed_job = detail.json()["jobs"][0]
+            assert completed_job["experiment_id"] == experiment["id"]
+            assert completed_job["status"] == "succeeded"
+            assert completed_job["progress"] == 100
+            assert completed_job["errors"] == []
             model = detail.json()["models"][0]
             assert model["id"] in ready["model_ids"]
             assert client.get(f"/api/models/{model['id']}/demo-sample").status_code == 200
@@ -105,3 +131,36 @@ def test_processing_dataset_creates_no_fake_experiment_and_live_pipeline_remains
     }
     assert client.post("/api/preprocessing/preview", json=payload).status_code == 200
     assert client.post("/api/training/jobs", json=payload).status_code == 202
+
+
+def test_repeated_readiness_calls_use_verified_cache_without_reopening_bundles(client, monkeypatch):
+    clear_verified_readiness_cache(clear_manifest=True)
+    calls = 0
+    original = demo_readiness._read_bundle
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(demo_readiness, "_read_bundle", counted)
+    first = client.get("/api/datasets/readiness")
+    second = client.get("/api/datasets/readiness")
+    library = client.get("/api/datasets/library")
+    assert first.status_code == second.status_code == library.status_code == 200
+    assert calls == 4  # two genuine models for each of the two ready datasets, verified once
+
+
+def test_uploaded_dataset_is_excluded_at_registered_readiness_boundary(client, registered, config):
+    stored = client.get(f"/api/datasets/{registered.id}")
+    assert stored.status_code == 200
+    assert stored.json()["provenance"]["origin"] == "uploaded"
+    readiness = client.get(f"/api/datasets/{registered.id}/readiness")
+    assert readiness.status_code == 200
+    assert readiness.json() == {
+        "status": "requires_processing", "instant_demo_available": False,
+        "artifact_version": None, "experiment_id": None, "model_ids": [],
+        "verified_dataset_hash": None, "verified_artifact_manifest_hash": None,
+    }
+    preview = client.post("/api/preprocessing/preview", json=config.model_dump(mode="json"))
+    assert preview.status_code == 200

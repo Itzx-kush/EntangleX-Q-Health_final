@@ -21,13 +21,21 @@ from sqlalchemy import select
 from app.api.schemas import ModelParameters, PipelineConfig, TrainingConfig
 from app.data.service import register_builtin
 from app.database import init_db, session_scope
-from app.demo_readiness import ARTIFACT_SCHEMA_VERSION, ARTIFACT_VERSION, READY_DEMO_DATASETS
+from app.demo_readiness import (ARTIFACT_SCHEMA_VERSION, ARTIFACT_VERSION, PACKAGED_ARTIFACT_HASH_ALGORITHM,
+    PACKAGED_ARTIFACT_HASH_SCOPE, READY_DEMO_DATASETS, packaged_artifact_sha256)
 from app.jobs.manager import manager
 from app.storage.entities import Dataset, Experiment, Job, ModelRecord
 
 CONFIGS = {
     "wdbc": {"duplicate_policy": "reject"},
     "early-stage-diabetes": {"duplicate_policy": "drop_exact"},
+}
+# Stable package slots avoid filename churn; manifest identity remains the model record ID.
+ARTIFACT_FILENAMES = {
+    ("early-stage-diabetes", "logistic_regression"): "d025c91a-d637-46ee-bd29-8bbce2d1bf69.dill.b64",
+    ("early-stage-diabetes", "random_forest"): "baa94644-b5ff-4f31-8375-ade8b7dc54eb.dill.b64",
+    ("wdbc", "logistic_regression"): "f2afdeb1-f61c-40d7-800f-52d6fc80d2e2.dill.b64",
+    ("wdbc", "random_forest"): "e088bd64-7e1b-4a81-b883-48311dde3eb8.dill.b64",
 }
 
 
@@ -41,11 +49,19 @@ def serialise_experiment(row: Experiment) -> dict:
             "config": row.config, "summary": row.summary, "created_at": row.created_at.isoformat()}
 
 
+def serialise_job(row: Job) -> dict:
+    return {"id": row.id, "experiment_id": row.experiment_id, "status": row.status,
+            "progress": row.progress, "state": row.state, "errors": row.errors,
+            "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat()}
+
+
 def serialise_model(row: ModelRecord, filename: str, sha256: str) -> dict:
     return {"id": row.id, "experiment_id": row.experiment_id, "dataset_id": row.dataset_id,
             "model_type": row.model_type, "status": row.status, "artifact_sha256": sha256,
             "details": row.details, "metrics": row.metrics, "created_at": row.created_at.isoformat(),
-            "artifact": {"filename": filename, "sha256": sha256}}
+            "artifact": {"filename": filename, "sha256": sha256,
+                         "hash_algorithm": PACKAGED_ARTIFACT_HASH_ALGORITHM,
+                         "hash_scope": PACKAGED_ARTIFACT_HASH_SCOPE}}
 
 
 def wait(job_id: str, timeout: float = 180) -> None:
@@ -67,8 +83,8 @@ def main() -> None:
     package = ROOT / "backend" / "app" / "demo_artifacts"
     model_package = package / "models"
     model_package.mkdir(parents=True, exist_ok=True)
-    for old in model_package.glob("*.dill.b64"):
-        old.unlink()
+    for filename in ARTIFACT_FILENAMES.values():
+        (model_package / filename).unlink(missing_ok=True)
     init_db()
     manager.start()
     entries = {}
@@ -99,20 +115,23 @@ def main() -> None:
                     model.details = {**model.details, "experiment_kind": "precomputed_verified_demo", "artifact_version": ARTIFACT_VERSION}
                 dataset_data = serialise_dataset(session.get(Dataset, dataset.id))
                 experiment_data = serialise_experiment(exp)
+                job_data = serialise_job(session.get(Job, job.id))
             model_data = []
             for model in models:
                 source = BUILD_ROOT / "models" / f"{model.id}.dill"
                 payload = source.read_bytes()
-                sha = hashlib.sha256(payload).hexdigest()
-                filename = f"{model.id}.dill.b64"
+                sha = packaged_artifact_sha256(payload)
+                filename = ARTIFACT_FILENAMES[(slug, model.model_type)]
                 (model_package / filename).write_bytes(base64.b64encode(payload))
                 with session_scope() as session:
                     stored = session.get(ModelRecord, model.id)
                     stored.artifact_sha256 = sha
-                    stored.details = {**stored.details, "experiment_kind": "precomputed_verified_demo", "artifact_version": ARTIFACT_VERSION}
+                    stored.details = {**stored.details, "experiment_kind": "precomputed_verified_demo", "artifact_version": ARTIFACT_VERSION,
+                                      "artifact_integrity": {"scheme": "packaged_sha256", "algorithm": PACKAGED_ARTIFACT_HASH_ALGORITHM,
+                                                             "scope": PACKAGED_ARTIFACT_HASH_SCOPE}}
                     model_data.append(serialise_model(stored, filename, sha))
             entries[slug] = {"slug": slug, "dataset_sha256": dataset.sha256, "dataset": dataset_data,
-                             "experiment": experiment_data, "models": model_data,
+                             "experiment": experiment_data, "job": job_data, "models": model_data,
                              "prediction_sample": {"source": "withheld row from packaged public benchmark", "target_withheld": True},
                              "explanations": {"mode": "on_demand_after_integrity_validation"},
                              "report": {"mode": "generated_on_demand_from_verified_registry_records"}}
