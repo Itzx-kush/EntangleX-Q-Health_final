@@ -11,6 +11,8 @@ from importlib.resources import files
 from pathlib import Path
 from threading import RLock
 
+from sqlalchemy import select
+
 from .api.schemas import TrainingConfig
 from .data.catalog import builtin_bytes, list_builtin_datasets
 from .database import session_scope
@@ -51,13 +53,10 @@ def _canonical_manifest(value: dict) -> bytes:
     return json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
 
-def _load_manifest(*, refresh: bool = False) -> dict:
-    global _manifest_cache
+def _read_manifest(root) -> dict:
     validate_readiness_configuration()
-    if _manifest_cache is not None and not refresh:
-        return _manifest_cache
     try:
-        value = json.loads(_root().joinpath("manifest.json").read_text(encoding="utf-8"))
+        value = json.loads(root.joinpath("manifest.json").read_text(encoding="utf-8"))
     except (FileNotFoundError, OSError, json.JSONDecodeError) as exc:
         raise AppError("demo_manifest_unavailable", "The verified demo artifact manifest is unavailable.", 503) from exc
     if value.get("schema_version") != ARTIFACT_SCHEMA_VERSION or value.get("artifact_version") != ARTIFACT_VERSION:
@@ -69,14 +68,22 @@ def _load_manifest(*, refresh: bool = False) -> dict:
     entries = value.get("datasets")
     if not isinstance(entries, dict) or set(entries) != set(READY_DEMO_DATASETS):
         raise AppError("demo_manifest_invalid", "The verified demo artifact manifest does not match the readiness configuration.", 409)
+    return value
+
+
+def _load_manifest(*, refresh: bool = False) -> dict:
+    global _manifest_cache
+    if _manifest_cache is not None and not refresh:
+        return _manifest_cache
+    value = _read_manifest(_root())
     _manifest_cache = value
     return value
 
 
-def _artifact_path(filename: str) -> Path:
+def _artifact_path(filename: str, root=None) -> Path:
     if not filename or Path(filename).name != filename or not filename.endswith(".dill.b64"):
         raise AppError("demo_manifest_invalid", "A packaged model artifact reference is invalid.", 409)
-    return Path(str(_root().joinpath("models", filename)))
+    return Path(str((root or _root()).joinpath("models", filename)))
 
 
 def _artifact_payload(path: Path) -> bytes:
@@ -110,7 +117,7 @@ def _validate_timestamp(value: object, field: str) -> None:
         raise AppError("demo_manifest_invalid", f"The verified demo {field} timestamp is invalid.", 409) from exc
 
 
-def _validate_entry(slug: str, entry: dict, manifest: dict) -> dict:
+def _validate_entry(slug: str, entry: dict, manifest: dict, artifact_root=None) -> dict:
     catalog, dataset_bytes = builtin_bytes(slug)
     if entry.get("slug") != slug or entry.get("dataset_sha256") != catalog["sha256"]:
         raise AppError("demo_dataset_mismatch", "The verified demo artifact does not match the packaged dataset.", 409)
@@ -151,7 +158,7 @@ def _validate_entry(slug: str, entry: dict, manifest: dict) -> dict:
                 or artifact.get("hash_scope") != PACKAGED_ARTIFACT_HASH_SCOPE
                 or model.get("artifact_sha256") != artifact.get("sha256")):
             raise AppError("demo_model_mismatch", "A verified demo model SHA-256 contract is inconsistent.", 409)
-        bundle = _read_bundle(_artifact_path(artifact.get("filename", "")), artifact.get("sha256", ""))
+        bundle = _read_bundle(_artifact_path(artifact.get("filename", ""), artifact_root), artifact.get("sha256", ""))
         model_provenance = model.get("details", {}).get("dataset_provenance", {})
         if (bundle.get("dataset_id") != dataset_id or bundle.get("dataset_hash") != catalog["sha256"]
                 or bundle.get("config") != experiment.get("config") or model_provenance.get("library_slug") != slug
@@ -160,6 +167,15 @@ def _validate_entry(slug: str, entry: dict, manifest: dict) -> dict:
             raise AppError("demo_model_mismatch", "A verified demo model is incompatible with its dataset or experiment.", 409)
     return {"catalog": catalog, "dataset_bytes": dataset_bytes, "dataset": dataset, "experiment": experiment,
             "job": job, "models": models, "manifest_sha256": manifest["manifest_sha256"]}
+
+
+def validate_package_tree(root: Path) -> dict[str, dict]:
+    """Fully validate a staged package tree without reading or mutating published caches."""
+    manifest = _read_manifest(root)
+    return {
+        slug: _validate_entry(slug, manifest["datasets"][slug], manifest, root)
+        for slug in sorted(READY_DEMO_DATASETS)
+    }
 
 
 def clear_verified_readiness_cache(*, clear_manifest: bool = False) -> None:
@@ -208,8 +224,61 @@ def _datetime(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+def _validate_runtime_registry(session, slug: str, checked: dict) -> None:
+    """Phase A: validate every existing registry identity without mutating files or rows."""
+    dataset_data, experiment_data, job_data, models_data = (
+        checked["dataset"], checked["experiment"], checked["job"], checked["models"]
+    )
+    dataset = session.get(Dataset, dataset_data["id"])
+    if dataset is not None and (
+        dataset.id != dataset_data["id"]
+        or dataset.sha256 != checked["catalog"]["sha256"]
+        or dataset.provenance.get("library_slug") != slug
+    ):
+        raise AppError("demo_dataset_mismatch", "A runtime dataset conflicts with the verified demo identity.", 409)
+
+    experiment = session.get(Experiment, experiment_data["id"])
+    if experiment is not None and (
+        experiment.id != experiment_data["id"]
+        or experiment.dataset_id != dataset_data["id"]
+        or experiment.config != experiment_data["config"]
+    ):
+        raise AppError("demo_experiment_mismatch", "A runtime experiment conflicts with the verified demo identity.", 409)
+
+    jobs = list(session.scalars(select(Job).where(Job.experiment_id == experiment_data["id"])))
+    if any(job.id != job_data["id"] for job in jobs):
+        raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
+    job = session.get(Job, job_data["id"])
+    if job is not None and (
+        job.id != job_data["id"]
+        or job.experiment_id != experiment_data["id"]
+        or job.status != job_data["status"]
+        or job.progress != job_data["progress"]
+        or job.state != job_data["state"]
+        or job.errors != job_data["errors"]
+    ):
+        raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
+
+    expected_model_ids = {model["id"] for model in models_data}
+    experiment_models = list(session.scalars(
+        select(ModelRecord).where(ModelRecord.experiment_id == experiment_data["id"])
+    ))
+    if any(model.id not in expected_model_ids for model in experiment_models):
+        raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+    for model_data in models_data:
+        model = session.get(ModelRecord, model_data["id"])
+        if model is not None and (
+            model.id != model_data["id"]
+            or model.dataset_id != dataset_data["id"]
+            or model.experiment_id != experiment_data["id"]
+            or model.status != model_data["status"]
+            or model.artifact_sha256 != model_data["artifact_sha256"]
+        ):
+            raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+
+
 def install_verified_demo_artifacts() -> None:
-    """Startup verification plus idempotent hydration into the existing runtime registry."""
+    """Validate registry first, then hydrate files and insert only missing rows."""
     states = verify_packaged_readiness()
     with _lock:
         for slug in sorted(READY_DEMO_DATASETS):
@@ -219,6 +288,11 @@ def install_verified_demo_artifacts() -> None:
             checked = state["checked"]
             dataset_data, experiment_data, job_data, models_data = checked["dataset"], checked["experiment"], checked["job"], checked["models"]
             try:
+                # Phase A: every possible registry conflict is checked before the first file write.
+                with session_scope() as session:
+                    _validate_runtime_registry(session, slug, checked)
+
+                # Phase B: only a conflict-free slug may hydrate runtime files.
                 dataset_path = safe_path("data/datasets", dataset_data["id"], ".csv")
                 if not dataset_path.is_file() or hashlib.sha256(dataset_path.read_bytes()).hexdigest() != checked["catalog"]["sha256"]:
                     atomic_bytes(dataset_path, checked["dataset_bytes"])
@@ -231,30 +305,21 @@ def install_verified_demo_artifacts() -> None:
                     existing_dataset = session.get(Dataset, dataset_data["id"])
                     if existing_dataset is None:
                         session.add(Dataset(**{**dataset_data, "created_at": _datetime(dataset_data["created_at"])}))
-                    elif existing_dataset.sha256 != dataset_data["sha256"] or existing_dataset.provenance.get("library_slug") != slug:
-                        raise AppError("demo_dataset_mismatch", "A runtime dataset conflicts with the verified demo identity.", 409)
                     existing_experiment = session.get(Experiment, experiment_data["id"])
                     if existing_experiment is None:
                         session.add(Experiment(**{**experiment_data, "created_at": _datetime(experiment_data["created_at"])}))
-                    elif existing_experiment.dataset_id != dataset_data["id"] or existing_experiment.config != experiment_data["config"]:
-                        raise AppError("demo_experiment_mismatch", "A runtime experiment conflicts with the verified demo identity.", 409)
                     existing_job = session.get(Job, job_data["id"])
                     if existing_job is None:
                         session.add(Job(**{**job_data, "created_at": _datetime(job_data["created_at"]), "updated_at": _datetime(job_data["updated_at"])}))
-                    elif (existing_job.experiment_id != experiment_data["id"] or existing_job.status != "succeeded"
-                            or existing_job.progress != 100 or existing_job.errors != job_data["errors"]):
-                        raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
                     for model_data in models_data:
                         stored = {key: value for key, value in model_data.items() if key != "artifact"}
                         existing_model = session.get(ModelRecord, stored["id"])
                         if existing_model is None:
                             session.add(ModelRecord(**{**stored, "created_at": _datetime(stored["created_at"])}))
-                        elif (existing_model.experiment_id != experiment_data["id"] or existing_model.dataset_id != dataset_data["id"]
-                                or existing_model.artifact_sha256 != stored["artifact_sha256"]):
-                            raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
             except AppError as exc:
                 state.clear()
                 state.update({"available": False, "code": exc.code})
+                raise
 
 
 def _processing_readiness(*, unavailable_reason: str | None = None) -> dict:

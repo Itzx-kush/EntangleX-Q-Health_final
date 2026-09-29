@@ -1,12 +1,15 @@
 import base64
 import copy
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
+import app.demo_readiness as demo_readiness
 from app.data.catalog import builtin_bytes, list_builtin_datasets
+from app.database import session_scope
 from app.demo_readiness import (
     READY_DEMO_DATASETS,
     PACKAGED_ARTIFACT_HASH_ALGORITHM,
@@ -16,13 +19,15 @@ from app.demo_readiness import (
     _read_bundle,
     _validate_entry,
     clear_verified_readiness_cache,
+    install_verified_demo_artifacts,
     packaged_artifact_sha256,
     readiness_summary,
     validate_packaged_dataset,
     validate_readiness_configuration,
 )
+from app.storage.entities import Dataset, Experiment, Job, ModelRecord
+from app.storage.files import safe_path
 from app.utils.errors import AppError
-import app.demo_readiness as demo_readiness
 
 PROCESSING = {"cleveland-heart-disease", "chronic-kidney-disease", "ilpd-liver"}
 
@@ -164,3 +169,99 @@ def test_uploaded_dataset_is_excluded_at_registered_readiness_boundary(client, r
     }
     preview = client.post("/api/preprocessing/preview", json=config.model_dump(mode="json"))
     assert preview.status_code == 200
+
+
+def test_installer_validates_all_registry_conflicts_before_any_file_write(client, monkeypatch):
+    checked = validate_packaged_dataset("early-stage-diabetes")
+    dataset_path = safe_path("data/datasets", checked["dataset"]["id"], ".csv")
+    model_data = checked["models"][0]
+    model_path = safe_path("models", model_data["id"], ".dill")
+    original_dataset_bytes, original_model_bytes = dataset_path.read_bytes(), model_path.read_bytes()
+    original_artifact_sha = model_data["artifact_sha256"]
+    sentinel_dataset, sentinel_model = b"dataset-sentinel-before-conflict", b"model-sentinel-before-conflict"
+    calls = []
+    with session_scope() as session:
+        model = session.get(ModelRecord, model_data["id"])
+        model.artifact_sha256 = "0" * 64
+        counts_before = tuple(
+            len(list(session.query(entity)))
+            for entity in (Dataset, Experiment, Job, ModelRecord)
+        )
+    dataset_path.write_bytes(sentinel_dataset)
+    model_path.write_bytes(sentinel_model)
+
+    def forbidden_write(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("filesystem hydration started before registry validation completed")
+
+    monkeypatch.setattr(demo_readiness, "atomic_bytes", forbidden_write)
+    try:
+        with pytest.raises(AppError) as error:
+            install_verified_demo_artifacts()
+        assert error.value.code == "demo_model_mismatch"
+        assert calls == []
+        assert dataset_path.read_bytes() == sentinel_dataset
+        assert model_path.read_bytes() == sentinel_model
+        with session_scope() as session:
+            counts_after = tuple(
+                len(list(session.query(entity)))
+                for entity in (Dataset, Experiment, Job, ModelRecord)
+            )
+            assert session.get(ModelRecord, model_data["id"]).artifact_sha256 == "0" * 64
+        assert counts_after == counts_before
+    finally:
+        dataset_path.write_bytes(original_dataset_bytes)
+        model_path.write_bytes(original_model_bytes)
+        with session_scope() as session:
+            session.get(ModelRecord, model_data["id"]).artifact_sha256 = original_artifact_sha
+        clear_verified_readiness_cache(clear_manifest=True)
+
+
+def _load_generator_module():
+    path = Path(__file__).resolve().parents[2] / "scripts" / "build_demo_artifacts.py"
+    spec = importlib.util.spec_from_file_location("build_demo_artifacts_test", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write_fixture_package(root: Path, label: str) -> None:
+    (root / "models").mkdir(parents=True)
+    (root / "models" / "model.dill.b64").write_text(label, encoding="utf-8")
+    (root / "manifest.json").write_text(
+        json.dumps({"artifact": "models/model.dill.b64", "label": label}),
+        encoding="utf-8",
+    )
+
+
+def _assert_fixture_package(root: Path, label: str) -> None:
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["label"] == label
+    referenced = root / manifest["artifact"]
+    assert referenced.is_file()
+    assert referenced.read_text(encoding="utf-8") == label
+
+
+def test_transactional_publication_rolls_back_failure_and_publishes_complete_success(tmp_path):
+    generator = _load_generator_module()
+    published, failed_stage = tmp_path / "demo_artifacts", tmp_path / "failed-stage"
+    _write_fixture_package(published, "old-complete-package")
+    _write_fixture_package(failed_stage, "new-package-that-must-not-leak")
+
+    def fail_after_backup():
+        raise RuntimeError("simulated publication failure")
+
+    with pytest.raises(RuntimeError, match="simulated publication failure"):
+        generator.transactional_replace_tree(
+            failed_stage,
+            published,
+            after_backup=fail_after_backup,
+        )
+    _assert_fixture_package(published, "old-complete-package")
+    assert not (published / "models" / "partial.dill.b64").exists()
+
+    successful_stage = tmp_path / "successful-stage"
+    _write_fixture_package(successful_stage, "new-complete-package")
+    generator.transactional_replace_tree(successful_stage, published)
+    _assert_fixture_package(published, "new-complete-package")

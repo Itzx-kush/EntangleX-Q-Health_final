@@ -62,6 +62,12 @@ The packaged hash is deliberately different from normal runtime storage integrit
 
 Any mismatch prevents instant-demo loading and degrades that dataset to unavailable/requires-processing metadata. There is no cross-dataset fallback. Live training remains available.
 
+### Installation and publication invariants
+
+Runtime installation is registry-first: every existing Dataset, Experiment, completed Job, and ModelRecord identity and relationship for a demo slug is checked before any runtime dataset or model file is written. A conflict raises a safe error, performs no filesystem hydration for that slug, and inserts no missing registry rows.
+
+Artifact regeneration is staged transactionally. The generator trains and serializes into a temporary sibling package, writes its manifest there, and runs the full package validator against staging. Only a complete valid tree is published. The previous package is preserved as a rollback tree during the directory swap, so an exception or failed swap restores the prior manifest and artifacts; the published manifest never points to a partially generated set.
+
 ## Frontend behavior
 
 The Medical Dataset Library, Demo Center, Training, Prediction, and Experiments views consume backend readiness metadata. The Demo Center computes its ready/processing counts from the returned five records. Ready records are labeled **Verified Demo Ready** and **Precomputed research result**; other records say **Requires Processing** and retain the live Training action.
