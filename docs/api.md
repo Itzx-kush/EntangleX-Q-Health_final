@@ -1,6 +1,6 @@
 # API reference
 
-Base path: `/api`. The Vite frontend and Nginx deployment proxy this same base. All application endpoints except `GET /health` use the optional configured Bearer token dependency and origin allowlist. Example authorization header: `Authorization: Bearer <your-locally-generated-token>`; no credential is included in the repository.
+Base path: `/api`. The Vite frontend and Nginx deployment proxy this same base. All application endpoints except `GET /api/health` use the optional configured Bearer token dependency and origin allowlist. Example authorization header: `Authorization: Bearer <your-locally-generated-token>`; no credential is included in the repository.
 
 All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) and `offset` where noted. Current frontend registry lists load the first 100 records; use API pagination for a larger local registry. No raw dataset download endpoint exists.
 
@@ -8,7 +8,7 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 
 | Method | Path | Request / response |
 |---|---|---|
-| GET | `/health` | Reachability, software mode, token-required flag and quantum package presence; not execution verification |
+| GET | `/api/health` | Reachability, software mode, token-required flag and quantum package presence; not execution verification |
 | GET | `/summary` | Registry counts and recent experiments |
 | GET | `/system/status` | Safe runtime facts for the workspace shell: database/storage availability, model families, quantum capability, and job counts; no secrets or private paths |
 | GET | `/datasets` | Paginated `DatasetOut[]`; provenance and aggregate quality, no raw table |

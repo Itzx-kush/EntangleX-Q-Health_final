@@ -198,7 +198,7 @@ Prediction requires the exact registered input schema and an identified ready mo
 
 Experiment records retain configuration, dataset provenance, split fingerprint, software versions, model metrics, timing and limitations. Models are tied to an experiment, source dataset, trusted artifact and its hash. Rerun creates a **new** experiment with `parent_id`; it never overwrites the original. Failed models remain visible. HTML/JSON reports include the medical disclaimer and measured, non-presumptive comparison text.
 
-The API reference is [docs/api.md](docs/api.md). Public reachability is `GET /api/health`; other app endpoints accept an optional configured Bearer token. Training submission returns job and experiment records; poll `/api/training/jobs/{id}`. Reports are downloaded through the authenticated API, not a public file server.
+The API reference is [docs/api.md](docs/api.md). Public reachability is `GET /api/health`; other app endpoints accept an optional configured Bearer token. Training submission returns job and experiment records; poll `/api/training/jobs/{id}`. Reports are downloaded through the authenticated API, not a public file server. Render deployment settings, SPA fallback behavior, production API/CORS configuration, and the ephemeral runtime-storage boundary are documented in [deployment](docs/deployment.md). The checked-in Render blueprint does not configure a persistent disk; packaged built-ins and verified demos are repository-bundled, while uploads and live-run state are ephemeral.
 
 ## 16. Tests and source checks
 

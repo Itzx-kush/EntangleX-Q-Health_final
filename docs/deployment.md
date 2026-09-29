@@ -1,4 +1,4 @@
-# Local deployment
+# Deployment
 
 ## Supported topology
 
@@ -35,6 +35,29 @@ Stop the backend before copying the whole runtime directory or named volume. Pre
 
 Deletion of an unreferenced dataset is supported through the API. There is no retention scheduler or complete regulatory deletion workflow. Referenced datasets are retained to prevent broken experiment provenance. Plan storage retention before private-data use.
 
+## Render production blueprint
+
+`render.yaml` declares two services and is the repository source of truth for Render:
+
+| Service | Render settings |
+| --- | --- |
+| Frontend static site | root `frontend`; build `npm ci && npm run build`; publish `dist` |
+| Backend web service | root `backend`; Dockerfile `backend/Dockerfile`; health check `/api/health` |
+
+The frontend uses `BrowserRouter`. Render's `/*` rewrite serves `/index.html` for direct visits and reloads of client-side routes, including `/experiments/:id`. Do not replace this rewrite with a redirect or replace `BrowserRouter` with `HashRouter`.
+
+Node is pinned to `22.12.x` (and npm 10.x) in `frontend/package.json`; the root `.nvmrc` pins `22.12.0`. The committed lockfile remains authoritative and the Render build uses `npm ci`.
+
+The Render static build sets `VITE_API_BASE=https://entanglex-q-health-api.onrender.com/api`. Local development and same-origin proxy deployments retain `/api`. Production frontend configuration rejects localhost and insecure absolute HTTP API targets. If Render service names or custom domains change, update the frontend API base, backend `QHEALTH_CORS_ORIGINS`, backend `QHEALTH_TRUSTED_HOSTS`, and static-site CSP `connect-src` together.
+
+The backend blueprint sets production mode and explicit HTTPS CORS/trusted-host boundaries. Production startup rejects wildcard CORS origins, insecure CORS origins, and wildcard trusted hosts. The static-site headers in `render.yaml` are the controls used by Render; the Nginx headers in `frontend/nginx.conf` apply only to the container/Compose topology.
+
+No Render persistent disk is declared. Consequently `/runtime` is ephemeral: user uploads, runtime SQLite rows, live-training model files, and generated experiment state can disappear when the service is replaced or restarted. Add and deliberately configure a Render disk before promising persistence; point `QHEALTH_STORAGE_ROOT` at its mount path and back up SQLite and artifacts together. This repository does not simulate persistence with browser state or static data.
+
+Backend startup initializes an empty runtime database, verifies and installs the repository-bundled demo package, then starts the single-process training manager. Startup does not train models, download datasets, require internet access, or require a pre-seeded SQLite database. Integrity or registry conflicts fail closed; missing/corrupt packaged artifacts are never reported ready.
+
+The blueprint and local production-style smoke tests are regression-checked. This documentation does **not** claim that a live Render deployment was performed or verified.
+
 ## Public deployment is outside the current security boundary
 
 A token is not user management, access control, tenant isolation or a compliance program. Public deployment requires a reviewed authentication layer, TLS, authorization, audit policies, encrypted storage, validated backups, request/rate quotas, deployment hardening, monitoring and threat assessment. Clinical deployment additionally requires appropriate scientific and regulatory work that this prototype does not supply.
@@ -48,7 +71,6 @@ library therefore remains available on a fresh Render/container instance
 without a runtime download or pre-populated volume. Registration still creates
 an ordinary runtime dataset record.
 
-Uploaded datasets, SQLite rows, model artifacts and experiment snapshots are
-runtime state and require a persistent Render disk when they must survive
-container replacement. Point `QHEALTH_STORAGE_ROOT` at that disk mount. Built-in
-library discoverability does not depend on that disk.
+The packaged verified-demo manifest and model payloads are also copied with the backend application. They can hydrate a fresh empty runtime without external downloads or manually seeded SQLite/model state. Exactly `wdbc` and `early-stage-diabetes` remain verified-demo ready; the other three built-ins continue to require normal processing.
+
+Uploaded datasets, runtime SQLite rows, live-trained model artifacts and generated experiment snapshots are runtime state. The checked-in Render blueprint has no persistent disk, so that state is ephemeral across service replacement. If persistence is configured later, point `QHEALTH_STORAGE_ROOT` at the disk mount. Built-in library and packaged verified-demo availability do not depend on such a disk.
