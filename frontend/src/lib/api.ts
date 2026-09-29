@@ -1,6 +1,24 @@
 import type {Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,SystemStatus,TrainingConfig} from '../types/qhealth';
 
-const base=(import.meta.env.VITE_API_BASE as string|undefined)||'/api';
+export function resolveApiBase(configured:string|undefined,production:boolean){
+  const value=(configured||'/api').trim()||'/api';
+  const normalized=value.length>1?value.replace(/\/+$/,''):value;
+  if(production){
+    try{
+      const url=new URL(normalized);
+      if(['localhost','127.0.0.1','::1'].includes(url.hostname))throw new Error('Production API base must not target localhost.');
+      if(url.protocol!=='https:')throw new Error('Production cross-origin API base must use HTTPS.');
+    }catch(error){
+      if(normalized.startsWith('/'))return normalized;
+      if(error instanceof Error&&error.message.startsWith('Production '))throw error;
+      throw new Error('Production API base must be a relative path or absolute HTTPS URL.');
+    }
+  }
+  return normalized;
+}
+
+export const apiBase=resolveApiBase(import.meta.env.VITE_API_BASE as string|undefined,import.meta.env.PROD);
+const base=apiBase;
 let token='';
 export function setSessionToken(value:string){token=value.trim();}
 

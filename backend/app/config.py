@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
-from pydantic import Field
+from typing import Literal
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +15,7 @@ DISCLAIMER = (
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="QHEALTH_", env_file=PROJECT_ROOT / ".env", extra="ignore")
     storage_root: Path = PROJECT_ROOT
+    deployment_mode: Literal["local", "production"] = "local"
     api_token: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080"
     trusted_hosts: str = "localhost,127.0.0.1,backend,testserver"
@@ -23,6 +25,18 @@ class Settings(BaseSettings):
     quantum_max_samples: int = Field(default=256, ge=20, le=1024)
     max_queued_jobs: int = Field(default=3, ge=1, le=10)
     log_level: str = "INFO"
+
+    @model_validator(mode="after")
+    def production_network_boundaries(self):
+        if self.deployment_mode != "production":
+            return self
+        origins = [value.strip() for value in self.cors_origins.split(",") if value.strip()]
+        hosts = [value.strip() for value in self.trusted_hosts.split(",") if value.strip()]
+        if not origins or "*" in origins or any(not value.startswith("https://") for value in origins):
+            raise ValueError("Production CORS origins must be explicit HTTPS origins; wildcard and local origins are not allowed.")
+        if not hosts or "*" in hosts:
+            raise ValueError("Production trusted hosts must be explicit; wildcard hosts are not allowed.")
+        return self
 
     @property
     def root(self) -> Path:
