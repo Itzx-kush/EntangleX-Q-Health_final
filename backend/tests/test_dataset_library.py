@@ -156,7 +156,7 @@ def test_each_builtin_completes_bounded_classical_end_to_end_workflow(client, sl
     model = next(record for record in detail.json()["models"] if record["status"] == "ready")
     assert model["dataset_id"] == dataset_id
     assert model["details"]["dataset_provenance"]["library_slug"] == slug
-    assert client.get(f"/api/models/{model['id']}/demo-sample").status_code == 403
+    assert client.get(f"/api/models/{model['id']}/demo-sample").status_code == 200
 
     comparison = client.get(f"/api/experiments/{experiment_id}/comparison")
     assert comparison.status_code == 200

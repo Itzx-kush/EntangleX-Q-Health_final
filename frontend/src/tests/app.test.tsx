@@ -50,7 +50,7 @@ describe('medical dataset library',()=>{
     license:'CC BY 4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',attribution:'Wolberg et al.',
     target:'diagnosis',target_type:'binary_classification' as const,positive_label:'malignant',negative_label:'benign',
     row_count:569,feature_count:30,class_labels:['benign','malignant'],sha256:'a'.repeat(64),normalization:[],
-    recommended_duplicate_policy:'reject' as const,origin:'built_in' as const,dataset_status:'available' as const,
+    recommended_duplicate_policy:'reject' as const,origin:'built_in' as const,dataset_status:'available' as const,demo_readiness:{status:'ready' as const,instant_demo_available:true,artifact_version:'sih-verified-demo-v1',experiment_id:'experiment-a',model_ids:['model-a'],verified_dataset_hash:'a'.repeat(64),verified_artifact_manifest_hash:'b'.repeat(64)},
   };
   const inspection=(target='diagnosis')=>({
     filename:'medical.csv',sha256:'b'.repeat(64),row_count:20,column_count:3,columns:['age','diagnosis','outcome'],
@@ -64,9 +64,9 @@ describe('medical dataset library',()=>{
   const libraryItems=[
     libraryItem,
     {...libraryItem,slug:'early-stage-diabetes',name:'Early Stage Diabetes Risk Prediction',domain:'endocrinology',target:'diabetes_status',positive_label:'positive',negative_label:'negative',row_count:520,feature_count:16,class_labels:['negative','positive'],recommended_duplicate_policy:'drop_exact' as const},
-    {...libraryItem,slug:'cleveland-heart-disease',name:'Heart Disease — Cleveland',domain:'cardiovascular',target:'heart_disease',positive_label:'present',negative_label:'absent',row_count:303,feature_count:13,class_labels:['absent','present']},
-    {...libraryItem,slug:'chronic-kidney-disease',name:'Chronic Kidney Disease',domain:'nephrology',target:'ckd_status',positive_label:'ckd',negative_label:'not_ckd',row_count:400,feature_count:24,class_labels:['ckd','not_ckd']},
-    {...libraryItem,slug:'ilpd-liver',name:'ILPD Liver Patient Dataset',domain:'hepatology',target:'liver_disease',positive_label:'present',negative_label:'absent',row_count:583,feature_count:10,class_labels:['absent','present'],recommended_duplicate_policy:'drop_exact' as const},
+    {...libraryItem,demo_readiness:{status:'requires_processing' as const,instant_demo_available:false,artifact_version:null,experiment_id:null,model_ids:[],verified_dataset_hash:null,verified_artifact_manifest_hash:null},slug:'cleveland-heart-disease',name:'Heart Disease — Cleveland',domain:'cardiovascular',target:'heart_disease',positive_label:'present',negative_label:'absent',row_count:303,feature_count:13,class_labels:['absent','present']},
+    {...libraryItem,demo_readiness:{status:'requires_processing' as const,instant_demo_available:false,artifact_version:null,experiment_id:null,model_ids:[],verified_dataset_hash:null,verified_artifact_manifest_hash:null},slug:'chronic-kidney-disease',name:'Chronic Kidney Disease',domain:'nephrology',target:'ckd_status',positive_label:'ckd',negative_label:'not_ckd',row_count:400,feature_count:24,class_labels:['ckd','not_ckd']},
+    {...libraryItem,demo_readiness:{status:'requires_processing' as const,instant_demo_available:false,artifact_version:null,experiment_id:null,model_ids:[],verified_dataset_hash:null,verified_artifact_manifest_hash:null},slug:'ilpd-liver',name:'ILPD Liver Patient Dataset',domain:'hepatology',target:'liver_disease',positive_label:'present',negative_label:'absent',row_count:583,feature_count:10,class_labels:['absent','present'],recommended_duplicate_policy:'drop_exact' as const},
   ];
   const registeredDataset=(item:typeof libraryItem)=>({
     id:`dataset-${item.slug}`,name:item.name,sha256:item.sha256,created_at:new Date().toISOString(),
@@ -215,7 +215,7 @@ describe('settings and Demo Center readiness',()=>{
     license:'CC BY 4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',attribution:'Wolberg et al.',
     target:'diagnosis',target_type:'binary_classification' as const,positive_label:'malignant',negative_label:'benign',
     row_count:569,feature_count:30,class_labels:['benign','malignant'],sha256:'a'.repeat(64),normalization:[],
-    recommended_duplicate_policy:'reject' as const,origin:'built_in' as const,dataset_status:'available' as const,
+    recommended_duplicate_policy:'reject' as const,origin:'built_in' as const,dataset_status:'available' as const,demo_readiness:{status:'ready' as const,instant_demo_available:true,artifact_version:'sih-verified-demo-v1',experiment_id:'experiment-a',model_ids:['model-a'],verified_dataset_hash:'a'.repeat(64),verified_artifact_manifest_hash:'b'.repeat(64)},
   };
   const demoDataset={
     id:'dataset-a',name:demoLibraryItem.name,sha256:demoLibraryItem.sha256,created_at:'2026-09-29T00:00:00Z',

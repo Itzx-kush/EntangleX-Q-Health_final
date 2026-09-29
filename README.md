@@ -244,3 +244,8 @@ See [limitations](docs/limitations.md) for unsupported grouped/time-series valid
 [Architecture](docs/architecture.md) | [API](docs/api.md) | [ML pipeline](docs/ml_pipeline.md) | [Quantum pipeline](docs/quantum_pipeline.md) | [Explainability](docs/explainability.md) | [Deployment](docs/deployment.md) | [Reproducibility](docs/reproducibility.md) | [Security](docs/security.md) | [Dataset provenance](docs/data_provenance.md) | [Requirements traceability](docs/requirements_traceability.md) | [Generation status](docs/generation_status.json) | [Task 1 final verification](docs/task1_final_verification.md) | [Task 2 QNN verification](docs/task2_qnn_verification.md) | [SIH final verification](docs/SIH_FINAL_VERIFICATION.md) | [SIH demo video script](docs/SIH_DEMO_VIDEO_SCRIPT.md)
 
 The WDBC source is UCI Machine Learning Repository, DOI **10.24432/C5DW2B**, attributed to Wolberg, Mangasarian, Street and Street (1993), under **CC BY 4.0** as described by UCI. The actual application copy is reconstructed from the installed scikit-learn dataset and hashed at registration; the sklearn version and transformation are recorded. Original supplied specifications are retained under `docs/specifications/`.
+
+
+## Verified Instant Demo
+
+See [docs/VERIFIED_INSTANT_DEMO.md](docs/VERIFIED_INSTANT_DEMO.md).

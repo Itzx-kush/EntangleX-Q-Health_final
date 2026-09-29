@@ -9,6 +9,7 @@ from ..data.quality import quality_report
 from ..storage.entities import Dataset
 from ..storage.repository import recent, require
 from ..utils.errors import AppError
+from ..demo_readiness import readiness_for_registered_dataset, readiness_summary
 from .schemas import (
     BuiltInRegistrationRequest,
     DatasetInspectionOut,
@@ -36,6 +37,10 @@ def list_datasets(limit: int = Query(100, ge=1, le=500), offset: int = Query(0, 
 @router.get("/library", response_model=list[DatasetLibraryItem])
 def list_library():
     return service.library()
+
+@router.get("/readiness", response_model=dict)
+def dataset_readiness():
+    return readiness_summary()
 
 @router.post("/library/{slug}", response_model=DatasetOut, status_code=201)
 def register_library_dataset(slug: str, request: BuiltInRegistrationRequest | None = None):
@@ -73,6 +78,11 @@ async def upload_dataset(metadata_json: str = Form(...), file: UploadFile = File
 @router.post("/demo", response_model=DatasetOut, status_code=201)
 def load_demo():
     return service.register_demo()
+
+@router.get("/{identity}/readiness", response_model=dict)
+def registered_dataset_readiness(identity: UUID):
+    with session_scope() as session:
+        return readiness_for_registered_dataset(require(session, Dataset, str(identity)))
 
 @router.get("/{identity}", response_model=DatasetOut)
 def get_dataset(identity: UUID):

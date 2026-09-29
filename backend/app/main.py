@@ -15,6 +15,7 @@ from .api.security import authorize
 from .api.schemas import ExperimentOut
 from .config import DISCLAIMER, get_settings
 from .database import init_db, session_scope
+from .demo_readiness import install_verified_demo_artifacts, validate_readiness_configuration
 from .jobs.manager import manager
 from .quantum.backends import availability
 from .storage.entities import Dataset, Experiment, Job, ModelRecord
@@ -37,7 +38,9 @@ logger.propagate = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_readiness_configuration()
     init_db()
+    install_verified_demo_artifacts()
     manager.start()
     logger.info("application_started mode=single_workstation_research")
     try:

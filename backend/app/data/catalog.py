@@ -40,8 +40,8 @@ def _load_manifest() -> tuple[dict, ...]:
         return _manifest
 
 
-def list_builtin_datasets() -> list[dict]:
-    return [
+def list_builtin_datasets(*, include_readiness: bool = True) -> list[dict]:
+    items = [
         {
             **{key: value for key, value in entry.items() if key != "filename"},
             "origin": "built_in",
@@ -49,6 +49,11 @@ def list_builtin_datasets() -> list[dict]:
         }
         for entry in _load_manifest()
     ]
+    if include_readiness:
+        from ..demo_readiness import readiness_for
+        for item in items:
+            item["demo_readiness"] = readiness_for(item["slug"])
+    return items
 
 
 def get_builtin_dataset(slug: str) -> dict:

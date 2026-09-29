@@ -4,6 +4,7 @@ from sqlalchemy import select
 from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
+from ..demo_readiness import verify_installed_model
 from ..storage.entities import Experiment, ModelRecord, ExplanationRecord
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
@@ -15,7 +16,11 @@ def report_data(identity: str) -> dict:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity)))
         explanations = list(session.scalars(select(ExplanationRecord).where(ExplanationRecord.model_id.in_([m.id for m in models])))) if models else []
+    experiment_kind = experiment.summary.get("experiment_kind", "live_experiment")
+    for model in models:
+        verify_installed_model(model)
     return {"title": "EntangleX Q-Health Research Experiment Report", "generated_at": utcnow().isoformat(),
+        "experiment_kind": experiment_kind, "experiment_label": "PRECOMPUTED VERIFIED DEMO EXPERIMENT" if experiment_kind == "precomputed_verified_demo" else "LIVE RESEARCH EXPERIMENT",
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
         "models": [ModelOut.model_validate(m).model_dump(mode="json") for m in models],
@@ -29,7 +34,7 @@ def html_report(identity: str) -> str:
         return html.escape(str(value), quote=True)
     def pre(value):
         return "<pre>" + escaped(json.dumps(value, indent=2, ensure_ascii=False)) + "</pre>"
-    sections = ["<h1>EntangleX Q-Health</h1><p>Research experiment report</p>", "<aside>" + escaped(DISCLAIMER) + "</aside>",
+    sections = ["<h1>EntangleX Q-Health</h1><p>" + escaped(data["experiment_label"]) + "</p>", "<aside>" + escaped(DISCLAIMER) + "</aside>",
         "<h2>Dataset and provenance</h2>" + pre(data["dataset"]),
         "<h2>Preprocessing and feature engineering</h2>" + pre(data["preprocessing"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),

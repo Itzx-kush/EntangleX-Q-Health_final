@@ -97,12 +97,12 @@ export function Datasets(){
   <PageHeader eyebrow="01 / Data Lab" title="Datasets" description="Choose a verified public medical benchmark or register a deidentified CSV, then carry its authoritative dataset ID through the existing Q‑Health pipeline."/>
   <StageNav current="/datasets"/>
   <ErrorBanner error={error instanceof Error?error.message:undefined}/>
-  <Card className="mt-5" title="Medical Dataset Library" description="Five compact public datasets are packaged with the backend for deployment-safe, one-click registration. No model result is precomputed.">
+  <Card className="mt-5" title="Medical Dataset Library" description="Five compact public datasets are packaged with the backend. Availability badges distinguish genuine precomputed research results from the normal live workflow.">
    {library.isLoading?<Loading/>:<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{library.data?.map(item=><article className="rounded-xl border p-4" key={item.slug}>
-    <div className="flex items-start justify-between gap-3"><div><Badge tone="green">Built-in</Badge><h3 className="mt-2 font-semibold">{item.name}</h3><p className="mt-1 text-xs muted">{item.description}</p></div><Database className="shrink-0 text-primary" size={18}/></div>
+    <div className="flex items-start justify-between gap-3"><div><div className="flex flex-wrap gap-1"><Badge tone="green">Built-in</Badge><Badge tone={item.demo_readiness.status==='ready'?'blue':'amber'}>{item.demo_readiness.status==='ready'?'Verified Demo Ready':'Requires Processing'}</Badge></div><h3 className="mt-2 font-semibold">{item.name}</h3><p className="mt-1 text-xs muted">{item.description}</p></div><Database className="shrink-0 text-primary" size={18}/></div>
     <div className="mt-4 grid grid-cols-2 gap-2 text-xs"><div><span className="metric-label">SAMPLES</span><strong className="block">{item.row_count.toLocaleString()}</strong></div><div><span className="metric-label">FEATURES</span><strong className="block">{item.feature_count}</strong></div><div><span className="metric-label">TARGET</span><strong className="block break-all">{item.target}</strong></div><div><span className="metric-label">DOMAIN</span><strong className="block capitalize">{item.domain}</strong></div></div>
     <div className="mt-3 flex flex-wrap gap-1">{item.class_labels.map(label=><Badge key={label}>{label}</Badge>)}</div>
-    <p className="mt-3 text-[11px] muted">{item.source} · {item.license}</p>
+    <p className="mt-3 text-[11px] muted">{item.source} · {item.license}</p><p className="mt-2 text-[11px] muted">{item.demo_readiness.status==='ready'?'Precomputed research result available; live training remains available.':'No precomputed result is packaged; run normal live training.'}</p>
     <Button className="mt-4 w-full" disabled={builtIn.isPending} onClick={()=>builtIn.mutate(item.slug)}>{builtIn.isPending?'Registering…':'Use Dataset'}</Button>
    </article>)}</div>}
   </Card>
