@@ -105,6 +105,70 @@ class DatasetUploadMetadata(Schema):
             raise ValueError("Source reference must be an HTTP(S) URL; it is recorded, never fetched.")
         return value
 
+class TargetCandidateOut(Schema):
+    column: str
+    score: float
+    confidence: Literal["low", "medium", "high"]
+    target_type: str
+    class_labels: list[str]
+    class_distribution: dict[str, int]
+    unique_values: int
+    missing_fraction: float
+    eligible_for_current_pipeline: bool
+    reasons: list[str]
+    penalties: list[str]
+    position: int
+
+class DatasetInspectionOut(Schema):
+    filename: str
+    sha256: str
+    row_count: int
+    column_count: int
+    columns: list[str]
+    column_schema: list[dict[str, Any]] = Field(validation_alias="schema", serialization_alias="schema")
+    detected_target: str | None
+    target_type: str | None
+    confidence_score: float
+    confidence: Literal["low", "medium", "high"]
+    selection_method: str
+    class_labels: list[str]
+    class_distribution: dict[str, int]
+    positive_label: str | None
+    positive_label_confidence: float
+    positive_label_reason: str
+    requires_manual_target: bool
+    requires_positive_label: bool
+    heuristic_notice: str
+    candidates: list[TargetCandidateOut]
+
+class DatasetLibraryItem(Schema):
+    slug: str
+    name: str
+    domain: str
+    description: str
+    source: str
+    source_url: str
+    version: str
+    license: str
+    license_url: str
+    attribution: str
+    target: str
+    target_type: Literal["binary_classification"]
+    positive_label: str
+    negative_label: str
+    row_count: int
+    feature_count: int
+    class_labels: list[str]
+    sha256: str
+    normalization: list[str]
+    recommended_duplicate_policy: Literal["reject", "drop_exact"]
+    origin: Literal["built_in"]
+    dataset_status: Literal["available"]
+
+class BuiltInRegistrationRequest(Schema):
+    target: str | None = Field(default=None, max_length=100)
+    positive_label: str | None = Field(default=None, max_length=64)
+
 class ValidateRequest(Schema):
     features: list[str] | None = None
 

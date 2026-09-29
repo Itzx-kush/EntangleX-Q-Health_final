@@ -131,7 +131,7 @@ Open `http://127.0.0.1:8080`. Both published ports are loopback-bound. Docker st
 
 ## 9. Guided demo workflow
 
-1. Open **Datasets** and select **Load Wisconsin benchmark**. Registration reads scikit-learn's packaged public dataset; it does not download arbitrary URLs. Verify source, hash, class counts, and the configured positive label **malignant**.
+1. Open **Datasets** and choose a verified entry from the **Medical Dataset Library**. The Breast Cancer Wisconsin Diagnostic entry preserves the original benchmark path, while `POST /api/datasets/demo` remains backwards compatible with the scikit-learn loader. Verify source, hash, class counts, and the configured positive label before continuing.
 2. Open **Data quality**, then **Preprocessing**, **Feature selection**, and **PCA / dimensions**. Inspect descriptive quality and training-only previews. Defaults use 12 ANOVA-selected encoded features, four PCA components, and angle scaling shared by every model.
 3. Open **Training**. Start with Logistic Regression, SVM and Random Forest. The default 160-sample stratified budget applies to every selected model, not just quantum models. A completed model's metrics appear only after actual fitting and held-out evaluation.
 4. For a separate comparison, select classical baselines together with VQC, QSVC and/or QNN. Quantum selection requires shared PCA dimensions equal to qubits, shared angle scaling, no class weighting, and no calibration. Start with four qubits and modest optimizer iterations. Jobs expose state, partial failures, and cooperative cancellation.
@@ -146,9 +146,25 @@ Optional CLI demonstration against an already-running server:
 
 The second command performs genuine quantum training on your machine. No performance or runtime is promised.
 
-## 10. Dataset upload and provenance
+## 10. Medical Dataset Library, upload and provenance
+
+The Data Lab exposes five deployment-safe public datasets: Breast Cancer
+Wisconsin Diagnostic, Early Stage Diabetes Risk Prediction, Cleveland Heart
+Disease, Chronic Kidney Disease and ILPD Liver Patient. The backend package
+contains their small normalized CSV resources and a checked provenance
+manifest. Selecting one verifies its SHA-256 and creates an ordinary registered
+dataset ID for the existing quality, preprocessing, training, explainability
+and reporting workflow. `POST /api/datasets/demo` remains available for the
+original scikit-learn WDBC benchmark.
+
 
 Only UTF-8 comma-separated `.csv` tables are supported, with one header row and at least ten records. Supply dataset name, domain, source/reference, version, target column, and explicit positive-class label. Confirm that records are de-identified and independent. The MVP requires exactly two nonmissing target labels; it rejects an absent target, invalid labels, invalid headers, binary files, oversized content, and unsupported extensions.
+
+The inspect-first upload flow ranks possible target columns and infers a
+positive label only when the binary labels have clear semantics. Low-confidence
+or ambiguous results require manual selection. Existing `/api/datasets/upload`
+clients remain compatible and explicit target/positive-label values always
+take precedence.
 
 The database records the exact stored CSV SHA-256, upload time, rows/features, class distribution, source, version and class mapping. No upload is available through a static public URL. Uploaded raw records are not displayed globally. The public-demo sample endpoint explicitly refuses user-uploaded datasets.
 

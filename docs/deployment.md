@@ -38,3 +38,17 @@ Deletion of an unreferenced dataset is supported through the API. There is no re
 ## Public deployment is outside the current security boundary
 
 A token is not user management, access control, tenant isolation or a compliance program. Public deployment requires a reviewed authentication layer, TLS, authorization, audit policies, encrypted storage, validated backups, request/rate quotas, deployment hardening, monitoring and threat assessment. Clinical deployment additionally requires appropriate scientific and regulatory work that this prototype does not supply.
+
+## Built-in dataset resources
+
+The Medical Dataset Library CSVs and manifest are stored under
+`backend/app/data/builtin_datasets`. The backend Dockerfile's existing
+`COPY app /app/app` includes them in the immutable application image. The
+library therefore remains available on a fresh Render/container instance
+without a runtime download or pre-populated volume. Registration still creates
+an ordinary runtime dataset record.
+
+Uploaded datasets, SQLite rows, model artifacts and experiment snapshots are
+runtime state and require a persistent Render disk when they must survive
+container replacement. Point `QHEALTH_STORAGE_ROOT` at that disk mount. Built-in
+library discoverability does not depend on that disk.

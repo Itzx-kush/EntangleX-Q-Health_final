@@ -10,7 +10,7 @@ import {ClassBalance,ValueBars} from '../components/Charts';
 import {api,qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {shortId,dateTime} from '../utils/format';
-import type {Dataset,Preview} from '../types/qhealth';
+import type {Dataset,DatasetInspection,Preview} from '../types/qhealth';
 import {AnimatedSection,BlurText,BorderGlow,ClickSpark,GlareHover,GradientText,Magnet,QuantumVisual,Reveal,ShinyText,SpotlightPanel} from '../components/reactbits';
 
 export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
@@ -43,11 +43,79 @@ export function Overview(){
 }
 
 export function Datasets(){
- const {draft,update}=useDraft(); const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets}); const qc=useQueryClient(); const [selected,setSelected]=useState<Dataset|null>(null); const [file,setFile]=useState<File|null>(null); const [confirmed,setConfirmed]=useState(false); const [form,setForm]=useState({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
- const demo=useMutation({mutationFn:qh.demo,onSuccess:d=>{update({dataset_id:d.id,features:null});qc.invalidateQueries({queryKey:['datasets']})}}); const remove=useMutation({mutationFn:qhDelete,onSuccess:()=>qc.invalidateQueries({queryKey:['datasets']})});
+ const {draft,selectDataset}=useDraft();
+ const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets});
+ const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary});
+ const qc=useQueryClient();
+ const [selected,setSelected]=useState<Dataset|null>(null);
+ const [file,setFile]=useState<File|null>(null);
+ const [inspection,setInspection]=useState<DatasetInspection|null>(null);
+ const [confirmed,setConfirmed]=useState(false);
+ const [form,setForm]=useState({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
+ const choose=(dataset:Dataset)=>selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);
+ const builtIn=useMutation({
+  mutationFn:(slug:string)=>qh.registerBuiltIn(slug),
+  onSuccess:dataset=>{choose(dataset);setSelected(dataset);qc.invalidateQueries({queryKey:['datasets']})},
+ });
+ const remove=useMutation({mutationFn:qhDelete,onSuccess:()=>{setSelected(null);qc.invalidateQueries({queryKey:['datasets']})}});
  async function qhDelete(id:string){await api.remove('/datasets/' + id)}
- const upload=useMutation({mutationFn:async()=>{const body=new FormData();body.append('file',file as File);body.append('metadata_json',JSON.stringify({...form,source_url:form.source_url||null,deidentified:true,sampling_unit:'independent_samples'}));return qh.upload(body)},onSuccess:d=>{update({dataset_id:d.id,features:null});qc.invalidateQueries({queryKey:['datasets']});setFile(null);setConfirmed(false)}});
- return <div><PageHeader eyebrow="01 / Data Lab" title="Datasets" description="Explore registered biomedical inputs in a research-first registry, inspect provenance, and carry one dataset through the entire Q‑Health pipeline." actions={<Button disabled={demo.isPending} onClick={()=>demo.mutate()}><Database size={14}/>{demo.isPending?'Loading benchmark…':'Load benchmark'}</Button>}/><StageNav current="/datasets"/><ErrorBanner error={(datasets.error as Error)?.message||(upload.error as Error)?.message||(demo.error as Error)?.message||(remove.error as Error)?.message}/><div className="two-grid mt-5"><Card title="Dataset registry" description="Each record becomes a traceable input for downstream experiments."><div className="table-wrap"><table className="data-table"><thead><tr><th>Dataset</th><th>Samples</th><th>Features</th><th>Target</th><th/></tr></thead><tbody>{datasets.data?.map(d=><tr key={d.id} className={draft.dataset_id===d.id?'bg-primary/5':''}><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(d)}>{d.name}</button><small className="block muted">{shortId(d.id)} · {d.provenance.source}</small></td><td>{d.provenance.row_count.toLocaleString()}</td><td>{d.provenance.feature_count}</td><td>{d.provenance.target}<small className="block muted">Positive: {d.provenance.positive_label}</small></td><td className="text-right"><Button variant="outline" onClick={()=>update({dataset_id:d.id,features:null})}>{draft.dataset_id===d.id?'Selected':'Select'}</Button></td></tr>)}</tbody></table></div>{datasets.isLoading&&<Loading/>}{!datasets.isLoading&&!datasets.data?.length&&<EmptyState title="No datasets registered">Load the public benchmark or register a deidentified CSV.</EmptyState>}</Card><Card title={selected?selected.name:'Selected provenance'} description="The selected record mirrors the provenance-first exploration style of TICTAC.">{selected?<div className="space-y-3 text-sm"><div className="grid grid-cols-2 gap-3">{[['Rows',selected.provenance.row_count],['Features',selected.provenance.feature_count],['Target',selected.provenance.target],['Version',selected.provenance.version]].map(x=><div className="rounded-xl border p-3" key={String(x[0])}><span className="metric-label">{x[0]}</span><strong className="mt-1 block">{String(x[1])}</strong></div>)}</div><p className="muted">{selected.provenance.source}</p><p className="mono break-all text-[10px] muted">SHA-256: {selected.sha256}</p><JsonDisclosure label="Full provenance" value={selected.provenance}/><Button variant="ghost" disabled={remove.isPending} onClick={()=>{if(window.confirm('Delete this dataset?'))remove.mutate(selected.id)}}><Trash2 size={13}/> Delete dataset</Button></div>:<EmptyState title="Choose a dataset">Select a registry row to inspect its metadata.</EmptyState>}</Card></div><Card className="mt-5" title="Register a deidentified CSV" description="The upload is passed directly to the existing backend endpoint; the interface does not fabricate a client-side preview."><div className="grid gap-4 md:grid-cols-2">{Object.entries(form).map(x=><label className="field" key={x[0]}><span>{x[0].replaceAll('_',' ')}</span><Input value={x[1]} onChange={e=>setForm(s=>({...s,[x[0]]:e.target.value}))}/></label>)}</div><div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto]"><label className="field"><span>CSV file</span><Input type="file" accept=".csv,text/csv" onChange={e=>setFile(e.target.files?.[0]||null)}/></label><div className="flex items-end"><Button disabled={!file||!confirmed||upload.isPending} onClick={()=>upload.mutate()}><Upload size={14}/>{upload.isPending?'Registering…':'Validate and register'}</Button></div></div><label className="mt-4 flex items-start gap-2 text-xs muted"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I confirm this file contains no patient-identifiable information and represents independent samples.</label></Card></div>
+ const inspect=useMutation({
+  mutationFn:async(values?:{target?:string;positive_label?:string})=>{
+   if(!file)throw new Error('Choose a CSV file first.');
+   const body=new FormData();body.append('file',file);
+   if(values?.target)body.append('target',values.target);
+   if(values?.positive_label)body.append('positive_label',values.positive_label);
+   return qh.inspectDataset(body);
+  },
+  onSuccess:data=>{
+   setInspection(data);
+   setForm(current=>({...current,
+    name:current.name||data.filename.replace(/\.csv$/i,'').replaceAll('_',' '),
+    target:data.detected_target||current.target,
+    positive_label:data.positive_label||'',
+   }));
+  },
+ });
+ const upload=useMutation({
+  mutationFn:async()=>{
+   const body=new FormData();body.append('file',file as File);
+   body.append('metadata_json',JSON.stringify({...form,source_url:form.source_url||null,deidentified:true,sampling_unit:'independent_samples'}));
+   return qh.upload(body);
+  },
+  onSuccess:dataset=>{
+   choose(dataset);setSelected(dataset);qc.invalidateQueries({queryKey:['datasets']});
+   setFile(null);setInspection(null);setConfirmed(false);
+   setForm({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
+  },
+ });
+ const error=[datasets,library,builtIn,inspect,upload,remove].find(item=>item.error)?.error;
+ const changeTarget=(target:string)=>{
+  setForm(current=>({...current,target,positive_label:''}));
+  inspect.mutate({target});
+ };
+ return <div>
+  <PageHeader eyebrow="01 / Data Lab" title="Datasets" description="Choose a verified public medical benchmark or register a deidentified CSV, then carry its authoritative dataset ID through the existing Q‑Health pipeline."/>
+  <StageNav current="/datasets"/>
+  <ErrorBanner error={error instanceof Error?error.message:undefined}/>
+  <Card className="mt-5" title="Medical Dataset Library" description="Five compact public datasets are packaged with the backend for deployment-safe, one-click registration. No model result is precomputed.">
+   {library.isLoading?<Loading/>:<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{library.data?.map(item=><article className="rounded-xl border p-4" key={item.slug}>
+    <div className="flex items-start justify-between gap-3"><div><Badge tone="green">Built-in</Badge><h3 className="mt-2 font-semibold">{item.name}</h3><p className="mt-1 text-xs muted">{item.description}</p></div><Database className="shrink-0 text-primary" size={18}/></div>
+    <div className="mt-4 grid grid-cols-2 gap-2 text-xs"><div><span className="metric-label">SAMPLES</span><strong className="block">{item.row_count.toLocaleString()}</strong></div><div><span className="metric-label">FEATURES</span><strong className="block">{item.feature_count}</strong></div><div><span className="metric-label">TARGET</span><strong className="block break-all">{item.target}</strong></div><div><span className="metric-label">DOMAIN</span><strong className="block capitalize">{item.domain}</strong></div></div>
+    <div className="mt-3 flex flex-wrap gap-1">{item.class_labels.map(label=><Badge key={label}>{label}</Badge>)}</div>
+    <p className="mt-3 text-[11px] muted">{item.source} · {item.license}</p>
+    <Button className="mt-4 w-full" disabled={builtIn.isPending} onClick={()=>builtIn.mutate(item.slug)}>{builtIn.isPending?'Registering…':'Use Dataset'}</Button>
+   </article>)}</div>}
+  </Card>
+  <div className="two-grid mt-5"><Card title="Registered datasets" description="Built-in and uploaded datasets remain separate immutable registry records."><div className="table-wrap"><table className="data-table"><thead><tr><th>Dataset</th><th>Samples</th><th>Features</th><th>Target</th><th/></tr></thead><tbody>{datasets.data?.map(dataset=><tr key={dataset.id} className={draft.dataset_id===dataset.id?'bg-primary/5':''}><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(dataset)}>{dataset.name}</button><small className="block muted">{shortId(dataset.id)} · {dataset.provenance.origin==='built_in'?'Built-in':'Uploaded'}</small></td><td>{dataset.provenance.row_count.toLocaleString()}</td><td>{dataset.provenance.feature_count}</td><td>{dataset.provenance.target}<small className="block muted">Positive: {dataset.provenance.positive_label}</small></td><td className="text-right"><Button variant="outline" onClick={()=>choose(dataset)}>{draft.dataset_id===dataset.id?'Selected':'Select'}</Button></td></tr>)}</tbody></table></div>{datasets.isLoading&&<Loading/>}{!datasets.isLoading&&!datasets.data?.length&&<EmptyState title="No datasets registered">Choose a built-in dataset or inspect a CSV below.</EmptyState>}</Card>
+   <Card title={selected?selected.name:'Selected provenance'} description="The registered backend record is the single source of truth for every downstream stage.">{selected?<div className="space-y-3 text-sm"><div className="grid grid-cols-2 gap-3">{[['Rows',selected.provenance.row_count],['Features',selected.provenance.feature_count],['Target',selected.provenance.target],['Type',selected.provenance.target_type||'binary_classification']].map(x=><div className="rounded-xl border p-3" key={String(x[0])}><span className="metric-label">{x[0]}</span><strong className="mt-1 block break-all">{String(x[1])}</strong></div>)}</div><p className="muted">{selected.provenance.source}</p><p className="mono break-all text-[10px] muted">SHA-256: {selected.sha256}</p><JsonDisclosure label="Full provenance and target resolution" value={selected.provenance}/><Button variant="ghost" disabled={remove.isPending} onClick={()=>{if(window.confirm('Delete this dataset?'))remove.mutate(selected.id)}}><Trash2 size={13}/> Delete dataset</Button></div>:<EmptyState title="Choose a registry record">Open a registered dataset to inspect its provenance.</EmptyState>}</Card></div>
+  <Card className="mt-5" title="Upload New Dataset" description="Inspect a deidentified CSV first. The backend ranks target candidates and never silently registers a low-confidence guess.">
+   <div className="grid gap-4 md:grid-cols-[1fr_auto]"><label className="field"><span>CSV file</span><Input type="file" accept=".csv,text/csv" onChange={event=>{const next=event.target.files?.[0]||null;setFile(next);setInspection(null);setForm(current=>({...current,name:next?next.name.replace(/\.csv$/i,'').replaceAll('_',' '):'',target:'',positive_label:''}))}}/></label><div className="flex items-end"><Button variant="outline" disabled={!file||inspect.isPending} onClick={()=>inspect.mutate({})}><ShieldCheck size={14}/>{inspect.isPending?'Inspecting…':'Detect Target'}</Button></div></div>
+   {inspection&&<div className="mt-5 rounded-xl border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><span className="metric-label">AUTOMATIC TARGET ANALYSIS</span><h3 className="mt-1 font-semibold">{inspection.detected_target||'Manual selection required'}</h3><p className="mt-1 text-xs muted">{inspection.target_type?.replaceAll('_',' ')||'No eligible target resolved'} · {inspection.confidence} heuristic confidence ({Math.round(inspection.confidence_score*100)}/100)</p></div><Badge tone={inspection.requires_manual_target?'amber':'green'}>{inspection.requires_manual_target?'Review required':'Resolved'}</Badge></div><p className="mt-2 text-[11px] muted">{inspection.heuristic_notice}</p><div className="mt-4 grid gap-4 md:grid-cols-2"><label className="field"><span>Target column · Change Target</span><Select value={form.target} onChange={event=>changeTarget(event.target.value)}><option value="">Select target</option>{inspection.columns.map(column=><option value={column} key={column}>{column}</option>)}</Select></label><label className="field"><span>Positive class</span><Select value={form.positive_label} onChange={event=>setForm(current=>({...current,positive_label:event.target.value}))}><option value="">Select positive class</option>{inspection.class_labels.map(label=><option value={label} key={label}>{label}</option>)}</Select></label></div><div className="mt-3 flex flex-wrap gap-1">{inspection.class_labels.map(label=><Badge key={label}>{label}: {inspection.class_distribution[label]??0}</Badge>)}</div><JsonDisclosure label="Candidate ranking and schema" value={{candidates:inspection.candidates,schema:inspection.schema}}/></div>}
+   {inspection&&<details className="mt-5 rounded-xl border p-4"><summary className="cursor-pointer text-sm font-semibold">Dataset details and provenance</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{(['name','domain','source','source_url','version'] as const).map(key=><label className="field" key={key}><span>{key.replaceAll('_',' ')}</span><Input value={form[key]} onChange={event=>setForm(current=>({...current,[key]:event.target.value}))}/></label>)}</div></details>}
+   <label className="mt-4 flex items-start gap-2 text-xs muted"><input type="checkbox" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/>I confirm this file contains no patient-identifiable information and represents independent samples.</label>
+   <Button className="mt-4" disabled={!file||!inspection||!form.target||!form.positive_label||!form.name||!confirmed||upload.isPending} onClick={()=>upload.mutate()}><Upload size={14}/>{upload.isPending?'Registering…':'Register Dataset'}</Button>
+  </Card>
+ </div>;
 }
 
 function ActiveDataset({children}:{children:(d:Dataset)=>React.ReactNode}){const {draft}=useDraft();const q=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});if(q.isLoading)return <Loading/>;if(!q.data)return <EmptyState title="Select a dataset">Choose an input in Data Lab first.</EmptyState>;return <>{children(q.data)}{q.error&&<ErrorBanner error={(q.error as Error).message}/>}</>}

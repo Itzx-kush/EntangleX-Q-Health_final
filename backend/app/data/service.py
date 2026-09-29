@@ -14,12 +14,15 @@ from ..storage.files import atomic_bytes, safe_path, sanitize_filename, verify
 from ..storage.repository import require
 from ..utils.errors import AppError
 from ..utils.serialization import utcnow
+from .catalog import builtin_bytes, list_builtin_datasets
 from .quality import quality_report
+from .target_detection import detect_target
 
 _demo_registration_lock = Lock()
 _dataset_delete_lock = Lock()
+_builtin_registration_lock = Lock()
 
-def parse_csv(content: bytes, target: str, positive_label: str | None = None) -> pd.DataFrame:
+def _read_csv_table(content: bytes, target_hint: str | None = None) -> tuple[pd.DataFrame, list[str]]:
     settings = get_settings()
     if len(content) > settings.upload_limit:
         raise AppError("upload_too_large", "The upload exceeds the configured size limit.", 413)
@@ -36,16 +39,17 @@ def parse_csv(content: bytes, target: str, positive_label: str | None = None) ->
     normalized_header = [h.lstrip("\ufeff") for h in header]
     if normalized_header != header:
         header = normalized_header
-    diabetes_readmission_source = "readmitted" in header and target.strip() in {"readmitted", "readmitted_30d"}
-    derived_readmission_target = target.strip() == "readmitted_30d" and target not in header and diabetes_readmission_source
     if len(set(header)) != len(header) or any(not h.strip() or h != h.strip() or len(h) > 100 or any(ord(c) < 32 for c in h) for h in header):
         raise AppError("invalid_header", "Column names must be unique, trimmed, nonempty, and at most 100 characters.")
     if any(row and len(row) != len(header) for row in rows[1:]):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
     try:
-        # Preserve target labels exactly; infer input numeric types for review.
-        source_target = "readmitted" if diabetes_readmission_source else target
-        frame = pd.read_csv(io.StringIO(text), dtype={source_target: "string"}, nrows=settings.max_rows + 1, on_bad_lines="error")
+        dtype = None
+        if target_hint:
+            source_target = "readmitted" if "readmitted" in header and target_hint.strip() in {"readmitted", "readmitted_30d"} else target_hint
+            if source_target in header:
+                dtype = {source_target: "string"}
+        frame = pd.read_csv(io.StringIO(text), dtype=dtype, nrows=settings.max_rows + 1, on_bad_lines="error")
     except (ValueError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
         raise AppError("invalid_csv", "CSV parsing failed; check quoting, delimiters, and the table schema.") from exc
     if len(frame) < 10 or len(frame) > settings.max_rows:
@@ -53,23 +57,63 @@ def parse_csv(content: bytes, target: str, positive_label: str | None = None) ->
     frame.columns = [str(c).lstrip("\ufeff").strip() for c in frame.columns]
     if list(frame.columns) != header or not isinstance(frame.index, pd.RangeIndex):
         raise AppError("inconsistent_schema", "CSV rows and headers have inconsistent field counts.")
+    return frame, header
+
+def parse_csv(content: bytes, target: str, positive_label: str | None = None) -> pd.DataFrame:
+    frame, header = _read_csv_table(content, target)
+    diabetes_readmission_source = "readmitted" in header and target.strip() in {"readmitted", "readmitted_30d"}
     if diabetes_readmission_source:
         within_30 = frame["readmitted"].astype("string").str.strip().eq("<30")
         if target.strip() == "readmitted_30d" or positive_label == "1":
             frame[target] = within_30.astype(int)
         else:
             frame[target] = np.where(within_30, "<30", "not_within_30d")
-        frame = frame.drop(columns=["readmitted", "encounter_id", "patient_nbr"], errors="ignore")
+        drop_columns = ["encounter_id", "patient_nbr"]
+        if target != "readmitted":
+            drop_columns.append("readmitted")
+        frame = frame.drop(columns=drop_columns, errors="ignore")
     for col in frame.select_dtypes(exclude=np.number):
         # Object arrays use np.nan (not pd.NA) for sklearn's imputers.
         frame[col] = frame[col].map(lambda v: str(v) if pd.notna(v) else np.nan).astype(object)
     return frame
 
-def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata, *, license_info: str | None = None) -> Dataset:
+def inspect_csv(content: bytes, filename: str, target: str | None = None, positive_label: str | None = None) -> dict:
+    if not filename.lower().endswith(".csv"):
+        raise AppError("extension_not_allowed", "Only UTF-8 .csv uploads are accepted.")
+    frame, _ = _read_csv_table(content)
+    result = detect_target(frame, target, positive_label)
+    schema = []
+    for column in frame.columns:
+        series = frame[column]
+        schema.append({
+            "name": str(column),
+            "type": "number" if pd.api.types.is_numeric_dtype(series) else "string",
+            "missing_count": int(series.isna().sum()),
+            "unique_count": int(series.nunique(dropna=True)),
+        })
+    return {
+        "filename": sanitize_filename(filename),
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "row_count": len(frame),
+        "column_count": len(frame.columns),
+        "columns": [str(c) for c in frame.columns],
+        "schema": schema,
+        **result,
+    }
+
+def register_csv(
+    content: bytes,
+    filename: str,
+    metadata: DatasetUploadMetadata,
+    *,
+    license_info: str | None = None,
+    provenance_extra: dict | None = None,
+) -> Dataset:
     if not filename.lower().endswith(".csv"):
         raise AppError("extension_not_allowed", "Only UTF-8 .csv uploads are accepted.")
     frame = parse_csv(content, metadata.target, metadata.positive_label)
     quality = quality_report(frame, metadata.target, metadata.positive_label)
+    detection = detect_target(frame, metadata.target, metadata.positive_label)
     identity = str(uuid4())
     timestamp = utcnow()
     sha = hashlib.sha256(content).hexdigest()
@@ -85,6 +129,11 @@ def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata,
         "negative_label": next(c for c in quality["target_classes"] if c != metadata.positive_label),
         "license": license_info, "is_demo": license_info is not None, "deidentification_asserted_by_uploader": True,
         "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
+        "origin": "built_in" if license_info is not None else "uploaded",
+        "dataset_status": "registered",
+        "target_type": "binary_classification",
+        "target_detection": detection,
+        **(provenance_extra or {}),
     }
     path = safe_path("data/datasets", identity, ".csv")
     atomic_bytes(path, content)
@@ -96,6 +145,65 @@ def register_csv(content: bytes, filename: str, metadata: DatasetUploadMetadata,
     except Exception:
         path.unlink(missing_ok=True)
         raise
+
+def library() -> list[dict]:
+    return list_builtin_datasets()
+
+def register_builtin(slug: str, target: str | None = None, positive_label: str | None = None) -> Dataset:
+    with _builtin_registration_lock:
+        entry, content = builtin_bytes(slug)
+        resolved_target = target or entry["target"]
+        frame = parse_csv(content, resolved_target, positive_label or entry["positive_label"])
+        detection = detect_target(frame, resolved_target, positive_label)
+        resolved_positive = positive_label
+        if resolved_positive is None:
+            resolved_positive = entry["positive_label"] if resolved_target == entry["target"] else detection["positive_label"]
+        if resolved_positive is None:
+            raise AppError("positive_label_required", "Choose the positive label before registering this target.")
+        metadata = DatasetUploadMetadata(
+            name=entry["name"],
+            domain=entry["domain"],
+            source=entry["source"],
+            source_url=entry["source_url"],
+            version=entry["version"],
+            target=resolved_target,
+            positive_label=resolved_positive,
+            deidentified=True,
+        )
+        sha = hashlib.sha256(content).hexdigest()
+        with session_scope() as session:
+            matches = list(session.scalars(select(Dataset).where(Dataset.sha256 == sha, Dataset.name == entry["name"])))
+            for existing in matches:
+                if existing.provenance.get("target") == resolved_target and existing.provenance.get("positive_label") == resolved_positive:
+                    return existing
+        heuristic = next((c for c in detection["candidates"] if c["column"] == resolved_target), None)
+        target_detection = {
+            **detection,
+            "selection_method": "verified_manifest" if target is None else "manual_override",
+            "confidence_score": 1.0 if target is None else detection["confidence_score"],
+            "confidence": "high" if target is None else detection["confidence"],
+            "verified_target": entry["target"],
+            "heuristic_candidate": heuristic,
+        }
+        return register_csv(
+            content,
+            entry["filename"],
+            metadata,
+            license_info=f'{entry["license"]}; {entry["attribution"]}',
+            provenance_extra={
+                "origin": "built_in",
+                "library_slug": slug,
+                "dataset_status": "registered",
+                "target_type": "binary_classification",
+                "target_detection": target_detection,
+                "license_url": entry["license_url"],
+                "attribution": entry["attribution"],
+                "normalization": entry["normalization"],
+                "packaged_resource_sha256": entry["sha256"],
+                "recommended_duplicate_policy": entry["recommended_duplicate_policy"],
+                "deidentification_asserted_by_uploader": False,
+            },
+        )
 
 def load_frame(identity: str) -> tuple[Dataset, pd.DataFrame]:
     with session_scope() as session:
