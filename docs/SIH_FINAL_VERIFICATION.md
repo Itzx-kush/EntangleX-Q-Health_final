@@ -174,3 +174,73 @@ The default backend run skipped tests that explicitly require `RUN_QUANTUM_TESTS
 2. Only WDBC received an executed quantum training check. The other four datasets received quantum configuration and preprocessing compatibility checks, not executed quantum training.
 3. Quantum execution used a local simulator, not quantum hardware, and provides no evidence of quantum advantage.
 4. The existing FastAPI/httpx and pandas warnings remain; dependency upgrades or unrelated transformer refactoring were intentionally excluded from this integration pass.
+
+---
+
+## SIH Demo Center / Judge Experience Integration — 2026-09-29
+
+**Branch:** `feature/sih-demo-center-judge-flow`
+**Baseline:** merged Prompt 3 `main` at `ee8d0956398bcc115817b01b5bf12a88a0da5d63`
+**Scope:** frontend orchestration, truthful readiness, active dataset/experiment/model relationships, focused tests, and judge-flow documentation. The backend API and scientific pipeline were not changed.
+
+### Judge workflow
+
+The existing SIH Demo Center now provides a factual project introduction, a compact active-dataset summary, the latest experiment for that exact dataset, ready models from that exact experiment, a five-entry Medical Dataset Library quickstart, and direct actions for all eleven real application stages:
+
+`Dataset → Quality → Preprocessing → Feature Engineering → PCA → Training → Classical / Quantum → Comparison → Explainability → Prediction → Report`
+
+Every action uses an existing route. Dataset selection calls the existing built-in registration API and updates the existing persisted draft; it does not create another catalog or registry. The legacy `/api/datasets/demo` workflow is not called by the quickstart and remains separate.
+
+### Truthful state matrix
+
+The state derivation is isolated in `frontend/src/lib/demoState.ts` and covered as a pure function.
+
+| Backend-backed context | Dataset | Configuration stages | Training | Comparison | Explainability / Prediction | Report |
+|---|---|---|---|---|---|---|
+| No valid active dataset | `NOT STARTED` | `BLOCKED` | `BLOCKED` | `BLOCKED` | `BLOCKED` | `BLOCKED` |
+| Valid active dataset, no experiment | `READY` | `READY` | `READY` | `BLOCKED` | `BLOCKED` | `BLOCKED` |
+| Current-dataset job active | `READY` | `READY` | `IN PROGRESS` | `BLOCKED` | `BLOCKED` | `BLOCKED` |
+| Current experiment finished with one ready model | `READY` | `READY` | `COMPLETED` | `BLOCKED` | `READY` | `READY` |
+| Current experiment finished with two or more ready models | `READY` | `READY` | `COMPLETED` | `READY` | `READY` | `READY` |
+
+`READY` means the real next action is available; it never means a preprocessing, explanation, prediction, or comparison action was already executed. `COMPLETED` is reserved for persisted backend experiment/model state. A terminal experiment without a ready model is `BLOCKED`, not completed.
+
+The latest experiment is selected only from records whose `dataset_id` matches the active validated dataset. Models must match both that dataset ID and the current experiment ID. Jobs must match the current experiment. Switching datasets therefore drops stale experiment/model readiness without deleting unrelated configuration.
+
+### Scientific and legacy boundaries
+
+- No metric, prediction, experiment, or readiness record is precomputed by the Demo Center.
+- The UI states that benchmark output is research evidence, not clinical validation or diagnosis.
+- Quantum capability is reported as local simulation unless the backend says otherwise; no quantum-advantage claim was added.
+- Library selection uses `POST /api/datasets/library/{slug}`. It does not call `POST /api/datasets/demo` and does not alter `is_demo` or `/api/models/{id}/demo-sample` behavior.
+
+### Tests and build
+
+```text
+npm test -- src/tests/demoState.test.ts src/tests/app.test.tsx
+2 test files passed; 22 tests passed in 4.04s
+
+npm test
+3 test files passed; 25 tests passed in 4.67s
+
+npm run build
+tsc --noEmit passed; Vite production build passed in 4.61s
+
+pytest -q
+98 passed, 35 skipped, 2 warnings in 10.44s
+```
+
+Focused coverage includes the no-dataset matrix, valid-dataset configuration readiness, active jobs, latest-experiment selection over an older success, foreign experiment/model rejection, current completed experiment recognition, two-model comparison readiness, dataset-switch stale-state protection, all stage routes, one-click library selection, displayed backend metadata, legacy-demo non-use, and surfaced backend errors.
+
+The backend warnings remain the existing FastAPI TestClient/httpx deprecation warning and pandas future downcasting warning on the CKD path. Quantum-only tests remained skipped in the default backend command because Prompt 4 did not change quantum execution.
+
+### Local HTTP smoke
+
+A real local Uvicorn server was exercised over HTTP. The run verified health, five-entry library discovery, WDBC library registration, dataset detail and provenance, `is_demo=false`, one bounded Logistic Regression job, experiment and model relationship IDs, a ready model, experiment detail, summary, and JSON report retrieval. The job status was `succeeded`, and the report dataset ID matched the registered active dataset ID.
+
+### Deployment and QA limits
+
+- Production frontend compilation succeeded and introduced no new runtime dependency or environment variable.
+- Existing package-contained datasets and Docker copy behavior were unchanged; no runtime dataset download or database seed was introduced.
+- Render itself was not redeployed or smoke-tested in this pass.
+- Visible-browser and screenshot-based responsive QA were not performed, so they are not marked as passed. Existing jsdom interaction tests, route assertions, theme/mobile regression tests, and the production build passed.

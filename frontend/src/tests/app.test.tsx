@@ -23,6 +23,8 @@ vi.mock('../lib/api',()=>({
     datasets:vi.fn(()=>Promise.resolve([])),
     datasetLibrary:vi.fn(()=>Promise.resolve([])),
     registerBuiltIn:vi.fn(()=>Promise.resolve({})),
+    dataset:vi.fn(()=>Promise.resolve({})),
+    demo:vi.fn(()=>Promise.resolve({})),
     inspectDataset:vi.fn(()=>Promise.resolve({})),
     upload:vi.fn(()=>Promise.resolve({})),
     capabilities:vi.fn(()=>Promise.resolve({available:false,runtime_verified:false,execution:'Quantum runtime unavailable'})),
@@ -207,57 +209,107 @@ describe('settings and Demo Center readiness',()=>{
     expect(localStorage.getItem('qhealth-inspector')).toBe('hidden');
   });
 
-  it('shows truthful not-yet-run readiness and supports next/previous stage navigation',async()=>{
+  const demoLibraryItem={
+    slug:'wdbc',name:'Breast Cancer Wisconsin Diagnostic',domain:'oncology',description:'Diagnostic benchmark',
+    source:'UCI Machine Learning Repository',source_url:'https://doi.org/10.24432/C5DW2B',version:'snapshot',
+    license:'CC BY 4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',attribution:'Wolberg et al.',
+    target:'diagnosis',target_type:'binary_classification' as const,positive_label:'malignant',negative_label:'benign',
+    row_count:569,feature_count:30,class_labels:['benign','malignant'],sha256:'a'.repeat(64),normalization:[],
+    recommended_duplicate_policy:'reject' as const,origin:'built_in' as const,dataset_status:'available' as const,
+  };
+  const demoDataset={
+    id:'dataset-a',name:demoLibraryItem.name,sha256:demoLibraryItem.sha256,created_at:'2026-09-29T00:00:00Z',
+    provenance:{name:demoLibraryItem.name,domain:demoLibraryItem.domain,source:demoLibraryItem.source,source_url:demoLibraryItem.source_url,version:'snapshot',target:'diagnosis',positive_label:'malignant',negative_label:'benign',features:[],numeric_features:[],categorical_features:[],row_count:569,feature_count:30,class_distribution:{benign:357,malignant:212},target_classes:['benign','malignant'],is_demo:false,dataset_hash:demoLibraryItem.sha256,license:'CC BY 4.0',origin:'built_in' as const,library_slug:'wdbc',recommended_duplicate_policy:'reject' as const},
+    quality:{} as never,
+  };
+  const currentExperiment={
+    id:'experiment-a',dataset_id:demoDataset.id,parent_id:null,status:'succeeded',
+    config:{models:['logistic_regression','svm']},summary:{},created_at:'2026-09-29T00:00:00Z',
+  } as Awaited<ReturnType<typeof qh.experiments>>[number];
+  const readyModel=(id:string,experimentId:string,datasetId:string,modelType:'logistic_regression'|'svm'='logistic_regression')=>({
+    id,experiment_id:experimentId,dataset_id:datasetId,model_type:modelType,status:'ready',
+    details:{},metrics:{},created_at:'2026-09-29T00:00:00Z',
+  } as Awaited<ReturnType<typeof qh.models>>[number]);
+
+  it('loads with a truthful no-dataset state and verified route actions',async()=>{
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
-    await waitFor(()=>expect(screen.getAllByText('NOT YET RUN').length).toBeGreaterThan(0));
-    expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
+    await waitFor(()=>expect(screen.getByText(/No dataset is selected/)).toBeInTheDocument());
+    expect(document.querySelector('[data-stage="dataset"]')?.textContent).toContain('NOT STARTED');
+    expect(document.querySelector('[data-stage="quality"]')?.textContent).toContain('BLOCKED');
+    expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('BLOCKED');
+    const routes={dataset:'/datasets',quality:'/quality',preprocessing:'/preprocessing',features:'/features',pca:'/pca',training:'/training',quantum:'/quantum',comparison:'/comparison',explainability:'/explainability',prediction:'/prediction',report:'/experiments'};
+    Object.entries(routes).forEach(([stage,path])=>
+      expect(document.querySelector(`[data-stage="${stage}"] a`)).toHaveAttribute('href',path)
+    );
+    expect(screen.getByText('Step 1 of 11')).toBeInTheDocument();
+    screen.getAllByRole('link',{name:'Choose Dataset'}).forEach(link=>
+      expect(link).toHaveAttribute('href','/datasets')
+    );
     fireEvent.click(screen.getByRole('button',{name:/Next/i}));
-    expect(screen.getByText('Step 2 of 10')).toBeInTheDocument();
-    expect(screen.getByRole('link',{name:/Open current stage/i})).toHaveAttribute('href','/datasets');
+    expect(screen.getByText('Step 2 of 11')).toBeInTheDocument();
+    screen.getAllByRole('link',{name:'Open Data Quality'}).forEach(link=>
+      expect(link).toHaveAttribute('href','/quality')
+    );
     fireEvent.click(screen.getByRole('button',{name:/Previous/i}));
-    expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 11')).toBeInTheDocument();
   });
 
-  it.each([
-    {
-      label:'does not use a ready model from a different experiment',
-      modelExperimentId:'experiment-b',
-      expectedReady:false,
-    },
-    {
-      label:'accepts a ready model from the completed experiment',
-      modelExperimentId:'experiment-a',
-      expectedReady:true,
-    },
-  ])('$label',async({modelExperimentId,expectedReady})=>{
-    vi.mocked(qh.summary).mockResolvedValue({
-      counts:{datasets:1,experiments:1,ready_models:1,active_jobs:0},
-      recent_experiments:[],
-      disclaimer:'Research only',
-    });
-    vi.mocked(qh.experiments).mockResolvedValue([
-      {id:'experiment-a',status:'succeeded'},
-    ] as Awaited<ReturnType<typeof qh.experiments>>);
-    vi.mocked(qh.models).mockResolvedValue([
-      {id:'model-1',experiment_id:modelExperimentId,status:'ready'},
-    ] as Awaited<ReturnType<typeof qh.models>>);
+  it('selects a library dataset through the existing API and displays backend metadata',async()=>{
+    vi.mocked(qh.datasetLibrary).mockResolvedValue([demoLibraryItem]);
+    vi.mocked(qh.registerBuiltIn).mockResolvedValue(demoDataset);
+    vi.mocked(qh.dataset).mockResolvedValue(demoDataset);
+    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    fireEvent.click(await screen.findByRole('button',{name:'Use Dataset'}));
+    await waitFor(()=>expect(qh.registerBuiltIn).toHaveBeenCalledWith('wdbc'));
+    await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(demoDataset.id));
+    const currentCard=screen.getByRole('heading',{name:'Current dataset'}).closest('.glass-card');
+    expect(currentCard).not.toBeNull();
+    expect(within(currentCard as HTMLElement).getByText(demoDataset.name)).toBeInTheDocument();
+    expect(within(currentCard as HTMLElement).getByText('diagnosis')).toBeInTheDocument();
+    expect(within(currentCard as HTMLElement).getByText('benign / malignant')).toBeInTheDocument();
+    expect(document.querySelector('[data-stage="quality"]')?.textContent).toContain('READY');
+    expect(qh.demo).not.toHaveBeenCalled();
+  });
 
+  it('does not use a ready model from another experiment for the active dataset',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:demoDataset.id}));
+    vi.mocked(qh.dataset).mockResolvedValue(demoDataset);
+    vi.mocked(qh.experiments).mockResolvedValue([currentExperiment]);
+    vi.mocked(qh.models).mockResolvedValue([readyModel('model-b','experiment-b','dataset-b')]);
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>{
-      const dependentSteps=Array.from(document.querySelectorAll('.demo-step')).slice(6,9);
-      expect(dependentSteps).toHaveLength(3);
-      if(expectedReady){
-        dependentSteps.forEach(step=>expect(step.textContent).toContain('READY'));
-      }else{
-        dependentSteps.forEach(step=>expect(step.textContent).toContain('NOT YET RUN'));
-        dependentSteps.forEach(step=>expect(step.textContent).not.toMatch(/\bREADY\b/));
-      }
+      expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('BLOCKED');
+      expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('BLOCKED');
+      expect(document.querySelector('[data-stage="explainability"]')?.textContent).toContain('BLOCKED');
+      expect(document.querySelector('[data-stage="prediction"]')?.textContent).toContain('BLOCKED');
+      expect(document.querySelector('[data-stage="report"]')?.textContent).toContain('BLOCKED');
     });
+  });
+
+  it('recognizes ready models only from the current completed experiment',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:demoDataset.id}));
+    vi.mocked(qh.dataset).mockResolvedValue(demoDataset);
+    vi.mocked(qh.experiments).mockResolvedValue([currentExperiment]);
+    vi.mocked(qh.models).mockResolvedValue([
+      readyModel('model-a1',currentExperiment.id,demoDataset.id),
+      readyModel('model-a2',currentExperiment.id,demoDataset.id,'svm'),
+    ]);
+    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    await waitFor(()=>{
+      expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('COMPLETED');
+      expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('READY');
+      expect(document.querySelector('[data-stage="explainability"]')?.textContent).toContain('READY');
+      expect(document.querySelector('[data-stage="prediction"]')?.textContent).toContain('READY');
+      expect(document.querySelector('[data-stage="report"]')?.textContent).toContain('READY');
+    });
+    screen.getAllByRole('link',{name:'View Experiment'}).forEach(link=>
+      expect(link).toHaveAttribute('href','/experiments/experiment-a')
+    );
   });
 
   it('surfaces backend errors instead of failing silently',async()=>{
-    vi.mocked(qh.summary).mockRejectedValueOnce(new Error('Backend unavailable'));
+    vi.mocked(qh.health).mockRejectedValueOnce(new Error('Backend unavailable'));
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
-    await waitFor(()=>expect(screen.getByText('Backend unavailable')).toBeInTheDocument());
+    await waitFor(()=>expect(screen.getAllByText('Backend unavailable').length).toBeGreaterThan(0));
   });
 });
