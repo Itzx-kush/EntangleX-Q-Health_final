@@ -1,11 +1,11 @@
 {
-  "artifact_version": "sih-verified-demo-v1",
+  "artifact_version": "sih-verified-demo-v2",
   "datasets": {
     "early-stage-diabetes": {
       "dataset": {
-        "created_at": "2026-09-29T14:52:18.183989",
+        "created_at": "2026-09-29T15:18:53.068792",
         "filename": "early_stage_diabetes.csv",
-        "id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+        "id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
         "name": "Early Stage Diabetes Risk Prediction",
         "provenance": {
           "attribution": "Islam, M. M. F., Ferdousi, R., Rahman, S., & Bushra, H. Y. Early Stage Diabetes Risk Prediction Dataset.",
@@ -385,7 +385,7 @@
           },
           "target_type": "binary_classification",
           "task": "binary_classification",
-          "uploaded_at": "2026-09-29T14:52:18.183989+00:00",
+          "uploaded_at": "2026-09-29T15:18:53.068792+00:00",
           "version": "UCI dataset 529 snapshot"
         },
         "quality": {
@@ -585,7 +585,7 @@
           "calibration": "none",
           "calibration_folds": 3,
           "cv_folds": 3,
-          "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+          "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
           "duplicate_policy": "drop_exact",
           "features": null,
           "max_samples": 160,
@@ -631,15 +631,15 @@
           "seed": 2026,
           "test_size": 0.2
         },
-        "created_at": "2026-09-29T14:52:18.246604",
-        "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
-        "id": "255cd5fa-e81a-4153-8b7c-75a6035bf5f7",
+        "created_at": "2026-09-29T15:18:53.130810",
+        "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
+        "id": "66c3336e-fc64-492e-914f-c182d0ce6d36",
         "parent_id": null,
         "status": "succeeded",
         "summary": {
-          "artifact_version": "sih-verified-demo-v1",
+          "artifact_version": "sih-verified-demo-v2",
           "comparison_fingerprint": "7e49cb81201c6c518a3a9358a46ea046a4cba3ddbef35fa18093b2dcd3c65591",
-          "completed_at": "2026-09-29T14:52:19.018199+00:00",
+          "completed_at": "2026-09-29T15:18:53.879164+00:00",
           "dataset_provenance": {
             "attribution": "Islam, M. M. F., Ferdousi, R., Rahman, S., & Bushra, H. Y. Early Stage Diabetes Risk Prediction Dataset.",
             "categorical_features": [
@@ -1018,7 +1018,7 @@
             },
             "target_type": "binary_classification",
             "task": "binary_classification",
-            "uploaded_at": "2026-09-29T14:52:18.183989+00:00",
+            "uploaded_at": "2026-09-29T15:18:53.068792+00:00",
             "version": "UCI dataset 529 snapshot"
           },
           "description": "Controlled benchmark experiment; precomputed research result.",
@@ -1060,22 +1060,39 @@
       "explanations": {
         "mode": "on_demand_after_integrity_validation"
       },
+      "job": {
+        "created_at": "2026-09-29T15:18:53.131902",
+        "errors": [],
+        "experiment_id": "66c3336e-fc64-492e-914f-c182d0ce6d36",
+        "id": "a1a76ba8-41d4-4aff-bbbc-400107c5f7e6",
+        "progress": 100,
+        "state": "Finished: 2 model(s) persisted; 0 model(s) failed.",
+        "status": "succeeded",
+        "updated_at": "2026-09-29T15:18:53.878278"
+      },
       "models": [
         {
           "artifact": {
             "filename": "d025c91a-d637-46ee-bd29-8bbce2d1bf69.dill.b64",
-            "sha256": "08bd4ff36ef4d3e25155f39f72b0115c108d765d3ebf3fee906c3397c03b2b74"
+            "hash_algorithm": "sha256",
+            "hash_scope": "raw_dill_payload",
+            "sha256": "e8f7b665630fe42203f63320c138555aa72395994d97b7cd53f634601f448104"
           },
-          "artifact_sha256": "08bd4ff36ef4d3e25155f39f72b0115c108d765d3ebf3fee906c3397c03b2b74",
-          "created_at": "2026-09-29T14:52:18.466870",
-          "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+          "artifact_sha256": "e8f7b665630fe42203f63320c138555aa72395994d97b7cd53f634601f448104",
+          "created_at": "2026-09-29T15:18:53.336246",
+          "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
           "details": {
-            "artifact_version": "sih-verified-demo-v1",
+            "artifact_integrity": {
+              "algorithm": "sha256",
+              "scheme": "packaged_sha256",
+              "scope": "raw_dill_payload"
+            },
+            "artifact_version": "sih-verified-demo-v2",
             "configuration": {
               "calibration": "none",
               "calibration_folds": 3,
               "cv_folds": 3,
-              "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+              "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
               "duplicate_policy": "drop_exact",
               "features": null,
               "max_samples": 160,
@@ -1499,7 +1516,7 @@
               },
               "target_type": "binary_classification",
               "task": "binary_classification",
-              "uploaded_at": "2026-09-29T14:52:18.183989+00:00",
+              "uploaded_at": "2026-09-29T15:18:53.068792+00:00",
               "version": "UCI dataset 529 snapshot"
             },
             "experiment_kind": "precomputed_verified_demo",
@@ -1820,8 +1837,8 @@
             "task": "binary_classification",
             "warnings": []
           },
-          "experiment_id": "255cd5fa-e81a-4153-8b7c-75a6035bf5f7",
-          "id": "d025c91a-d637-46ee-bd29-8bbce2d1bf69",
+          "experiment_id": "66c3336e-fc64-492e-914f-c182d0ce6d36",
+          "id": "3df4c186-aa08-4c71-b7cf-e2300f5774fe",
           "metrics": {
             "calibration": {
               "brier_score": 0.06400853381484505,
@@ -1924,14 +1941,14 @@
             },
             "timing": {
               "cv_fold_seconds": [
-                0.03933061499992618,
-                0.024134353000022202,
-                0.02693846499994379
+                0.03337918300030651,
+                0.02296596199994383,
+                0.030390810999961104
               ],
-              "cv_total_seconds": 0.10979394200001025,
-              "final_training_seconds": 0.01884582100001353,
-              "test_inference_seconds": 0.007492640000009487,
-              "test_inference_seconds_per_sample": 0.00023414500000029648
+              "cv_total_seconds": 0.1018812990000697,
+              "final_training_seconds": 0.016824352000185172,
+              "test_inference_seconds": 0.006588524000108009,
+              "test_inference_seconds_per_sample": 0.0002058913750033753
             },
             "training": {
               "accuracy": 0.8671875,
@@ -2429,18 +2446,25 @@
         {
           "artifact": {
             "filename": "baa94644-b5ff-4f31-8375-ade8b7dc54eb.dill.b64",
-            "sha256": "644ca04eda07eba610d88c5b7a26c543ff4a5dd91a41f5e17792a16e19d05bae"
+            "hash_algorithm": "sha256",
+            "hash_scope": "raw_dill_payload",
+            "sha256": "9ea2f01d41b01e8586cb6d72fa100f09d6d5a903a5f2096d81a885795695495f"
           },
-          "artifact_sha256": "644ca04eda07eba610d88c5b7a26c543ff4a5dd91a41f5e17792a16e19d05bae",
-          "created_at": "2026-09-29T14:52:19.014799",
-          "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+          "artifact_sha256": "9ea2f01d41b01e8586cb6d72fa100f09d6d5a903a5f2096d81a885795695495f",
+          "created_at": "2026-09-29T15:18:53.876402",
+          "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
           "details": {
-            "artifact_version": "sih-verified-demo-v1",
+            "artifact_integrity": {
+              "algorithm": "sha256",
+              "scheme": "packaged_sha256",
+              "scope": "raw_dill_payload"
+            },
+            "artifact_version": "sih-verified-demo-v2",
             "configuration": {
               "calibration": "none",
               "calibration_folds": 3,
               "cv_folds": 3,
-              "dataset_id": "392c2976-fc5a-49f1-86ff-405c0ae8a2ef",
+              "dataset_id": "14217fa3-4129-4f22-99d5-53cb13b02e0b",
               "duplicate_policy": "drop_exact",
               "features": null,
               "max_samples": 160,
@@ -2864,7 +2888,7 @@
               },
               "target_type": "binary_classification",
               "task": "binary_classification",
-              "uploaded_at": "2026-09-29T14:52:18.183989+00:00",
+              "uploaded_at": "2026-09-29T15:18:53.068792+00:00",
               "version": "UCI dataset 529 snapshot"
             },
             "experiment_kind": "precomputed_verified_demo",
@@ -3185,8 +3209,8 @@
             "task": "binary_classification",
             "warnings": []
           },
-          "experiment_id": "255cd5fa-e81a-4153-8b7c-75a6035bf5f7",
-          "id": "baa94644-b5ff-4f31-8375-ade8b7dc54eb",
+          "experiment_id": "66c3336e-fc64-492e-914f-c182d0ce6d36",
+          "id": "e86382e3-c45c-44bc-9f61-b39c88087841",
           "metrics": {
             "calibration": {
               "brier_score": 0.09872115405815424,
@@ -3282,14 +3306,14 @@
             },
             "timing": {
               "cv_fold_seconds": [
-                0.11465873400004511,
-                0.11577372400006425,
-                0.1129689409999628
+                0.10905769100008911,
+                0.1153437370003303,
+                0.10811949400022058
               ],
-              "cv_total_seconds": 0.3612496130000409,
-              "final_training_seconds": 0.10295630699999947,
-              "test_inference_seconds": 0.012691495000012765,
-              "test_inference_seconds_per_sample": 0.0003966092187503989
+              "cv_total_seconds": 0.3477956000001541,
+              "final_training_seconds": 0.10321553599987965,
+              "test_inference_seconds": 0.01243252600033884,
+              "test_inference_seconds_per_sample": 0.00038851643751058873
             },
             "training": {
               "accuracy": 0.8984375,
@@ -3727,9 +3751,9 @@
     },
     "wdbc": {
       "dataset": {
-        "created_at": "2026-09-29T14:52:19.294022",
+        "created_at": "2026-09-29T15:18:54.191469",
         "filename": "wdbc.csv",
-        "id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+        "id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
         "name": "Breast Cancer Wisconsin Diagnostic",
         "provenance": {
           "attribution": "Wolberg, W., Mangasarian, O., Street, N., & Street, W. (1993). Breast Cancer Wisconsin (Diagnostic).",
@@ -4056,7 +4080,7 @@
           },
           "target_type": "binary_classification",
           "task": "binary_classification",
-          "uploaded_at": "2026-09-29T14:52:19.294022+00:00",
+          "uploaded_at": "2026-09-29T15:18:54.191469+00:00",
           "version": "UCI WDBC snapshot"
         },
         "quality": {
@@ -5356,7 +5380,7 @@
           "calibration": "none",
           "calibration_folds": 3,
           "cv_folds": 3,
-          "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+          "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
           "duplicate_policy": "reject",
           "features": null,
           "max_samples": 160,
@@ -5402,15 +5426,15 @@
           "seed": 2026,
           "test_size": 0.2
         },
-        "created_at": "2026-09-29T14:52:19.378990",
-        "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
-        "id": "d012903d-1c7f-490d-908e-eae7662e168f",
+        "created_at": "2026-09-29T15:18:54.283286",
+        "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
+        "id": "155b35e0-5504-437b-9a6e-51f85e090d18",
         "parent_id": null,
         "status": "succeeded",
         "summary": {
-          "artifact_version": "sih-verified-demo-v1",
+          "artifact_version": "sih-verified-demo-v2",
           "comparison_fingerprint": "3d51b35d1787e30910f77c3482b55f8a175c518260819ba72d3ccafa83b7bb7b",
-          "completed_at": "2026-09-29T14:52:20.063311+00:00",
+          "completed_at": "2026-09-29T15:18:54.952736+00:00",
           "dataset_provenance": {
             "attribution": "Wolberg, W., Mangasarian, O., Street, N., & Street, W. (1993). Breast Cancer Wisconsin (Diagnostic).",
             "categorical_features": [],
@@ -5736,7 +5760,7 @@
             },
             "target_type": "binary_classification",
             "task": "binary_classification",
-            "uploaded_at": "2026-09-29T14:52:19.294022+00:00",
+            "uploaded_at": "2026-09-29T15:18:54.191469+00:00",
             "version": "UCI WDBC snapshot"
           },
           "description": "Controlled benchmark experiment; precomputed research result.",
@@ -5777,22 +5801,39 @@
       "explanations": {
         "mode": "on_demand_after_integrity_validation"
       },
+      "job": {
+        "created_at": "2026-09-29T15:18:54.283909",
+        "errors": [],
+        "experiment_id": "155b35e0-5504-437b-9a6e-51f85e090d18",
+        "id": "2a0f4665-6d67-44e3-9875-c414dcb13f51",
+        "progress": 100,
+        "state": "Finished: 2 model(s) persisted; 0 model(s) failed.",
+        "status": "succeeded",
+        "updated_at": "2026-09-29T15:18:54.952018"
+      },
       "models": [
         {
           "artifact": {
             "filename": "f2afdeb1-f61c-40d7-800f-52d6fc80d2e2.dill.b64",
-            "sha256": "8d350f54c7cf0af5615ba85f82705b9d53604f9f7a03cf4ea16ed7396b72284f"
+            "hash_algorithm": "sha256",
+            "hash_scope": "raw_dill_payload",
+            "sha256": "7d52fbef8f19ce60cd2dc98cc4ec713ceacd1017cf46a29d2808248e9d93ea31"
           },
-          "artifact_sha256": "8d350f54c7cf0af5615ba85f82705b9d53604f9f7a03cf4ea16ed7396b72284f",
-          "created_at": "2026-09-29T14:52:19.577869",
-          "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+          "artifact_sha256": "7d52fbef8f19ce60cd2dc98cc4ec713ceacd1017cf46a29d2808248e9d93ea31",
+          "created_at": "2026-09-29T15:18:54.470412",
+          "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
           "details": {
-            "artifact_version": "sih-verified-demo-v1",
+            "artifact_integrity": {
+              "algorithm": "sha256",
+              "scheme": "packaged_sha256",
+              "scope": "raw_dill_payload"
+            },
+            "artifact_version": "sih-verified-demo-v2",
             "configuration": {
               "calibration": "none",
               "calibration_folds": 3,
               "cv_folds": 3,
-              "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+              "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
               "duplicate_policy": "reject",
               "features": null,
               "max_samples": 160,
@@ -6163,7 +6204,7 @@
               },
               "target_type": "binary_classification",
               "task": "binary_classification",
-              "uploaded_at": "2026-09-29T14:52:19.294022+00:00",
+              "uploaded_at": "2026-09-29T15:18:54.191469+00:00",
               "version": "UCI WDBC snapshot"
             },
             "experiment_kind": "precomputed_verified_demo",
@@ -6521,8 +6562,8 @@
             "task": "binary_classification",
             "warnings": []
           },
-          "experiment_id": "d012903d-1c7f-490d-908e-eae7662e168f",
-          "id": "f2afdeb1-f61c-40d7-800f-52d6fc80d2e2",
+          "experiment_id": "155b35e0-5504-437b-9a6e-51f85e090d18",
+          "id": "33d2ce92-7a58-49aa-ba5e-09dc6fe84b46",
           "metrics": {
             "calibration": {
               "brier_score": 0.07160827337721846,
@@ -6619,14 +6660,14 @@
             },
             "timing": {
               "cv_fold_seconds": [
-                0.014141216999973949,
-                0.012907380000001467,
-                0.014291596000020945
+                0.015782387999934144,
+                0.013883584999803134,
+                0.012628054000288103
               ],
-              "cv_total_seconds": 0.07179279499996483,
-              "final_training_seconds": 0.009868826000001718,
-              "test_inference_seconds": 0.0034172969999417546,
-              "test_inference_seconds_per_sample": 0.00010679053124817983
+              "cv_total_seconds": 0.05691014300009556,
+              "final_training_seconds": 0.009434945999601041,
+              "test_inference_seconds": 0.0037108400001670816,
+              "test_inference_seconds_per_sample": 0.0001159637500052213
             },
             "training": {
               "accuracy": 0.9453125,
@@ -6953,18 +6994,25 @@
         {
           "artifact": {
             "filename": "e088bd64-7e1b-4a81-b883-48311dde3eb8.dill.b64",
-            "sha256": "6a85a7c5b8f0acad976309b9b8db9c7464cf71d5d0d8dd4b8dcf8ded63c68afd"
+            "hash_algorithm": "sha256",
+            "hash_scope": "raw_dill_payload",
+            "sha256": "5c763ff070c6e3bf9a905b136e2b43363e205220b1b5023a44f82c614c4028fe"
           },
-          "artifact_sha256": "6a85a7c5b8f0acad976309b9b8db9c7464cf71d5d0d8dd4b8dcf8ded63c68afd",
-          "created_at": "2026-09-29T14:52:20.060863",
-          "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+          "artifact_sha256": "5c763ff070c6e3bf9a905b136e2b43363e205220b1b5023a44f82c614c4028fe",
+          "created_at": "2026-09-29T15:18:54.950420",
+          "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
           "details": {
-            "artifact_version": "sih-verified-demo-v1",
+            "artifact_integrity": {
+              "algorithm": "sha256",
+              "scheme": "packaged_sha256",
+              "scope": "raw_dill_payload"
+            },
+            "artifact_version": "sih-verified-demo-v2",
             "configuration": {
               "calibration": "none",
               "calibration_folds": 3,
               "cv_folds": 3,
-              "dataset_id": "e378d0ef-b1a0-453d-810c-913e626c8fab",
+              "dataset_id": "6c26a637-fe61-46d1-b919-d9615742b8b7",
               "duplicate_policy": "reject",
               "features": null,
               "max_samples": 160,
@@ -7335,7 +7383,7 @@
               },
               "target_type": "binary_classification",
               "task": "binary_classification",
-              "uploaded_at": "2026-09-29T14:52:19.294022+00:00",
+              "uploaded_at": "2026-09-29T15:18:54.191469+00:00",
               "version": "UCI WDBC snapshot"
             },
             "experiment_kind": "precomputed_verified_demo",
@@ -7693,8 +7741,8 @@
             "task": "binary_classification",
             "warnings": []
           },
-          "experiment_id": "d012903d-1c7f-490d-908e-eae7662e168f",
-          "id": "e088bd64-7e1b-4a81-b883-48311dde3eb8",
+          "experiment_id": "155b35e0-5504-437b-9a6e-51f85e090d18",
+          "id": "48c4852f-8a12-46ea-82aa-ea5cda122f88",
           "metrics": {
             "calibration": {
               "brier_score": 0.055765342881944444,
@@ -7793,14 +7841,14 @@
             },
             "timing": {
               "cv_fold_seconds": [
-                0.1039792840000473,
-                0.10200352200001817,
-                0.09979034599996339
+                0.10416619199986599,
+                0.10060828699988633,
+                0.09971437100011826
               ],
-              "cv_total_seconds": 0.32221373699997,
-              "final_training_seconds": 0.09276383000008082,
-              "test_inference_seconds": 0.00772006500005773,
-              "test_inference_seconds_per_sample": 0.00024125203125180406
+              "cv_total_seconds": 0.3214539740001783,
+              "final_training_seconds": 0.09252464099972713,
+              "test_inference_seconds": 0.007579451000310655,
+              "test_inference_seconds_per_sample": 0.00023685784375970798
             },
             "training": {
               "accuracy": 1.0,
@@ -8205,6 +8253,6 @@
     }
   },
   "generated_by": "scripts/build_demo_artifacts.py",
-  "manifest_sha256": "54db3e322eea6961f61b1fe9c82065d9fffe5fe1511f6aa92678e64799dbafe9",
-  "schema_version": 1
+  "manifest_sha256": "bba21a3fb990db2752d73dbf47ebe9163cd283bff5a9a9566e191169163112b2",
+  "schema_version": 2
 }
