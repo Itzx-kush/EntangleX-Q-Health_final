@@ -32,8 +32,11 @@ def model_schema(identity: UUID):
 def public_demo_sample(identity: UUID):
     record, bundle = get_bundle(str(identity))
     dataset, frame = load_frame(bundle["dataset_id"])
-    if not dataset.provenance.get("is_demo", False):
-        raise AppError("demo_only", "Sample retrieval is available only for the bundled public benchmark, never uploaded datasets.", 403)
+    # Built-in library datasets are packaged public benchmarks and may safely
+    # provide a withheld prediction sample. Uploaded datasets never do.
+    is_public_benchmark = dataset.provenance.get("origin") == "built_in" or dataset.provenance.get("is_demo", False)
+    if not is_public_benchmark:
+        raise AppError("demo_only", "Sample retrieval is available only for bundled public benchmarks, never uploaded datasets.", 403)
     values = frame.iloc[bundle["test_indices"][0]][bundle["features"]].to_dict()
     return {"sample": "Public benchmark sample", "features": clean_json(values), "source": dataset.provenance["source"], "target_withheld": True}
 
