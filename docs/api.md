@@ -82,3 +82,11 @@ Explanation body: `method` (`permutation`, `shap`, `perturbation`), `max_samples
 Errors use `{"error": {"code": "...", "message": "...", ...}}`. Validation errors identify invalid schema locations/types without echoing input values. Common statuses: 401 missing/wrong configured token, 403 disallowed origin or raw uploaded-demo access, 404 unknown resource, 409 dataset-in-use/integrity/not-ready, 413 oversized request, 422 invalid data/configuration, 429 queue full, 503 optional component unavailable. Internal exceptions are sanitized; logs contain IDs and exception type rather than raw records.
 
 Request bodies are bounded before multipart parsing. Reports and API responses set no-store behavior; report HTML escapes source-controlled strings. See `backend/app/api/schemas.py` and generated OpenAPI for complete authoritative field definitions.
+
+## Medical Dataset Library and target inspection
+
+- `GET /api/datasets/library` lists the five packaged public datasets and their trusted source, license, target, class, size and integrity metadata.
+- `POST /api/datasets/library/{slug}` verifies and registers a built-in resource. An optional JSON body may provide `target` and `positive_label` for a validated manual override; an omitted target uses the verified manifest target.
+- `POST /api/datasets/inspect` accepts multipart `file` plus optional `target` and `positive_label` fields. It returns safe schema statistics, ranked target candidates, heuristic confidence, class metadata and whether manual selection is required. It does not register or persist the upload.
+
+The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/datasets/demo` contracts remain available. Final registration always reparses and validates the bytes; inspection is advisory and never becomes a second dataset registry.

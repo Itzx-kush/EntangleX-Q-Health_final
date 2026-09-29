@@ -11,7 +11,7 @@ Official sources consulted:
 - sklearn dataset loader: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_breast_cancer.html
 - CC BY 4.0 terms: https://creativecommons.org/licenses/by/4.0/
 
-These counts describe the public source, not an application measurement or a fabricated result file. The application reads the installed loader at runtime and calculates its actual registration counts and hash. No data rows, pretrained model or benchmark output is bundled in this generated archive.
+These counts describe the public source, not an application measurement or a fabricated result file. The legacy demo endpoint reads the installed loader at runtime and calculates its actual registration counts and hash. The Medical Dataset Library described below separately packages verified public CSV resources; no pretrained model or benchmark output is bundled.
 
 ## Transformations recorded
 
@@ -24,3 +24,33 @@ The positive class is `malignant`; the negative class is `benign`. Generic predi
 Provide accurate source, version, domain, target and positive label, and confirm de-identification and independent-sample suitability. The uploader is responsible for authorization, licensing and scientific validity. The application records metadata; it does not verify a license grant or fetch the source URL.
 
 Each source record retains exact stored-byte hash, upload timestamp, class distribution, feature schema and source reference. Per-experiment metadata additionally records transformations, split/sample budget, software environment and model identity. Referenced datasets cannot be deleted through the ordinary dataset API because doing so would break provenance and frozen-model explanation reconstruction.
+
+## Built-in Medical Dataset Library
+
+Five small CC BY 4.0 datasets are packaged as backend application resources.
+Runtime never downloads them. Every resource has a SHA-256 in
+`backend/app/data/builtin_datasets/manifest.json`; selection verifies that hash
+and registers the bytes through the same immutable dataset registry used by
+uploads.
+
+| Dataset | Authoritative source | Registered target |
+| --- | --- | --- |
+| Breast Cancer Wisconsin Diagnostic | UCI, DOI `10.24432/C5DW2B` | `diagnosis` |
+| Early Stage Diabetes Risk Prediction | UCI, DOI `10.24432/C5VG8H` | `diabetes_status` |
+| Heart Disease — Cleveland | UCI, DOI `10.24432/C52P4X` | `heart_disease` |
+| Chronic Kidney Disease | UCI, DOI `10.24432/C5G020` | `ckd_status` |
+| ILPD Liver Patient Dataset | UCI, DOI `10.24432/C5D02C` | `liver_disease` |
+
+The exact attribution, license URL, packaged hash, class labels, normalization
+steps, sample count and feature count are maintained in the manifest and copied
+into registered provenance. Heart disease uses UCI's documented binary
+interpretation (`num=0` absent, `num=1..4` present). Identifier columns are not
+packaged. Missing feature values are preserved for the existing training-fitted
+imputation pipeline. Source rows are not silently deduplicated; datasets with
+exact duplicate rows disclose a recommended `drop_exact` experiment policy.
+
+`POST /api/datasets/inspect` ranks upload target candidates using deterministic
+name, cardinality, class-support, identifier, timestamp, missingness and
+continuous-value signals. Its score is a heuristic ranking, not a calibrated
+probability. Explicit target and positive-label values override the suggestion
+and are revalidated during final registration.
