@@ -1,14 +1,13 @@
 # EntangleX Q-Health — Final SIH verification
 
 **Repository:** `Itzx-kush/EntangleX-Q-Health_final`
-**Current branch:** `main`
-**Baseline reviewed:** `1ed30206f49635636ee763d3d43891564726f67b`
-**Verification date:** 2026-09-23
+**Historical verification date:** 2026-09-23
+**Historical baseline reviewed:** `1ed30206f49635636ee763d3d43891564726f67b`
 **Scope:** Final hardening pass for the existing FastAPI, SQLite, ML, quantum, provenance, storage, React, and SIH presentation architecture.
 
-> This file records only the current pass. Earlier Task 1 and Task 2 records remain historical evidence and are not overwritten.
+> The sections through “Remaining limitations” preserve the September 23 verification record. The dated dataset-library section appended below records the separate September 29 integration pass; historical results are not presented as newly executed evidence.
 
-## Current hardening changes
+## Historical hardening changes
 
 - Added focused frontend coverage for route fallback/active navigation, command palette search and keyboard activation, mobile drawer behavior, settings persistence, Demo Center stage navigation/readiness, and surfaced backend errors.
 - Corrected Demo Center readiness so comparison, explainability, and prediction are not marked executable merely because any model record exists. They now require a completed experiment and at least one ready model; dataset-dependent stages stay `NOT YET RUN` without a registered dataset.
@@ -100,3 +99,78 @@ The local shell could reach both services (`curl` returned HTTP 200), and all re
 4. `npm audit` still reports two moderate advisories and the dependency install emits existing deprecation warnings; no unsafe forced upgrade was introduced.
 5. External-cohort validation, clinical validation, regulatory review, fairness studies, and deployment hardening remain outside this repository pass.
 6. No video was generated.
+
+---
+
+## Medical Dataset Library integration verification — 2026-09-29
+
+**Branch:** `feature/dataset-e2e-validation`
+**Baseline:** current `main` at `0ad21ae3e2a678f6c081788e0e9a9aea4bd17d1b`
+**Scope:** integration, regression testing, and hardening of the Medical Dataset Library introduced after the historical verification above.
+
+### Five-dataset verification
+
+The parameterized integration suite exercised every packaged library entry through the same generic API and pipeline path:
+
+1. Breast Cancer Wisconsin Diagnostic (`wdbc`)
+2. Early Stage Diabetes Risk Prediction (`early-stage-diabetes`)
+3. Heart Disease — Cleveland (`cleveland-heart-disease`)
+4. Chronic Kidney Disease (`chronic-kidney-disease`)
+5. ILPD Liver Patient Dataset (`ilpd-liver`)
+
+For each entry, the executed tests verified resource readability, manifest SHA-256, row and feature counts, binary target labels, positive/negative labels, target presence, registration metadata, normalization metadata, built-in provenance, quality validation, preprocessing preview, feature-selection preview, PCA preview, and dataset-ID propagation. Each dataset then completed a bounded logistic-regression experiment with a fixed seed, two CV folds, and a maximum of 80 samples. The tests retrieved the experiment and model, exercised comparison, prediction, perturbation explanation, JSON report generation, and confirmed the model and experiment retained the selected dataset ID. No model metric is recorded in this document.
+
+Breast Cancer was additionally checked through the legacy `POST /api/datasets/demo` workflow. The packaged library registration and legacy demo registration produced separate dataset IDs without changing their provenance semantics.
+
+### Target detection and upload
+
+The detector suite passed cases covering target-like names (`diagnosis`, `outcome`), binary and multiclass candidates, ID and timestamp penalties, continuous-measurement rejection, low-confidence/ambiguous candidates, missing targets, explicit target override, and explicit positive-label override.
+
+The upload integration test performed inspection, automatic target detection, a manual override to a different binary target, explicit positive-label selection, independent final CSV validation, central registration, provenance retrieval, quality validation, and preprocessing preview. The registered target and positive label matched the final manual choices; inspection remained advisory.
+
+### Dataset state hardening
+
+- Switching built-in datasets now applies that dataset's recommended duplicate policy and clears only feature-dependent state (`features`, log features, and ratios), while preserving unrelated model configuration.
+- Selecting a dataset immediately refreshes the displayed detail record rather than leaving stale metadata visible.
+- Deleting the active dataset clears its persisted active ID and returns dataset-dependent draft state to safe defaults.
+- A built-in public-license dataset no longer becomes a legacy demo dataset merely because it has license metadata. `is_demo=true` is now assigned only by the original approved `POST /api/datasets/demo` path, so `/api/models/{id}/demo-sample` remains restricted to that workflow. Models trained from Medical Dataset Library registrations receive HTTP 403 from that endpoint; a bounded model trained from the legacy demo registration successfully returned its approved demo sample.
+
+### Quantum compatibility
+
+All five datasets passed quantum configuration and shared-preprocessing validation with dataset-ID propagation, four PCA components, four qubits, and angle scaling enabled. This establishes configuration compatibility only.
+
+One separate real, bounded simulator-backed QSVC experiment was executed for the packaged WDBC dataset with 30 samples, two qubits, two CV folds, 128 shots, and a five-iteration bound in the quantum configuration. The job succeeded and the resulting ready QSVC model retained the WDBC dataset ID. This executed test does not establish quantum advantage, clinical effectiveness, or hardware validation.
+
+### Deployment and live HTTP verification
+
+The packaged CSV resources remain under `backend/app/data/builtin_datasets` and are accessed through the package-resource catalog. The backend image copies the `app` source tree, so these resources are included in a fresh deployed artifact. Library listing reads manifest metadata; CSV bytes are read and verified when a dataset is selected. Registration creates runtime state only after selection and does not require a runtime download or persistent pre-seeded database.
+
+A local Uvicorn process was exercised over real HTTP. The smoke run returned five library entries, registered CKD, retrieved registry/detail/provenance, validated quality, ran all three previews, inspected and registered a custom upload, and completed one bounded logistic-regression training job. The returned automatic upload target was `outcome`, and the job status was `succeeded`.
+
+### Actual commands and results
+
+```text
+pytest -q tests/test_dataset_library.py tests/test_target_detection.py
+31 passed, 1 skipped, 2 warnings in 7.37s
+
+pytest -q
+98 passed, 35 skipped, 2 warnings in 16.81s
+
+RUN_QUANTUM_TESTS=1 pytest -q tests/test_dataset_library.py::test_wdbc_executes_one_bounded_real_qsvc_experiment
+1 passed, 1 warning in 4.56s
+
+npm test
+2 test files passed; 17 tests passed in 5.06s
+
+npm run build
+tsc --noEmit passed; Vite production build completed in 5.16s
+```
+
+The default backend run skipped tests that explicitly require `RUN_QUANTUM_TESTS=1`; the one new bounded dataset-library QSVC integration test was then executed separately with that flag. Warnings were an existing FastAPI TestClient/httpx deprecation warning and a pandas future downcasting warning encountered by the CKD path.
+
+### Current limitations
+
+1. This pass did not complete visible-browser or screenshot-based responsive QA. Frontend behavior was verified with Vitest/jsdom, TypeScript checking, and the production build; no visual redesign was made.
+2. Only WDBC received an executed quantum training check. The other four datasets received quantum configuration and preprocessing compatibility checks, not executed quantum training.
+3. Quantum execution used a local simulator, not quantum hardware, and provides no evidence of quantum advantage.
+4. The existing FastAPI/httpx and pandas warnings remain; dependency upgrades or unrelated transformer refactoring were intentionally excluded from this integration pass.

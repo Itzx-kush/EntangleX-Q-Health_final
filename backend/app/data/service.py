@@ -107,6 +107,7 @@ def register_csv(
     metadata: DatasetUploadMetadata,
     *,
     license_info: str | None = None,
+    is_demo: bool = False,
     provenance_extra: dict | None = None,
 ) -> Dataset:
     if not filename.lower().endswith(".csv"):
@@ -127,7 +128,7 @@ def register_csv(
         "numeric_features": quality["numeric_features"], "categorical_features": quality["categorical_features"],
         "target_classes": quality["target_classes"], "class_distribution": quality["class_distribution"],
         "negative_label": next(c for c in quality["target_classes"] if c != metadata.positive_label),
-        "license": license_info, "is_demo": license_info is not None, "deidentification_asserted_by_uploader": True,
+        "license": license_info, "is_demo": is_demo, "deidentification_asserted_by_uploader": True,
         "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
         "origin": "built_in" if license_info is not None else "uploaded",
         "dataset_status": "registered",
@@ -235,7 +236,13 @@ def _register_demo() -> Dataset:
         existing = session.scalar(select(Dataset).where(Dataset.sha256 == sha, Dataset.name == meta.name))
         if existing is not None:
             return existing
-    return register_csv(content, "wdbc-benchmark.csv", meta, license_info="UCI CC BY 4.0; Wolberg, Mangasarian, Street & Street (1993). Identifier column is not included in sklearn features.")
+    return register_csv(
+        content,
+        "wdbc-benchmark.csv",
+        meta,
+        license_info="UCI CC BY 4.0; Wolberg, Mangasarian, Street & Street (1993). Identifier column is not included in sklearn features.",
+        is_demo=True,
+    )
 
 def delete_dataset(identity: str) -> None:
     with _dataset_delete_lock:
