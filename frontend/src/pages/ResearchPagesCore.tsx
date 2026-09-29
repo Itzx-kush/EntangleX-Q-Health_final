@@ -43,7 +43,7 @@ export function Overview(){
 }
 
 export function Datasets(){
- const {draft,selectDataset}=useDraft();
+ const {draft,selectDataset,clearDataset}=useDraft();
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets});
  const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary});
  const qc=useQueryClient();
@@ -52,13 +52,13 @@ export function Datasets(){
  const [inspection,setInspection]=useState<DatasetInspection|null>(null);
  const [confirmed,setConfirmed]=useState(false);
  const [form,setForm]=useState({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
- const choose=(dataset:Dataset)=>selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);
+ const choose=(dataset:Dataset)=>{selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);setSelected(dataset)};
  const builtIn=useMutation({
   mutationFn:(slug:string)=>qh.registerBuiltIn(slug),
-  onSuccess:dataset=>{choose(dataset);setSelected(dataset);qc.invalidateQueries({queryKey:['datasets']})},
+  onSuccess:dataset=>{choose(dataset);qc.invalidateQueries({queryKey:['datasets']})},
  });
- const remove=useMutation({mutationFn:qhDelete,onSuccess:()=>{setSelected(null);qc.invalidateQueries({queryKey:['datasets']})}});
- async function qhDelete(id:string){await api.remove('/datasets/' + id)}
+ const remove=useMutation({mutationFn:qhDelete,onSuccess:id=>{clearDataset(id);setSelected(current=>current?.id===id?null:current);qc.invalidateQueries({queryKey:['datasets']})}});
+ async function qhDelete(id:string){await api.remove('/datasets/' + id);return id}
  const inspect=useMutation({
   mutationFn:async(values?:{target?:string;positive_label?:string})=>{
    if(!file)throw new Error('Choose a CSV file first.');
@@ -83,7 +83,7 @@ export function Datasets(){
    return qh.upload(body);
   },
   onSuccess:dataset=>{
-   choose(dataset);setSelected(dataset);qc.invalidateQueries({queryKey:['datasets']});
+   choose(dataset);qc.invalidateQueries({queryKey:['datasets']});
    setFile(null);setInspection(null);setConfirmed(false);
    setForm({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
   },

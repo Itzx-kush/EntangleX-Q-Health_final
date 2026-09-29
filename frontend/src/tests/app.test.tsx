@@ -1,4 +1,4 @@
-import {fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
@@ -59,15 +59,23 @@ describe('medical dataset library',()=>{
     positive_label_reason:'Semantic pair',requires_manual_target:false,requires_positive_label:false,
     heuristic_notice:'Scores are deterministic heuristic rankings, not calibrated probabilities.',candidates:[],
   });
+  const libraryItems=[
+    libraryItem,
+    {...libraryItem,slug:'early-stage-diabetes',name:'Early Stage Diabetes Risk Prediction',domain:'endocrinology',target:'diabetes_status',positive_label:'positive',negative_label:'negative',row_count:520,feature_count:16,class_labels:['negative','positive'],recommended_duplicate_policy:'drop_exact' as const},
+    {...libraryItem,slug:'cleveland-heart-disease',name:'Heart Disease — Cleveland',domain:'cardiovascular',target:'heart_disease',positive_label:'present',negative_label:'absent',row_count:303,feature_count:13,class_labels:['absent','present']},
+    {...libraryItem,slug:'chronic-kidney-disease',name:'Chronic Kidney Disease',domain:'nephrology',target:'ckd_status',positive_label:'ckd',negative_label:'not_ckd',row_count:400,feature_count:24,class_labels:['ckd','not_ckd']},
+    {...libraryItem,slug:'ilpd-liver',name:'ILPD Liver Patient Dataset',domain:'hepatology',target:'liver_disease',positive_label:'present',negative_label:'absent',row_count:583,feature_count:10,class_labels:['absent','present'],recommended_duplicate_policy:'drop_exact' as const},
+  ];
+  const registeredDataset=(item:typeof libraryItem)=>({
+    id:`dataset-${item.slug}`,name:item.name,sha256:item.sha256,created_at:new Date().toISOString(),
+    provenance:{name:item.name,domain:item.domain,source:item.source,source_url:item.source_url,version:'snapshot',target:item.target,positive_label:item.positive_label,negative_label:item.negative_label,features:[],numeric_features:[],categorical_features:[],row_count:item.row_count,feature_count:item.feature_count,class_distribution:{},target_classes:item.class_labels,is_demo:false,dataset_hash:item.sha256,license:'CC BY 4.0',origin:'built_in' as const,recommended_duplicate_policy:item.recommended_duplicate_policy},
+    quality:{} as never,
+  });
 
   it('discovers and registers a built-in dataset without changing routes',async()=>{
     localStorage.setItem('qhealth-tictac-draft',JSON.stringify({pipeline:{log_features:['old_feature'],ratios:[{name:'old_ratio',numerator:'a',denominator:'b'}]}}));
     vi.mocked(qh.datasetLibrary).mockResolvedValue([libraryItem]);
-    vi.mocked(qh.registerBuiltIn).mockResolvedValue({
-      id:'dataset-1',name:libraryItem.name,sha256:libraryItem.sha256,created_at:new Date().toISOString(),
-      provenance:{name:libraryItem.name,domain:'oncology',source:libraryItem.source,source_url:libraryItem.source_url,version:'snapshot',target:'diagnosis',positive_label:'malignant',negative_label:'benign',features:[],numeric_features:[],categorical_features:[],row_count:569,feature_count:30,class_distribution:{benign:357,malignant:212},target_classes:['benign','malignant'],is_demo:true,dataset_hash:libraryItem.sha256,license:'CC BY 4.0',origin:'built_in'},
-      quality:{} as never,
-    });
+    vi.mocked(qh.registerBuiltIn).mockResolvedValue(registeredDataset(libraryItem));
     renderWithProviders(<Datasets/>,['/datasets']);
     await waitFor(()=>expect(screen.getByText('Breast Cancer Wisconsin Diagnostic')).toBeInTheDocument());
     expect(screen.getByText('Medical Dataset Library')).toBeInTheDocument();
@@ -75,10 +83,54 @@ describe('medical dataset library',()=>{
     await waitFor(()=>expect(qh.registerBuiltIn).toHaveBeenCalledWith('wdbc'));
     await waitFor(()=>{
       const draft=JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}');
-      expect(draft.dataset_id).toBe('dataset-1');
+      expect(draft.dataset_id).toBe('dataset-wdbc');
       expect(draft.pipeline.log_features).toEqual([]);
       expect(draft.pipeline.ratios).toEqual([]);
     });
+  });
+
+  it('switches through all five datasets with isolated duplicate policy and feature state',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({models:['qsvc'],pipeline:{log_features:['old_feature'],ratios:[{name:'old_ratio',numerator:'a',denominator:'b'}]}}));
+    vi.mocked(qh.datasetLibrary).mockResolvedValue(libraryItems);
+    vi.mocked(qh.registerBuiltIn).mockImplementation(async slug=>registeredDataset(libraryItems.find(item=>item.slug===slug) as typeof libraryItem));
+    renderWithProviders(<Datasets/>,['/datasets']);
+    await screen.findByText(libraryItems[0].name);
+    for(const item of libraryItems){
+      const article=screen.getByText(item.name).closest('article');
+      expect(article).not.toBeNull();
+      fireEvent.click(within(article as HTMLElement).getByRole('button',{name:'Use Dataset'}));
+      await waitFor(()=>{
+        const draft=JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}');
+        expect(draft.dataset_id).toBe(`dataset-${item.slug}`);
+        expect(draft.duplicate_policy).toBe(item.recommended_duplicate_policy);
+        expect(draft.pipeline.log_features).toEqual([]);
+        expect(draft.pipeline.ratios).toEqual([]);
+        expect(draft.models).toEqual(['qsvc']);
+      });
+    }
+    expect(qh.registerBuiltIn).toHaveBeenCalledTimes(5);
+  });
+
+  it('clears an active deleted dataset instead of retaining a stale ID',async()=>{
+    const dataset=registeredDataset(libraryItem);
+    vi.mocked(qh.datasetLibrary).mockResolvedValue([]);
+    vi.mocked(qh.datasets).mockResolvedValue([dataset]);
+    vi.spyOn(window,'confirm').mockReturnValue(true);
+    renderWithProviders(<Datasets/>,['/datasets']);
+    await waitFor(()=>expect(screen.getByRole('button',{name:'Select'})).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button',{name:'Select'}));
+    await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(dataset.id));
+    fireEvent.click(screen.getByRole('button',{name:/Delete dataset/i}));
+    await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(''));
+  });
+
+  it('restores the active registered dataset from persisted state after remount',async()=>{
+    const dataset=registeredDataset(libraryItem);
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:dataset.id}));
+    vi.mocked(qh.datasetLibrary).mockResolvedValue([]);
+    vi.mocked(qh.datasets).mockResolvedValue([dataset]);
+    renderWithProviders(<Datasets/>,['/datasets']);
+    await waitFor(()=>expect(screen.getByRole('button',{name:'Selected'})).toBeInTheDocument());
   });
 
   it('inspects an upload and supports manual target override',async()=>{
