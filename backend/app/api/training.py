@@ -1,9 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Query
-from ..alignment import HYBRID_MODEL_ID
 from ..database import session_scope
 from ..jobs.manager import manager
-from ..utils.errors import AppError
 from ..storage.entities import Job
 from ..storage.repository import recent, require
 from .schemas import JobOut, TrainingConfig, TrainingResponse
@@ -12,8 +10,6 @@ router = APIRouter(prefix="/training/jobs", tags=["training jobs"])
 
 @router.post("", response_model=TrainingResponse, status_code=202)
 def create_job(config: TrainingConfig):
-    if HYBRID_MODEL_ID in config.models:
-        raise AppError("model_not_yet_implemented", "PennyLane + PyTorch hybrid training is architecture-prepared but reserved for Prompt 2.", 409)
     job, experiment = manager.enqueue(config)
     return {"job": job, "experiment": experiment}
 

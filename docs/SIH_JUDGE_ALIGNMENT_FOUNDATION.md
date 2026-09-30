@@ -28,3 +28,9 @@ Existing Qiskit, Qiskit Aer, VQC, QSVC, QNN, classical models, threshold optimiz
 ## Dependency preparation
 
 `backend/requirements-hybrid.txt` isolates `pennylane>=0.43,<0.44` and `torch>=2.7,<2.10` for explicit Prompt 2 installation in the repository's Python 3.11 environment. They are intentionally excluded from `requirements.txt` in Prompt 1 so deployment size and existing verified environments do not change before execution exists.
+
+## SIH Judge Alignment — Executable Hybrid Model (2026-09-30)
+
+Prompt 2 replaces the foundation-only boundary with a real sklearn-compatible `PennyLaneTorchClassifier`. It reconstructs runtime-only PennyLane/PyTorch objects from application-owned configuration and NumPy weight arrays during secure artifact reload, without broadening the restricted-unpickler allowlist. The model participates in the existing CV/OOF threshold loop and records actual circuit/head parameter counts, package versions, measured timing, simulator metadata, and limitations.
+
+The first bounded end-to-end validation uses the existing Early Stage Diabetes catalog record and mixed categorical/numeric inputs. No CSV duplication or modification is performed. Qiskit models remain supported and separately configured. Real hardware, clinical validation, diagnostic use, cross-platform bit-for-bit determinism, speedup, superiority, and general quantum advantage are not claimed.

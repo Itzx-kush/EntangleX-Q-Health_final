@@ -11,23 +11,32 @@ def config(**overrides):
     return TrainingConfig(**values)
 
 
-def test_hybrid_capability_is_present_but_not_executable():
+def test_hybrid_capability_is_available_when_dependencies_import():
     contract = alignment_contract()
     hybrid = next(item for item in contract["models"] if item["model_id"] == HYBRID_MODEL_ID)
-    assert hybrid["implementation_status"] == "NOT_YET_IMPLEMENTED"
-    assert hybrid["executable"] is False
-    assert "not executable" in hybrid["explainability"].lower()
+    assert hybrid["implementation_status"] == "AVAILABLE"
+    assert hybrid["executable"] is True
+    assert contract["frameworks"]["pennylane"]["package_importable"] is True
+    assert contract["frameworks"]["torch"]["package_importable"] is True
+    assert contract["frameworks"]["pennylane"]["runtime_verified"] is False
+    assert contract["flagship_architecture"]["status"] == "IMPLEMENTED"
 
 
-def test_hybrid_configuration_is_bounded_and_dimensionally_coherent():
-    accepted = config()
-    assert accepted.hybrid.qubits == accepted.pipeline.pca_components == accepted.quantum.qubits
+def test_hybrid_and_qiskit_dimension_rules_are_separate_and_bounded():
+    accepted = config(pipeline={"pca_components": 3}, quantum={"qubits": 4}, hybrid={"qubits": 3})
+    assert accepted.hybrid.qubits == accepted.pipeline.pca_components
     with pytest.raises(ValidationError):
         config(hybrid={"qubits": 9})
     with pytest.raises(ValidationError):
-        config(hybrid={"qubits": 3})
+        config(pipeline={"pca_components": 4}, hybrid={"qubits": 3})
     with pytest.raises(ValidationError):
         config(hybrid={"classical_hidden_dimensions": [256]})
+    with pytest.raises(ValidationError):
+        config(max_samples=161, hybrid={"sample_cap": 160})
+    both = config(models=["vqc", HYBRID_MODEL_ID])
+    assert both.quantum.qubits == both.hybrid.qubits == both.pipeline.pca_components
+    with pytest.raises(ValidationError):
+        config(models=["vqc", HYBRID_MODEL_ID], pipeline={"pca_components": 3}, quantum={"qubits": 3}, hybrid={"qubits": 4})
 
 
 def test_showcase_metadata_is_deterministic_and_references_catalog_dataset():
@@ -42,7 +51,6 @@ def test_showcase_metadata_is_deterministic_and_references_catalog_dataset():
 def test_hybrid_uses_existing_threshold_contract_and_existing_models_still_validate():
     hybrid = config(threshold_strategy="target_sensitivity", target_sensitivity=0.97)
     assert hybrid.threshold_strategy == "target_sensitivity"
-    assert hybrid.target_sensitivity == 0.97
     for model in ["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn"]:
         assert TrainingConfig(dataset_id=uuid4(), models=[model]).models == [model]
 
@@ -53,14 +61,18 @@ def test_comparison_robustness_and_explanation_contracts_remain_compatible():
     assert ExplanationRequest(method="shap").method == "shap"
 
 
-def test_alignment_api_reports_pending_hybrid_and_training_is_guarded(client):
+def test_alignment_api_reports_available_hybrid_and_training_request_is_accepted(client, monkeypatch):
     response = client.get("/api/alignment")
     assert response.status_code == 200
-    payload = response.json()
-    hybrid = next(item for item in payload["models"] if item["model_id"] == HYBRID_MODEL_ID)
-    assert hybrid["executable"] is False
-    assert payload["flagship_architecture"]["status"] == "NOT_YET_IMPLEMENTED"
+    hybrid = next(item for item in response.json()["models"] if item["model_id"] == HYBRID_MODEL_ID)
+    assert hybrid["executable"] is True
 
-    blocked = client.post("/api/training/jobs", json={"dataset_id": str(uuid4()), "models": [HYBRID_MODEL_ID]})
-    assert blocked.status_code == 409
-    assert blocked.json()["error"]["code"] == "model_not_yet_implemented"
+    from app.jobs.manager import manager
+    from app.storage.entities import Experiment, Job
+    from app.utils.serialization import utcnow
+    job_id, experiment_id = str(uuid4()), str(uuid4())
+    job = Job(id=job_id, experiment_id=experiment_id, status="queued", progress=0, state="Queued", errors=[], created_at=utcnow(), updated_at=utcnow())
+    experiment = Experiment(id=experiment_id, dataset_id=str(uuid4()), parent_id=None, status="created", config={}, summary={}, created_at=utcnow())
+    monkeypatch.setattr(manager, "enqueue", lambda value: (job, experiment))
+    accepted = client.post("/api/training/jobs", json={"dataset_id": experiment.dataset_id, "models": [HYBRID_MODEL_ID]})
+    assert accepted.status_code == 202

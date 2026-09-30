@@ -12,7 +12,7 @@ from ..utils.serialization import clean_json
 
 
 COMPARE_METRICS = ["accuracy", "sensitivity", "specificity", "precision", "recall", "f1", "roc_auc"]
-QUANTUM_MODELS = {"vqc", "qsvc", "qnn"}
+QUANTUM_MODELS = {"vqc", "qsvc", "qnn", "hybrid_pennylane_torch"}
 
 
 def _difference(quantum, classical):

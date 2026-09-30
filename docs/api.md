@@ -96,3 +96,9 @@ The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/dat
 `GET /api/alignment` returns one deterministic, typed contract containing model capability states (`AVAILABLE`, `NOT_YET_IMPLEMENTED`, `UNAVAILABLE`), separate package/import/model/execution/simulator/hardware facts, the `early-stage-diabetes` featured context, the non-executing `sih-diabetes-demonstration` preset, and the target architecture stages. The endpoint never starts training and never returns benchmark metrics.
 
 `POST /api/training/jobs` accepts the bounded `hybrid_pennylane_torch` configuration shape for contract validation, but returns `409 model_not_yet_implemented` if it is selected in Prompt 1. Existing threshold fields retain their current OOF-validation and untouched-holdout semantics.
+
+## Executable PennyLane hybrid contract (2026-09-30)
+
+`GET /api/alignment` reports `hybrid_pennylane_torch` as `AVAILABLE` and executable only when both PennyLane and PyTorch import successfully. Implementation, package/import, simulator, runtime-verification, and hardware facts remain separate. `POST /api/training/jobs` accepts the bounded `hybrid` configuration and routes it through the existing job, CV, OOF-threshold, registry, persistence, prediction, comparison, robustness, and report paths.
+
+`POST /api/models/{id}/explain` with `method=shap` supports the mixed-type diabetes hybrid path. Training-partition-only category mappings reconstruct valid original-feature frames before the complete frozen pipeline is evaluated. Returned feature names remain original input names; contributions describe model behavior, not causation.

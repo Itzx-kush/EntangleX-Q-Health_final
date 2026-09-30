@@ -23,7 +23,7 @@ def report_data(identity: str) -> dict:
         "experiment_kind": experiment_kind, "experiment_label": "PRECOMPUTED VERIFIED DEMO EXPERIMENT" if experiment_kind == "precomputed_verified_demo" else "LIVE RESEARCH EXPERIMENT",
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
-        "models": [ModelOut.model_validate(m).model_dump(mode="json") for m in models],
+        "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": "PennyLane + PyTorch Hybrid" if m.model_type == "hybrid_pennylane_torch" else m.model_type} for m in models],
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
         "comparison": comparison(identity),
         "scientific_boundary": "Model probabilities, test metrics, and simulation results do not establish diagnosis, clinical validity, regulatory approval, or quantum advantage. Uncomputed measurements remain absent, not zero."}
@@ -40,7 +40,7 @@ def html_report(identity: str) -> str:
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
         "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
     for model in data["models"]:
-        sections.append("<h2>Model: " + escaped(model["model_type"]) + "</h2><p>Model ID: " + escaped(model["id"]) + "; status: " + escaped(model["status"]) + "</p>")
+        sections.append("<h2>Model: " + escaped(model.get("display_name", model["model_type"])) + "</h2><p>Model ID: " + escaped(model["id"]) + "; status: " + escaped(model["status"]) + "</p>")
         metrics = model["metrics"]
         sections.append("<h3>Evaluation: held-out test</h3>" + pre(metrics.get("test", "Not computed")))
         sections.append("<h3>Generalization: training and validation</h3>" + pre({"training_resubstitution": metrics.get("training"), "cross_validation": metrics.get("validation")}))
