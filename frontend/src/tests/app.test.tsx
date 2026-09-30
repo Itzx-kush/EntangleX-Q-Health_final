@@ -8,7 +8,7 @@ import {ThemeToggle} from '../components/ThemeToggle';
 import {DraftProvider} from '../hooks/useDraft';
 import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
-import {Comparison,PredictionPage,Robustness,Training} from '../pages/ResearchPagesModels';
+import {Comparison,PredictionPage,Quantum,Robustness,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
 
 vi.mock('../lib/api',()=>({
@@ -29,6 +29,8 @@ vi.mock('../lib/api',()=>({
     inspectDataset:vi.fn(()=>Promise.resolve({})),
     upload:vi.fn(()=>Promise.resolve({})),
     capabilities:vi.fn(()=>Promise.resolve({available:false,runtime_verified:false,execution:'Quantum runtime unavailable'})),
+    resourcePolicy:vi.fn(()=>Promise.resolve({})),
+    resourceAdvisor:vi.fn(()=>Promise.resolve({})),
     createJob:vi.fn(()=>Promise.resolve({})),
     comparison:vi.fn(()=>Promise.resolve({})),
     robustness:vi.fn(()=>Promise.resolve({experiment_id:'',dataset_id:'',sample_count:0,model_count:0,condition_count:0,results:[],limitations:[]})),
@@ -436,5 +438,57 @@ describe('operating-point and evidence UX',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Run robustness condition'}));
     expect(await screen.findByText(/not applicable:/i)).toBeInTheDocument();
     expect(screen.getAllByText(/No categorical feature/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('quantum resource advisor',()=>{
+  const recommendedQuantum={backend:'aer' as const,qubits:4,feature_map_reps:1,ansatz_reps:1,entanglement:'full' as const,optimizer:'SPSA' as const,maxiter:30,shots:1024,noise_probability:.05};
+  const advisorResponse={
+    requested_configuration:{model_type:'qnn' as const,quantum:{...recommendedQuantum,qubits:8,feature_map_reps:3,ansatz_reps:3,maxiter:300,shots:16384},feature_dimension:8,sample_count:300,dataset_id:null,experiment_id:null},
+    resource_profile:{logical_qubits:8,feature_dimension:8,feature_map_repetitions:3,ansatz_repetitions:3,entanglement:'full',logical_depth:null,gate_count:null,parameter_count:null,circuit_complexity:'high',optimizer:'SPSA',optimizer_iteration_budget:300,optimization_workload:'high',backend:'aer',execution_kind:'finite-shot local Aer simulation',shots_per_circuit_evaluation:16384,measurement_workload:'high',noise_probability:.05,noise_mode:'density-matrix simulator path',sample_count:300,bounded_quantum_sample_cap:256,sample_workload:'high',structural_metadata_status:'Not guessed',hardware_execution:false},
+    budget_status:{status:'exceeds_budget' as const,reasons:['qubits exceeds bounded limit']},
+    budget_policy:{version:'bounded-simulator-resource-policy-v1',scope:'local',schema_bounds:{},bounded_prototype_limits:{},near_budget_fraction:.75,safe_baseline:{},recommendation_order:[],semantics:'Explicit engineering guardrails; not a runtime prediction.'},
+    recommendation:{available:true,configuration:{model_type:'qnn' as const,quantum:recommendedQuantum,feature_dimension:4,sample_count:160,dataset_id:null,experiment_id:null},changes:[{field:'shots',from:16384,to:1024,reason:'Reduces finite-shot measurement workload.'},{field:'qubits',from:8,to:4,reason:'Keeps PCA equal to qubits.'}],rationale:'Deterministic policy order.',valid:true,policy_version:'bounded-simulator-resource-policy-v1'},
+    historical_evidence:{matched_runs:2,median_training_seconds:12,min_training_seconds:10,max_training_seconds:14,measured_fields:['final_training_seconds'],matching_policy:'Exact model, backend, and qubits.',runs:[],limitations:[]},
+    limitations:['Hardware execution is not available in the current verified configuration.'],
+  };
+
+  it('renders exceeded budget, measured history, changes, and applies only after explicit action',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({quantum:{...advisorResponse.requested_configuration.quantum},pipeline:{pca_components:8},max_samples:300}));
+    vi.mocked(qh.resourceAdvisor).mockResolvedValue(advisorResponse as never);
+    renderWithProviders(<Quantum/>,['/quantum']);
+    expect(screen.getByText('Quantum Resource Advisor')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Quantum advisor model'),{target:{value:'qnn'}});
+    fireEvent.click(screen.getByRole('button',{name:'Analyze resource profile'}));
+    expect(await screen.findByText('EXCEEDS BUDGET')).toBeInTheDocument();
+    expect(screen.getByText('16384')).toBeInTheDocument();
+    expect(screen.getByText('1024')).toBeInTheDocument();
+    expect(screen.getByText('Observed historical runs')).toBeInTheDocument();
+    expect(screen.getByText('12.000 s')).toBeInTheDocument();
+    expect(screen.getByText(/Hardware execution is not available/)).toBeInTheDocument();
+    let persisted=JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}');
+    expect(persisted.quantum.qubits).toBe(8);
+    fireEvent.click(screen.getByRole('button',{name:'Apply recommended configuration'}));
+    await waitFor(()=>{
+      persisted=JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}');
+      expect(persisted.quantum.qubits).toBe(4);
+      expect(persisted.pipeline.pca_components).toBe(4);
+      expect(persisted.max_samples).toBe(160);
+    });
+  });
+
+  it('shows the truthful no-history and within-budget states',async()=>{
+    vi.mocked(qh.resourceAdvisor).mockResolvedValue({
+      ...advisorResponse,
+      budget_status:{status:'within_budget',reasons:['Every dimension is within policy.']},
+      recommendation:{...advisorResponse.recommendation,available:false,configuration:null,changes:[],rationale:'Already within policy.'},
+      historical_evidence:{...advisorResponse.historical_evidence,matched_runs:0,median_training_seconds:null,min_training_seconds:null,max_training_seconds:null},
+    } as never);
+    renderWithProviders(<Quantum/>,['/quantum']);
+    fireEvent.click(screen.getByRole('button',{name:'Analyze resource profile'}));
+    expect(await screen.findByText('WITHIN BUDGET')).toBeInTheDocument();
+    expect(screen.getByText(/Insufficient historical evidence/)).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Apply recommended configuration'})).not.toBeInTheDocument();
+    expect(screen.queryByText(/Estimated runtime:/i)).not.toBeInTheDocument();
   });
 });
