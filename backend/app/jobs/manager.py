@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from uuid import uuid4
 from sqlalchemy import select
+from ..alignment import HYBRID_MODEL_ID
 from ..api.schemas import TrainingConfig
 from ..config import get_settings
 from ..data.splitting import prepare_data
@@ -45,6 +46,8 @@ class TrainingManager:
         self.executor = None
 
     def enqueue(self, config: TrainingConfig, parent_id: str | None = None):
+        if HYBRID_MODEL_ID in config.models:
+            raise AppError("model_not_yet_implemented", "PennyLane + PyTorch hybrid training is architecture-prepared but reserved for Prompt 2.", 409)
         if self.executor is None:
             raise AppError("worker_unavailable", "Training worker is not started.", 503)
         data = prepare_data(config)  # Preflight validation, not model fitting.

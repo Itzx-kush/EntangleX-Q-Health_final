@@ -42,6 +42,27 @@ class QuantumConfig(Schema):
             raise ValueError("Noise simulation requires the Aer backend.")
         return self
 
+class HybridModelConfig(Schema):
+    model_type: Literal["hybrid_pennylane_torch"] = "hybrid_pennylane_torch"
+    qubits: int = Field(default=4, ge=2, le=8)
+    feature_map: Literal["angle"] = "angle"
+    quantum_layers: int = Field(default=2, ge=1, le=6)
+    classical_hidden_dimensions: list[int] = Field(default_factory=lambda: [16, 8], min_length=1, max_length=3)
+    classical_activation: Literal["relu", "tanh"] = "relu"
+    optimizer: Literal["adam", "sgd"] = "adam"
+    learning_rate: float = Field(default=0.001, ge=0.00001, le=0.1)
+    epochs: int = Field(default=50, ge=1, le=500)
+    batch_size: int = Field(default=16, ge=1, le=256)
+    deterministic_seed: int = Field(default=42, ge=0, le=2147483647)
+    sample_cap: int = Field(default=160, ge=30, le=2000)
+    backend: Literal["default.qubit"] = "default.qubit"
+    @field_validator("classical_hidden_dimensions")
+    @classmethod
+    def bounded_hidden_dimensions(cls, value):
+        if any(dimension < 2 or dimension > 128 for dimension in value):
+            raise ValueError("Hybrid hidden dimensions must be between 2 and 128.")
+        return value
+
 class ModelParameters(Schema):
     logistic_c: float = Field(default=1, gt=0, le=10000)
     svm_c: float = Field(default=1, gt=0, le=10000)
@@ -53,9 +74,10 @@ class ModelParameters(Schema):
 class TrainingConfig(Schema):
     dataset_id: UUID
     features: list[str] | None = Field(default=None, max_length=200)
-    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=6)
+    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=7)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     quantum: QuantumConfig = Field(default_factory=QuantumConfig)
+    hybrid: HybridModelConfig = Field(default_factory=HybridModelConfig)
     parameters: ModelParameters = Field(default_factory=ModelParameters)
     seed: int = Field(default=42, ge=0, le=2147483647)
     test_size: float = Field(default=0.2, ge=0.1, le=0.4)
@@ -73,10 +95,12 @@ class TrainingConfig(Schema):
             raise ValueError("Choose each model only once.")
         if self.features is not None and (not self.features or len(set(self.features)) != len(self.features)):
             raise ValueError("Features must be a nonempty unique list.")
-        quantum_models = {"vqc", "qsvc", "qnn"}
+        quantum_models = {"vqc", "qsvc", "qnn", "hybrid_pennylane_torch"}
         if quantum_models.intersection(self.models):
             if self.pipeline.pca_components != self.quantum.qubits or not self.pipeline.angle_scaling:
                 raise ValueError("Quantum comparisons require shared PCA components equal to qubits and shared angle scaling.")
+            if "hybrid_pennylane_torch" in self.models and self.pipeline.pca_components != self.hybrid.qubits:
+                raise ValueError("Hybrid reduced feature dimension must equal the bounded hybrid qubit count.")
             if self.calibration != "none":
                 raise ValueError("Calibration is currently implemented for classical-only experiments. Quantum calibration is not enabled.")
             if self.parameters.class_weight is not None:
@@ -369,3 +393,64 @@ class ResourceAdvisorRequest(Schema):
         if self.feature_dimension != self.quantum.qubits:
             raise ValueError("Quantum feature dimension must equal the configured qubit count.")
         return self
+
+
+class ModelCapabilityOut(Schema):
+    model_id: str
+    display_name: str
+    category: str
+    implementation_status: Literal["AVAILABLE", "NOT_YET_IMPLEMENTED", "UNAVAILABLE"]
+    executable: bool
+    quantum_framework: str | None = None
+    classical_framework: str | None = None
+    execution: str | None = None
+    hardware_execution: str | None = None
+    probability_output: str | None = None
+    explainability: str | None = None
+    supported_prediction: str | None = None
+    supported_comparison: str | None = None
+    supported_thresholding: str | None = None
+    supported_robustness: str | None = None
+    training: str | None = None
+
+class FrameworkCapabilityOut(Schema):
+    package_installed: bool
+    package_importable: bool
+    model_implemented: bool
+    model_executable: bool
+    simulator_available: bool
+    real_hardware_available: bool
+
+class ShowcaseContextOut(Schema):
+    id: str
+    display_name: str
+    label: str
+    featured_dataset_slug: str
+    disease_domain: str
+    target: str
+    positive_class: str
+    dataset_hash: str
+    research_only_disclaimer: str
+    recommended_models: list[str]
+
+class FlagshipPresetOut(Schema):
+    id: str
+    display_name: str
+    dataset_slug: str
+    models: list[str]
+    auto_start_training: Literal[False]
+    threshold_strategy: Literal["target_sensitivity"]
+    evidence_requirements: list[str]
+
+class FlagshipArchitectureOut(Schema):
+    model_id: Literal["hybrid_pennylane_torch"]
+    status: Literal["NOT_YET_IMPLEMENTED"]
+    stages: list[str]
+
+class AlignmentContractOut(Schema):
+    contract_version: str
+    models: list[ModelCapabilityOut]
+    frameworks: dict[str, FrameworkCapabilityOut]
+    showcase: ShowcaseContextOut
+    flagship_experiment_preset: FlagshipPresetOut
+    flagship_architecture: FlagshipArchitectureOut

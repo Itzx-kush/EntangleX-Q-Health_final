@@ -1,4 +1,4 @@
-export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc' | 'qnn';
+export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc' | 'qnn' | 'hybrid_pennylane_torch';
 export type MetricName = 'accuracy' | 'precision' | 'recall' | 'sensitivity' | 'specificity' | 'f1' | 'roc_auc';
 
 export interface PipelineConfig {
@@ -12,8 +12,9 @@ export interface QuantumConfig {
   backend:'statevector'|'aer'; qubits:number; feature_map_reps:number; ansatz_reps:number;
   entanglement:'linear'|'full'; optimizer:'COBYLA'|'SPSA'; maxiter:number; shots:number; noise_probability:number;
 }
+export interface HybridModelConfig {model_type:'hybrid_pennylane_torch';qubits:number;feature_map:'angle';quantum_layers:number;classical_hidden_dimensions:number[];classical_activation:'relu'|'tanh';optimizer:'adam'|'sgd';learning_rate:number;epochs:number;batch_size:number;deterministic_seed:number;sample_cap:number;backend:'default.qubit'}
 export interface TrainingConfig {
-  dataset_id:string; features:string[]|null; models:ModelKind[]; pipeline:PipelineConfig; quantum:QuantumConfig;
+  dataset_id:string; features:string[]|null; models:ModelKind[]; pipeline:PipelineConfig; quantum:QuantumConfig; hybrid?:HybridModelConfig;
   parameters:{logistic_c:number;svm_c:number;svm_kernel:'rbf'|'linear';forest_trees:number;forest_max_depth:number|null;class_weight:'balanced'|null};
   seed:number; test_size:number; cv_folds:number; max_samples:number|null; duplicate_policy:'reject'|'drop_exact';
   probability_threshold:number; threshold_strategy:'fixed'|'target_sensitivity'; target_sensitivity:number;
@@ -60,4 +61,9 @@ export interface RobustnessPairScenario {perturbation_type:PerturbationType;pert
 export interface EvidencePair {quantum_model:string;classical_model:string;quantum_type:ModelKind;classical_type:ModelKind;performance:Record<MetricName,EvidenceValue>;computational_cost:{classical:EvidenceTiming;quantum:EvidenceTiming;deltas_quantum_minus_classical:EvidenceTiming;semantics:string};quantum_resources:{backend:string|null;execution_kind:string|null;qubits:number|null;shots:number|null;logical_depth:number|null;gate_counts:Record<string,number>|null;total_parameter_count:number|null;trainable_parameter_count:number|null;optimizer:string|null;optimizer_objective_evaluations:number|null;noise_probability:number|null;real_hardware:boolean;resource_semantics:string};fairness:{dataset_id:string;dataset_hash:string|null;experiment_id:string;split_hash:string|null;common_sample_count:number|null;source_sample_count:number|null;preprocessing_fingerprint:string|null;cv_fold_count:number|null;seed:number|null;threshold_strategy:string;controlled_comparison:boolean};operating_points:{classical:OperatingPoint;quantum:OperatingPoint};robustness:{status:string;note:string;scenarios?:RobustnessPairScenario[];limitations?:string[]};conclusion:string;limitations:string[];test_metric_delta_quantum_minus_classical:Record<MetricName,number|null>;final_training_seconds_delta:number|null}
 export interface Comparison {experiment_id:string;dataset_id:string;models:ModelRecord[];pairs:EvidencePair[];split:Record<string,unknown>;comparison_fingerprint:string;conclusion:string;limitations:string[]}
 export interface Health {status:string;version:string;mode:string;authentication_required:boolean;quantum:{available:boolean;runtime_verified:boolean;execution:string};disclaimer:string}
-export interface SystemStatus {status:string;version:string;mode:string;database_available:boolean;storage_available:boolean;quantum:Health['quantum'];supported_models:{classical:string[];quantum:string[]};jobs:{queued:number;running:number;active:number};}
+export interface SystemStatus {status:string;version:string;mode:string;database_available:boolean;storage_available:boolean;quantum:Health['quantum'];supported_models:{classical:string[];quantum:string[];hybrid_quantum_classical:string[]};jobs:{queued:number;running:number;active:number};}
+
+export type ImplementationStatus='AVAILABLE'|'NOT_YET_IMPLEMENTED'|'UNAVAILABLE';
+export interface ModelCapability {model_id:ModelKind;display_name:string;category:'classical'|'quantum'|'hybrid quantum-classical';implementation_status:ImplementationStatus;executable:boolean;quantum_framework?:string|null;classical_framework?:string|null;execution?:string|null;hardware_execution?:string|null;probability_output?:string|null;explainability?:string|null;supported_prediction?:string|null;supported_comparison?:string|null;supported_thresholding?:string|null;supported_robustness?:string|null;training?:string|null}
+export interface FrameworkCapability {package_installed:boolean;package_importable:boolean;model_implemented:boolean;model_executable:boolean;simulator_available:boolean;real_hardware_available:boolean}
+export interface AlignmentContract {contract_version:string;models:ModelCapability[];frameworks:Record<'qiskit'|'qiskit_aer'|'pennylane'|'torch',FrameworkCapability>;showcase:{id:string;display_name:string;label:string;featured_dataset_slug:string;disease_domain:string;target:string;positive_class:string;dataset_hash:string;research_only_disclaimer:string;recommended_models:ModelKind[]};flagship_experiment_preset:{id:string;display_name:string;dataset_slug:string;models:ModelKind[];auto_start_training:false;threshold_strategy:'target_sensitivity';evidence_requirements:string[]};flagship_architecture:{model_id:'hybrid_pennylane_torch';status:'NOT_YET_IMPLEMENTED';stages:string[]}}

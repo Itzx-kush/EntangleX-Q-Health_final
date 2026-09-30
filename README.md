@@ -249,3 +249,11 @@ The WDBC source is UCI Machine Learning Repository, DOI **10.24432/C5DW2B**, att
 ## Verified Instant Demo
 
 See [docs/VERIFIED_INSTANT_DEMO.md](docs/VERIFIED_INSTANT_DEMO.md).
+
+## SIH Judge Alignment — Foundation (2026-09-30)
+
+Early Stage Diabetes Risk Prediction is the **featured SIH demonstration**, while the existing Medical Dataset Library remains supported. The canonical future model identifier is `hybrid_pennylane_torch`: classical preprocessing and reduction → PennyLane quantum representation → PyTorch output head → positive-class probability → the existing OOF sensitivity-first threshold engine → research risk category → SHAP explanation.
+
+This foundation does **not** implement or execute that hybrid model. Its capability state is `NOT_YET_IMPLEMENTED`; the UI disables training. Existing Logistic Regression, SVM, Random Forest, VQC, QSVC, QNN, Qiskit/Aer simulation, evidence, robustness, explainability, persistence, reports, and resource-advisor paths remain in place. Real hardware and quantum advantage are not claimed. Prompt 2 is responsible for measured hybrid training execution.
+
+Prompt 2 dependencies are isolated in `backend/requirements-hybrid.txt` for the verified Python 3.11 dependency strategy; Prompt 1 does not install, import for execution, or add them to the default environment.

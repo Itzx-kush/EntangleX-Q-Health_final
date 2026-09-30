@@ -40,18 +40,21 @@ export function Training(){
  const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:3000});
  const dataset=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});
  const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary,staleTime:300000});
+ const alignment=useQuery({queryKey:['alignment'],queryFn:qh.alignment,staleTime:300000});
  const readiness=library.data?.find(item=>item.slug===dataset.data?.provenance.library_slug)?.demo_readiness;
  const mutation=useMutation({mutationFn:()=>qh.createJob(draft),onSuccess:r=>{update({dataset_id:r.experiment.dataset_id});jobs.refetch()}});
  const quantumSelected=draft.models.some(isQuantum);
  const toggle=(kind:ModelKind)=>{const next=draft.models.includes(kind)?draft.models.filter(x=>x!==kind):[...draft.models,kind];update({models:next});if(next.some(isQuantum))pipeline({pca_components:draft.quantum.qubits,angle_scaling:true})};
- const option=(kind:ModelKind,quantumModel:boolean)=><GlareHover key={kind}><button type="button" onClick={()=>toggle(kind)} className={'w-full rounded-xl border p-4 text-left transition '+(draft.models.includes(kind)?'border-primary bg-primary/5':'hover:bg-muted')}><div className="flex items-center justify-between"><strong>{modelLabels[kind]}</strong><Badge tone={draft.models.includes(kind)?(quantumModel?'purple':'blue'):'blue'}>{draft.models.includes(kind)?'Selected':quantumModel?'Quantum':'Classical'}</Badge></div><small className="mt-1 block muted">{quantumModel?'Hybrid / quantum model':'Classical baseline'}</small></button></GlareHover>;
+ const option=(kind:ModelKind,category:'Classical'|'Quantum'|'Hybrid quantum-classical',enabled=true)=>{const capability=alignment.data?.models.find(item=>item.model_id===kind);const runnable=enabled&&(capability?.executable??kind!=='hybrid_pennylane_torch');return <GlareHover key={kind}><button type="button" disabled={!runnable} aria-disabled={!runnable} onClick={()=>runnable&&toggle(kind)} className={'w-full rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 '+(draft.models.includes(kind)?'border-primary bg-primary/5':'hover:bg-muted')}><div className="flex items-center justify-between gap-2"><strong>{modelLabels[kind]}</strong><Badge tone={runnable?(draft.models.includes(kind)?(category==='Classical'?'blue':'purple'):'blue'):'amber'}>{runnable?(draft.models.includes(kind)?'Selected':category):(capability?.implementation_status||'Pending')}</Badge></div><small className="mt-1 block muted">{runnable?(category==='Classical'?'Classical baseline':category):'Architecture prepared — implementation pending'}</small></button></GlareHover>};
  return <div>
   <PageHeader eyebrow="01 / Train" title="Training" description="Configure one controlled experiment with shared partitions, preprocessing and evaluation conditions across supported classical and quantum models." actions={<Button disabled={!draft.dataset_id||!draft.models.length||mutation.isPending} onClick={()=>mutation.mutate()}><Play size={14}/>{mutation.isPending?'Creating job…':'Create training experiment'}</Button>}/>
   <StageNav current="/training"/><ErrorBanner error={(mutation.error as Error)?.message}/>{readiness&&<Notice tone={readiness.status==='ready'?'blue':'amber'}>{readiness.status==='ready'?'A verified precomputed SIH demo is available for this dataset. You can still start a new live experiment.':'This dataset requires processing; no precomputed demo artifact is packaged. Live training remains available.'}</Notice>}
   <Card className="mt-5" title="Model families" description="Choose the estimators that receive the same configured representation.">
-   <div className="grid gap-3 md:grid-cols-3">{(['logistic_regression','svm','random_forest'] as ModelKind[]).map(x=>option(x,false))}</div>
-   <div className="my-5 border-t"/>
-   <div className="grid gap-3 md:grid-cols-3">{(['vqc','qsvc','qnn'] as ModelKind[]).map(x=>option(x,true))}</div>
+   <p className="metric-label mb-2">CLASSICAL BASELINES</p><div className="grid gap-3 md:grid-cols-3">{(['logistic_regression','svm','random_forest'] as ModelKind[]).map(x=>option(x,'Classical'))}</div>
+   <div className="my-5 border-t"/><p className="metric-label mb-2">QUANTUM MODELS</p>
+   <div className="grid gap-3 md:grid-cols-3">{(['vqc','qsvc','qnn'] as ModelKind[]).map(x=>option(x,'Quantum'))}</div>
+   <div className="my-5 border-t"/><p className="metric-label mb-2">HYBRID QUANTUM-CLASSICAL</p>
+   <div className="grid gap-3 md:grid-cols-3">{option('hybrid_pennylane_torch','Hybrid quantum-classical')}</div>
    {quantumSelected&&<Notice>Quantum comparisons require PCA components equal to qubits, shared angle scaling, calibration disabled and no class-weighting. The interface makes no quantum-advantage claim.</Notice>}
   </Card>
   <div className="two-grid mt-5">
