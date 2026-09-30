@@ -85,3 +85,7 @@ and bounded sample count.
 ## Executable hybrid validation (2026-09-30)
 
 Focused tests execute an unmocked PennyLane QNode and PyTorch head, verify quantum-weight updates, cloneability, deterministic seeded behavior, valid probabilities, expectation outputs, and restricted-artifact round trips. The bounded end-to-end smoke registers the existing `early-stage-diabetes` catalog dataset and uses 40 shared samples, 2 PCA components/qubits, 1 quantum layer, one 4-unit classical hidden layer, 5 epochs, batch size 8, 2 CV folds, and target-sensitivity thresholding. It trains Random Forest and the hybrid model on the same split, then exercises persistence, prediction, mixed-type SHAP, and comparison evidence. Test measurements are not clinical claims.
+
+## Hybrid SHAP refinement validation (2026-09-30)
+
+Tests cover the real persisted Early Stage Diabetes hybrid artifact, exact-case prediction SHAP, global SHAP, original names/values, signed directions, OOF-threshold context, mixed categorical/numeric reconstruction, unseen-category and missing-feature failures, unavailable/failing SHAP behavior, and no-placeholder guarantees. Frontend tests assert that hybrid method state visibly reads `SHAP — Final Hybrid Output`, never presents permutation as the executed method, and renders positive/negative groups, probability, threshold, original values, and the causality limitation.

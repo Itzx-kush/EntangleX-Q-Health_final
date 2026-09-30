@@ -190,7 +190,7 @@ Training resubstitution, CV mean/sample standard deviation and held-out test met
 
 ## 14. Explainability and prediction
 
-Permutation importance calculates measured ROC-AUC drops on a bounded held-out subset. Numeric, complete-input SHAP uses a bounded training-only background; mixed/missing-input datasets use permutation as the implemented alternative. Quantum explanations use finite-difference perturbation/sensitivity analysis in original feature space. Negative importance values remain visible. None of these methods establishes medical causation.
+Permutation importance calculates measured ROC-AUC drops on a bounded held-out subset. Legacy non-hybrid raw-feature SHAP remains limited to complete numeric inputs. The PennyLane + PyTorch hybrid path supports bounded mixed categorical/numeric SHAP by deriving encodings from the training partition, reconstructing valid original-feature frames, and evaluating the complete frozen pipeline's final positive-class probability. Qiskit model explanations retain finite-difference perturbation/sensitivity semantics. None of these methods establishes medical causation.
 
 Prediction requires the exact registered input schema and an identified ready model. The screen distinguishes predicted class, positive-class model probability, decision score and non-clinical research risk category. Research thresholds are configurable. Sample inputs and predictions are not persisted. No diagnosis, treatment instruction, medical recommendation or patient prognosis is generated.
 
@@ -233,7 +233,7 @@ Upload validation, path safety, artifact integrity, deletion consistency, privac
 - **Quantum unavailable/import errors:** install the optional quantum group in the same Python environment. Align actual installed versions with the documented API target; do not interpret availability detection as executed verification.
 - **PCA/selection failure:** reduce components or choose more retained features/samples. Every CV training fold must support the dimensions; previews alone do not prove fold feasibility.
 - **Quality blocks training:** correct or exclude identifiers/proxy features, resolve conflicting duplicates and infinities, and explicitly choose a duplicate policy. Do not simply suppress a leakage warning.
-- **Permutation subset has one class:** increase explanation sample budget or use perturbation. SHAP is restricted to complete numeric raw features.
+- **Permutation subset has one class:** increase the explanation sample budget or use perturbation. Legacy non-hybrid SHAP requires complete numeric raw features; the Early Stage Diabetes hybrid path supports bounded mixed categorical/numeric SHAP using training-derived category mappings.
 - **Slow quantum fit/cancellation:** lower the *shared* sample budget and optimizer iterations. Cancellation takes effect at safe boundaries, not in the middle of a simulator call. Do not start multiple backend workers.
 - **Dependency/build failures:** compare the installed environment with [verified environment](docs/verified_environment.md). The recorded pins and lockfile cover dependency resolution, not Docker runtime or complete application execution.
 
@@ -281,3 +281,8 @@ Prompt 2 dependencies are isolated in `backend/requirements-hybrid.txt` for the 
 15. Export the evidence report.
 
 The WDBC path remains available. Results are research benchmark evidence—not diagnosis, clinical validation, real-hardware evidence, or proof of quantum advantage.
+
+
+## SIH Judge Alignment — Hybrid SHAP Refinement (2026-09-30)
+
+Hybrid local explanations answer **“Why was this case flagged?”** for the exact submitted case. The response records the final positive-class probability, persisted OOF operating threshold, predicted class, original feature values, signed SHAP contributions, direction, and method `SHAP — Final Hybrid Output`. Dataset-level explanations are separately labeled as mean absolute SHAP contribution across bounded held-out cases. Background rows are bounded to 20 and come only from the training partition; explanation requests remain bounded to 32 cases and never retrain or mutate the artifact. SHAP describes model behavior—not biological causation, clinical diagnosis, or a complete causal interpretation of the simulator-executed quantum circuit.

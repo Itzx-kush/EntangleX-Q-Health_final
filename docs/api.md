@@ -102,3 +102,9 @@ The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/dat
 `GET /api/alignment` reports `hybrid_pennylane_torch` as `AVAILABLE` and executable only when both PennyLane and PyTorch import successfully. Implementation, package/import, simulator, runtime-verification, and hardware facts remain separate. `POST /api/training/jobs` accepts the bounded `hybrid` configuration and routes it through the existing job, CV, OOF-threshold, registry, persistence, prediction, comparison, robustness, and report paths.
 
 `POST /api/models/{id}/explain` with `method=shap` supports the mixed-type diabetes hybrid path. Training-partition-only category mappings reconstruct valid original-feature frames before the complete frozen pipeline is evaluated. Returned feature names remain original input names; contributions describe model behavior, not causation.
+
+## Hybrid local SHAP response (2026-09-30)
+
+`POST /api/models/{id}/predict` preserves `influence` for compatibility and, for a hybrid model with `include_influence=true`, also returns `explanation`. The stable explanation includes `method=shap`, method display name, model identity, final-probability semantics, the exact prediction context, persisted operating threshold/source, original feature values, signed and absolute contributions, direction, interpretation, background count, and limitations. `operating_threshold` is also exposed at the prediction-response level.
+
+`POST /api/models/{id}/explain` requires `method=shap` for `hybrid_pennylane_torch` and returns explicitly global/dataset-level metadata. It never silently substitutes permutation importance. Invalid categories, missing background, unavailable SHAP, malformed schemas, and computation failures return explicit structured errors without placeholder values.

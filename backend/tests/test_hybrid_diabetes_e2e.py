@@ -60,9 +60,18 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     probability = output["predictions"][0]["probability_positive"]
     assert probability is not None and 0 <= probability <= 1
     assert output["threshold_source"] == "out_of_fold_validation"
-    assert len(output["influence"]) == 16
-    assert all(np.isfinite(item["magnitude"]) for item in output["influence"])
-    assert all("SHAP contribution" in item["perturbation"] for item in output["influence"])
+    assert output["operating_threshold"] == hybrid["metrics"]["operating_point"]["selected_threshold"]
+    local = output["explanation"]
+    assert local["method"] == "shap"
+    assert local["method_display"] == "SHAP — Final Hybrid Output"
+    assert local["scope"] == "local_case"
+    assert local["prediction_context"]["probability_positive"] == probability
+    assert local["prediction_context"]["operating_threshold"] == output["operating_threshold"]
+    assert len(local["contributions"]) == 16
+    assert all(np.isfinite(item["contribution"]) for item in local["contributions"])
+    assert {item["direction"] for item in local["contributions"]} <= {"toward_positive", "toward_negative", "neutral"}
+    assert {item["feature"] for item in local["contributions"]} == set(sample)
+    assert all(item["original_value"] == sample[item["feature"]] for item in local["contributions"])
 
     with session_scope() as session:
         record = session.scalar(select(ModelRecord).where(ModelRecord.id == hybrid["id"]))
@@ -77,9 +86,29 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     assert explanation.status_code == 201, explanation.text
     result = explanation.json()["result"]
     assert result["method"] == "shap"
+    assert result["method_display"] == "SHAP — Final Hybrid Output"
+    assert result["explanation_level"] == "global_dataset"
+    assert result["output_semantics"] == "final positive-class probability"
+    assert result["explained_case_count"] == 2
     assert len(result["influence"]) == 16
     assert all(np.isfinite(item["magnitude"]) for item in result["influence"])
-    assert any("not causal" in item.lower() for item in result["limitations"])
+    assert any("does not establish" in item.lower() for item in result["limitations"])
+
+    wrong_method = client.post(f"/api/models/{hybrid['id']}/explain", json={"method": "permutation", "max_samples": 2})
+    assert wrong_method.status_code == 422
+    assert wrong_method.json()["error"]["code"] == "hybrid_explanation_method"
+
+    missing = dict(sample); missing.pop(next(iter(missing)))
+    missing_response = client.post(f"/api/models/{hybrid['id']}/predict", json={"samples": [missing], "include_influence": True})
+    assert missing_response.status_code == 422
+    assert missing_response.json()["error"]["code"] == "prediction_schema"
+
+    schema = client.get(f"/api/models/{hybrid['id']}/input-schema").json()
+    categorical = next(field["name"] for field in schema["features"] if field["type"] == "string")
+    unknown = dict(sample); unknown[categorical] = "__not_observed__"
+    unknown_response = client.post(f"/api/models/{hybrid['id']}/predict", json={"samples": [unknown], "include_influence": True})
+    assert unknown_response.status_code == 422
+    assert unknown_response.json()["error"]["code"] == "shap_category_mismatch"
 
     comparison = client.get(f"/api/experiments/{experiment_id}/comparison")
     assert comparison.status_code == 200
