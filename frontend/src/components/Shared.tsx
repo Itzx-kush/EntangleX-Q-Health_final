@@ -28,6 +28,7 @@ export const researchWorkflow=[
   {label:'PCA',path:'/pca',caption:'Reduce dimensions where configured'},
   {label:'Train',path:'/training',caption:'Run classical and quantum models'},
   {label:'Compare',path:'/comparison',caption:'Evaluate under shared conditions'},
+  {label:'Robustness',path:'/robustness',caption:'Measure controlled degradation'},
   {label:'Explain',path:'/explainability',caption:'Measure feature influence'},
   {label:'Predict',path:'/prediction',caption:'Generate a research output'},
   {label:'Report',path:'/experiments',caption:'Preserve experiment provenance'},

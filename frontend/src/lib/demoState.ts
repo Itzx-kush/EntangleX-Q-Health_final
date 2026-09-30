@@ -9,6 +9,7 @@ export type DemoStageKey =
   | 'training'
   | 'quantum'
   | 'comparison'
+  | 'robustness'
   | 'explainability'
   | 'prediction'
   | 'report';
@@ -117,6 +118,7 @@ export function deriveDemoState(
       training,
       quantum,
       comparison:completed&&readyModels.length>=2?'READY':'BLOCKED',
+      robustness:modelDependent,
       explainability:modelDependent,
       prediction:modelDependent,
       report:completed?'READY':'BLOCKED',

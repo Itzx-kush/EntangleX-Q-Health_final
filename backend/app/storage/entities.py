@@ -58,3 +58,14 @@ class ExplanationRecord(Base):
     method: Mapped[str] = mapped_column(String(24))
     result: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+class RobustnessRecord(Base):
+    __tablename__ = "robustness_records"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    perturbation_type: Mapped[str] = mapped_column(String(32), index=True)
+    perturbation_level: Mapped[float] = mapped_column()
+    random_seed: Mapped[int] = mapped_column(Integer)
+    result: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

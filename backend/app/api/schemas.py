@@ -260,6 +260,60 @@ class PredictionOut(Schema):
     limitations: list[str]
     disclaimer: str
 
+class RobustnessScenario(Schema):
+    perturbation_type: Literal["missingness", "gaussian_noise", "outliers", "categorical"]
+    level: float = Field(gt=0, le=10)
+    @model_validator(mode="after")
+    def supported_level(self):
+        limits = {
+            "missingness": (0, 0.25),
+            "gaussian_noise": (0, 0.5),
+            "outliers": (1, 10),
+            "categorical": (0, 0.25),
+        }
+        low, high = limits[self.perturbation_type]
+        if not low < self.level <= high:
+            raise ValueError("Perturbation level is outside the supported bounded range.")
+        return self
+
+class RobustnessRequest(Schema):
+    model_ids: list[UUID] | None = Field(default=None, min_length=1, max_length=6)
+    scenarios: list[RobustnessScenario] = Field(
+        default_factory=lambda: [
+            RobustnessScenario(perturbation_type="missingness", level=0.05),
+            RobustnessScenario(perturbation_type="missingness", level=0.10),
+            RobustnessScenario(perturbation_type="gaussian_noise", level=0.05),
+            RobustnessScenario(perturbation_type="gaussian_noise", level=0.10),
+            RobustnessScenario(perturbation_type="outliers", level=3.0),
+            RobustnessScenario(perturbation_type="categorical", level=0.05),
+        ],
+        min_length=1,
+        max_length=8,
+    )
+    random_seed: int = Field(default=42, ge=0, le=2147483647)
+    max_samples: int = Field(default=32, ge=8, le=64)
+    @model_validator(mode="after")
+    def bounded_budget(self):
+        model_count = len(self.model_ids) if self.model_ids else 3
+        if model_count * len(self.scenarios) > 24:
+            raise ValueError("A robustness request may contain at most 24 model-scenario conditions.")
+        if self.model_ids and len(self.model_ids) != len(set(self.model_ids)):
+            raise ValueError("Choose each robustness model only once.")
+        scenario_keys = [(item.perturbation_type, item.level) for item in self.scenarios]
+        if len(scenario_keys) != len(set(scenario_keys)):
+            raise ValueError("Choose each perturbation type and level only once.")
+        return self
+
+class RobustnessRecordOut(Schema):
+    id: str
+    experiment_id: str
+    model_id: str
+    perturbation_type: str
+    perturbation_level: float
+    random_seed: int
+    result: dict[str, Any]
+    created_at: datetime
+
 class ExplanationRequest(Schema):
     method: Literal["permutation", "shap", "perturbation"] = "permutation"
     max_samples: int = Field(default=8, ge=2, le=32)

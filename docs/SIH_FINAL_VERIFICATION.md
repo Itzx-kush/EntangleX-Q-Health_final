@@ -299,3 +299,45 @@ installed and the recorded suites passed. Visible-browser, Docker, Render, real
 quantum hardware, external validation, clinical cutoff validation, robustness
 benchmarking, and general quantum advantage were not verified or claimed in
 this pass.
+
+## Robustness and degradation evidence lab — 2026-09-30
+
+This entry records the controlled Robustness Lab implementation and its
+executed verification. It does not replace prior verification records.
+
+### Implemented
+
+- Added deterministic missingness, training-standard-deviation-scaled Gaussian
+  noise, numerical outlier, and categorical corruption conditions.
+- Conditions run on a bounded subset of the original held-out samples against
+  frozen artifacts and locked operating thresholds. No fitting, threshold
+  reselection, or training/CV mutation occurs.
+- Persisted evidence includes dataset/split/model context, baseline and
+  perturbed metrics, signed and relative changes, threshold provenance,
+  timing, applicability status, condition fingerprints, and limitations.
+- Classical and quantum models reuse one perturbed frame per condition.
+  Existing comparison and report formats now expose paired robustness evidence
+  while retaining legacy `not_evaluated` behavior.
+- Added a judge-visible Robustness Lab with active-context filtering,
+  bounded controls, actual delta visualization, explicit not-applicable states,
+  and neutral language without winners, rankings, or advantage claims.
+
+### Executed verification
+
+- Targeted robustness, evidence, and route tests: **17 passed**, one existing
+  TestClient deprecation warning.
+- Full non-quantum backend regression: **124 passed, 35 deselected**, two
+  existing warnings.
+- Optional simulator-backed quantum regression, including a real paired
+  Logistic Regression/QNN robustness request: **35 passed, 124 deselected**,
+  15 bounded optimizer/deprecation warnings.
+- Frontend Vitest suite: **4 files, 34 tests passed**. jsdom emitted expected
+  zero-size ResponsiveContainer warnings; no test failed.
+- Frontend TypeScript check and Vite production build: **PASS**, 2,281 modules
+  transformed.
+
+The perturbations are controlled synthetic benchmark conditions, not external
+validation, hospital/population shift evidence, clinical robustness, patient
+safety evidence, model ranking, or general quantum advantage. Docker, Render,
+visible-browser responsive QA, and real quantum hardware were not exercised in
+this pass.

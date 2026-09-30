@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from ..api.schemas import ModelOut
 from ..database import session_scope
-from ..storage.entities import Experiment, ModelRecord
+from ..storage.entities import Experiment, ModelRecord, RobustnessRecord
 from ..storage.repository import require
 from ..utils.serialization import clean_json
 
@@ -132,7 +132,60 @@ def _neutral_conclusion(performance: dict, cost: dict) -> str:
     )
 
 
-def build_evidence_pair(experiment: Experiment, quantum: ModelRecord, classical: ModelRecord) -> dict:
+def _robustness_evidence(quantum: ModelRecord, classical: ModelRecord, records=()) -> dict:
+    latest = {}
+    for record in records:
+        result = record.result or {}
+        key = (
+            record.model_id,
+            record.perturbation_type,
+            record.perturbation_level,
+            record.random_seed,
+            result.get("sample_count"),
+        )
+        latest.setdefault(key, result)
+    scenario_keys = {
+        key[1:] for key in latest
+        if key[0] in {quantum.id, classical.id}
+    }
+    scenarios = []
+    for scenario_key in sorted(scenario_keys, key=lambda value: (value[0], value[1], value[2])):
+        q_result = latest.get((quantum.id, *scenario_key))
+        c_result = latest.get((classical.id, *scenario_key))
+        delta_difference = {}
+        for metric in COMPARE_METRICS:
+            q_delta = (q_result or {}).get("degradation_delta", {}).get(metric)
+            c_delta = (c_result or {}).get("degradation_delta", {}).get(metric)
+            delta_difference[metric] = _difference(q_delta, c_delta)
+        scenarios.append({
+            "perturbation_type": scenario_key[0],
+            "perturbation_level": scenario_key[1],
+            "random_seed": scenario_key[2],
+            "sample_count": scenario_key[3],
+            "classical": c_result,
+            "quantum": q_result,
+            "delta_difference_quantum_minus_classical": delta_difference,
+            "interpretation": "Observed degradation differences only; no robustness winner or quantum advantage is inferred.",
+        })
+    if not scenarios:
+        return {
+            "status": "not_evaluated",
+            "scenarios": [],
+            "note": "No controlled robustness record is available for this model pair.",
+        }
+    complete = all(item["classical"] is not None and item["quantum"] is not None for item in scenarios)
+    return {
+        "status": "evaluated" if complete else "partial",
+        "scenarios": scenarios,
+        "note": "Paired models use matching perturbation type, level, seed, bounded held-out samples, and locked thresholds.",
+        "limitations": [
+            "Controlled synthetic benchmark perturbations are not clinical robustness evidence.",
+            "No model ranking or quantum robustness advantage is claimed.",
+        ],
+    }
+
+
+def build_evidence_pair(experiment: Experiment, quantum: ModelRecord, classical: ModelRecord, robustness_records=()) -> dict:
     q_test = (quantum.metrics or {}).get("test") or {}
     c_test = (classical.metrics or {}).get("test") or {}
     performance = {
@@ -166,10 +219,7 @@ def build_evidence_pair(experiment: Experiment, quantum: ModelRecord, classical:
             "classical": _operating_point(classical, experiment),
             "quantum": _operating_point(quantum, experiment),
         },
-        "robustness": {
-            "status": "not_evaluated",
-            "note": "A controlled robustness benchmark is not implemented in this evidence engine.",
-        },
+        "robustness": _robustness_evidence(quantum, classical, robustness_records),
         "limitations": [
             "Benchmark evidence only; no clinical validation.",
             "Quantum execution is simulator-only unless the recorded backend explicitly states otherwise.",
@@ -194,10 +244,15 @@ def comparison(identity: str) -> dict:
             .where(ModelRecord.experiment_id == identity)
             .order_by(ModelRecord.created_at)
         ))
+        robustness_records = list(session.scalars(
+            select(RobustnessRecord)
+            .where(RobustnessRecord.experiment_id == identity)
+            .order_by(RobustnessRecord.created_at.desc())
+        ))
     ready = [model for model in models if model.status == "ready"]
     classical = [model for model in ready if model.model_type not in QUANTUM_MODELS]
     quantum = [model for model in ready if model.model_type in QUANTUM_MODELS]
-    pairs = [build_evidence_pair(experiment, q, c) for q in quantum for c in classical]
+    pairs = [build_evidence_pair(experiment, q, c, robustness_records) for q in quantum for c in classical]
     return {
         "experiment_id": identity,
         "dataset_id": experiment.dataset_id,

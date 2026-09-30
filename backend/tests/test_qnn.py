@@ -224,6 +224,20 @@ def test_qnn_training_job_registry_prediction_report_and_comparison(client, conf
     assert pair["performance"]["sensitivity"]["quantum"] == qnn_model["metrics"]["test"]["sensitivity"]
     assert pair["quantum_resources"]["real_hardware"] is False
     assert pair["fairness"]["threshold_strategy"] == "target_sensitivity"
+    classical_model = next(item for item in detail.json()["models"] if item["model_type"] == "logistic_regression")
+    robustness = client.post(f"/api/experiments/{experiment_id}/robustness", json={
+        "model_ids": [classical_model["id"], qnn_model["id"]],
+        "scenarios": [{"perturbation_type": "gaussian_noise", "level": .05}],
+        "random_seed": 29,
+        "max_samples": 8,
+    })
+    assert robustness.status_code == 200, robustness.text
+    assert robustness.json()["condition_count"] == 2
+    comparison = client.get(f"/api/experiments/{experiment_id}/comparison").json()
+    pair = next(pair for pair in comparison["pairs"] if pair["quantum_type"] == "qnn")
+    assert pair["robustness"]["status"] == "evaluated"
+    assert pair["robustness"]["scenarios"][0]["delta_difference_quantum_minus_classical"]["accuracy"] is not None
+    assert "advantage is inferred" in pair["robustness"]["scenarios"][0]["interpretation"]
     report = client.get(f"/api/experiments/{experiment_id}/report?format=json")
     assert report.status_code == 200
     assert '"qnn"' in report.text

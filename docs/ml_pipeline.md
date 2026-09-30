@@ -58,3 +58,28 @@ threshold, validation and holdout metrics, OOF sample count, fold count, and
 threshold source. An infeasible validation result never silently lowers the
 target or invents a threshold. These are research operating points, not
 clinically validated screening cutoffs.
+
+## Controlled robustness and degradation evaluation
+
+The Robustness Lab evaluates already-fitted artifacts on a deterministic,
+bounded subset of the original held-out partition. It never refits a model,
+changes preprocessing, reselects the research operating threshold, or feeds
+perturbed samples into training, CV, feature selection, calibration, or
+hyperparameter selection. Paired classical and quantum models must share the
+dataset hash, selected feature schema, and held-out indices.
+
+Supported original-feature-space conditions are approximately 5%/10%
+missingness, Gaussian noise scaled by 0.05/0.10 of each numeric feature's
+training-partition standard deviation, controlled numerical outliers at
+plus-or-minus three training standard deviations, and categorical corruption
+to another category observed in the training partition. Seeds, bounded sample
+indices, condition metadata, and fingerprints are persisted. A condition that
+does not apply returns `not_applicable` with a reason rather than disappearing.
+
+For each condition, the service reports baseline and perturbed accuracy,
+sensitivity, specificity, precision, recall, F1, and ROC-AUC when defined.
+`degradation_delta` is always `perturbed - baseline`; relative change is null
+when the baseline is zero. These synthetic perturbations are off-manifold
+stress tests, not external validation, hospital/population shift evidence,
+patient-safety evidence, clinical robustness, model ranking, or quantum
+advantage.
