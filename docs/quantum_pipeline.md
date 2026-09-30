@@ -85,3 +85,9 @@ configuration factors. Median/range values come only from recorded `final_traini
 circuit, and sample context remain visible. No wall-clock value is extrapolated
 for a new request. Local simulator resource dimensions are not QPU performance,
 and hardware execution remains unavailable in the verified configuration.
+
+## SIH Judge Alignment — Executable Hybrid Model (2026-09-30)
+
+The additive `hybrid_pennylane_torch` path uses the existing fitted sklearn preprocessing pipeline, then a PennyLane `default.qubit` QNode with Y-axis `AngleEmbedding`, trainable `StronglyEntanglingLayers`, and one Pauli-Z expectation output per qubit. A PyTorch CPU head consumes those expectations and trains jointly with the circuit using `BCEWithLogitsLoss` and Adam or SGD. Quantum parameters participate in backpropagation; fixed precomputed quantum features are not used.
+
+Qiskit VQC/QSVC/QNN configuration remains separate. A shared experiment containing both families must use matching PCA and qubit dimensions. Circuit resources are derived from the instantiated PennyLane template where available; they are logical simulator metadata, not hardware cost. Real hardware and general quantum advantage remain unestablished.

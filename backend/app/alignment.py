@@ -22,19 +22,19 @@ MODEL_CAPABILITIES = (
         "model_id": HYBRID_MODEL_ID,
         "display_name": "PennyLane + PyTorch Hybrid",
         "category": "hybrid quantum-classical",
-        "implementation_status": IMPLEMENTATION_PENDING,
+        "implementation_status": IMPLEMENTATION_UNAVAILABLE,
         "executable": False,
         "quantum_framework": "PennyLane",
         "classical_framework": "PyTorch",
-        "execution": "local simulation intended",
+        "execution": "local PennyLane quantum simulation",
         "hardware_execution": IMPLEMENTATION_UNAVAILABLE,
-        "probability_output": "intended after Prompt 2",
-        "explainability": "SHAP adapter intended; not executable in Prompt 1",
-        "supported_prediction": "intended",
-        "supported_comparison": "intended",
+        "probability_output": "positive-class probability",
+        "explainability": "SHAP contribution to the final hybrid model output",
+        "supported_prediction": "available when dependencies are importable",
+        "supported_comparison": "available when dependencies are importable",
         "supported_thresholding": "existing OOF threshold engine",
         "supported_robustness": "existing frozen-artifact robustness engine",
-        "training": IMPLEMENTATION_PENDING,
+        "training": IMPLEMENTATION_UNAVAILABLE,
     },
 )
 
@@ -59,15 +59,23 @@ def package_status(package: str) -> dict:
 def alignment_contract() -> dict:
     dataset = get_builtin_dataset(FEATURED_CONTEXT_ID)
     qiskit, aer, pennylane, torch = (package_status(name) for name in ("qiskit", "qiskit_aer", "pennylane", "torch"))
+    hybrid_executable = pennylane["package_importable"] and torch["package_importable"]
     frameworks = {
-        "qiskit": {**qiskit, "model_implemented": True, "model_executable": qiskit["package_importable"], "simulator_available": qiskit["package_importable"], "real_hardware_available": False},
-        "qiskit_aer": {**aer, "model_implemented": True, "model_executable": aer["package_importable"], "simulator_available": aer["package_importable"], "real_hardware_available": False},
-        "pennylane": {**pennylane, "model_implemented": False, "model_executable": False, "simulator_available": False, "real_hardware_available": False},
-        "torch": {**torch, "model_implemented": False, "model_executable": False, "simulator_available": False, "real_hardware_available": False},
+        "qiskit": {**qiskit, "model_implemented": True, "model_executable": qiskit["package_importable"], "simulator_available": qiskit["package_importable"], "real_hardware_available": False, "runtime_verified": False},
+        "qiskit_aer": {**aer, "model_implemented": True, "model_executable": aer["package_importable"], "simulator_available": aer["package_importable"], "real_hardware_available": False, "runtime_verified": False},
+        "pennylane": {**pennylane, "model_implemented": True, "model_executable": hybrid_executable, "simulator_available": pennylane["package_importable"], "real_hardware_available": False, "runtime_verified": False},
+        "torch": {**torch, "model_implemented": True, "model_executable": hybrid_executable, "simulator_available": False, "real_hardware_available": False, "runtime_verified": False},
     }
+    models = [dict(item) for item in MODEL_CAPABILITIES]
+    hybrid = next(item for item in models if item["model_id"] == HYBRID_MODEL_ID)
+    hybrid.update({
+        "implementation_status": IMPLEMENTATION_AVAILABLE if hybrid_executable else IMPLEMENTATION_UNAVAILABLE,
+        "executable": hybrid_executable,
+        "training": IMPLEMENTATION_AVAILABLE if hybrid_executable else IMPLEMENTATION_UNAVAILABLE,
+    })
     return {
         "contract_version": "2026-09-30",
-        "models": list(MODEL_CAPABILITIES),
+        "models": models,
         "frameworks": frameworks,
         "showcase": {
             "id": FEATURED_CONTEXT_ID,
@@ -90,8 +98,8 @@ def alignment_contract() -> dict:
             "threshold_strategy": "target_sensitivity",
             "evidence_requirements": ["same dataset hash", "same preprocessing", "same split", "same sample policy", "same evaluation configuration"],
         },
-        "flagship_architecture": {"model_id": HYBRID_MODEL_ID, "status": IMPLEMENTATION_PENDING, "stages": list(ARCHITECTURE_STAGES)},
+        "flagship_architecture": {"model_id": HYBRID_MODEL_ID, "status": "IMPLEMENTED" if hybrid_executable else "UNAVAILABLE", "stages": list(ARCHITECTURE_STAGES)},
     }
 
 def model_capability(model_id: str) -> dict:
-    return next(item for item in MODEL_CAPABILITIES if item["model_id"] == model_id)
+    return next(item for item in alignment_contract()["models"] if item["model_id"] == model_id)

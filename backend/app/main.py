@@ -13,6 +13,7 @@ from .api import alignment, datasets, experiments, models, pipeline, quantum, tr
 from .api.middleware import BodyLimitMiddleware
 from .api.security import authorize
 from .api.schemas import ExperimentOut
+from .alignment import alignment_contract
 from .config import DISCLAIMER, get_settings
 from .database import init_db, session_scope
 from .demo_readiness import install_verified_demo_artifacts, validate_readiness_configuration
@@ -123,10 +124,12 @@ def system_status():
         "database_available": database_available,
         "storage_available": storage_available,
         "quantum": availability(),
+        "model_capabilities": alignment_contract()["models"],
         "supported_models": {
             "classical": ["logistic_regression", "svm", "random_forest"],
             "quantum": ["vqc", "qsvc", "qnn"],
-            "hybrid_quantum_classical": ["hybrid_pennylane_torch"],
+            "qiskit_quantum": ["vqc", "qsvc", "qnn"],
+            "pennylane_hybrid": ["hybrid_pennylane_torch"],
         },
         "jobs": {
             "queued": sum(job.status == "queued" for job in jobs),

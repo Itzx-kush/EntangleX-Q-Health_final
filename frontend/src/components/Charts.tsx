@@ -21,7 +21,7 @@ export function MetricBars({metrics}:{metrics:Metrics}){
 }
 
 export function InfluenceBars({items}:{items:Influence[]}){
- return <ValueBars items={items.slice(0,24).map(item=>({name:item.feature,value:item.magnitude}))}/>;
+ return <ValueBars items={items.slice(0,24).map(item=>({name:item.feature,value:item.signed_mean??item.magnitude}))}/>;
 }
 
 export function ScoreLandscape({data}:{data:{score:number,y:number,label:string,id:string,color?:string}[]}){

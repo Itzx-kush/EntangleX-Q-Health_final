@@ -81,3 +81,7 @@ and bounded sample count.
 ## Separate verification levels
 
 `python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests does not independently establish Docker compatibility, clinical validity or model generalization. The post-generation Task 1 records separately document the native backend/frontend runtime checks and the Docker limitation.
+
+## Executable hybrid validation (2026-09-30)
+
+Focused tests execute an unmocked PennyLane QNode and PyTorch head, verify quantum-weight updates, cloneability, deterministic seeded behavior, valid probabilities, expectation outputs, and restricted-artifact round trips. The bounded end-to-end smoke registers the existing `early-stage-diabetes` catalog dataset and uses 40 shared samples, 2 PCA components/qubits, 1 quantum layer, one 4-unit classical hidden layer, 5 epochs, batch size 8, 2 CV folds, and target-sensitivity thresholding. It trains Random Forest and the hybrid model on the same split, then exercises persistence, prediction, mixed-type SHAP, and comparison evidence. Test measurements are not clinical claims.

@@ -95,16 +95,24 @@ class TrainingConfig(Schema):
             raise ValueError("Choose each model only once.")
         if self.features is not None and (not self.features or len(set(self.features)) != len(self.features)):
             raise ValueError("Features must be a nonempty unique list.")
-        quantum_models = {"vqc", "qsvc", "qnn", "hybrid_pennylane_torch"}
-        if quantum_models.intersection(self.models):
+        qiskit_models = {"vqc", "qsvc", "qnn"}
+        qiskit_selected = bool(qiskit_models.intersection(self.models))
+        hybrid_selected = "hybrid_pennylane_torch" in self.models
+        if qiskit_selected:
             if self.pipeline.pca_components != self.quantum.qubits or not self.pipeline.angle_scaling:
-                raise ValueError("Quantum comparisons require shared PCA components equal to qubits and shared angle scaling.")
-            if "hybrid_pennylane_torch" in self.models and self.pipeline.pca_components != self.hybrid.qubits:
-                raise ValueError("Hybrid reduced feature dimension must equal the bounded hybrid qubit count.")
+                raise ValueError("Qiskit comparisons require PCA components equal to QuantumConfig qubits and shared angle scaling.")
+        if hybrid_selected:
+            if self.pipeline.pca_components != self.hybrid.qubits or not self.pipeline.angle_scaling:
+                raise ValueError("PennyLane hybrid comparisons require PCA components equal to HybridModelConfig qubits and shared angle scaling.")
+            if self.max_samples is None or self.max_samples > self.hybrid.sample_cap:
+                raise ValueError("The shared experiment max_samples must not exceed the hybrid sample_cap.")
+        if qiskit_selected and hybrid_selected and self.quantum.qubits != self.hybrid.qubits:
+            raise ValueError("Qiskit and PennyLane hybrid qubits must agree for a shared comparison representation.")
+        if qiskit_selected or hybrid_selected:
             if self.calibration != "none":
-                raise ValueError("Calibration is currently implemented for classical-only experiments. Quantum calibration is not enabled.")
+                raise ValueError("Calibration is currently implemented for classical-only experiments. Quantum-family calibration is not enabled.")
             if self.parameters.class_weight is not None:
-                raise ValueError("Quantum classifiers do not implement class weights; use none for a fair shared experiment.")
+                raise ValueError("Quantum-family classifiers do not implement class weights; use none for a fair shared experiment.")
         return self
 
 class DatasetUploadMetadata(Schema):
@@ -374,7 +382,7 @@ class CircuitOut(Schema):
     execution_kind: str
     backend: str
     qubits: int
-    logical_depth: int
+    logical_depth: int | None
     gate_counts: dict[str, int]
     parameter_count: int
     text: str
@@ -420,6 +428,7 @@ class FrameworkCapabilityOut(Schema):
     model_executable: bool
     simulator_available: bool
     real_hardware_available: bool
+    runtime_verified: bool = False
 
 class ShowcaseContextOut(Schema):
     id: str
@@ -444,7 +453,7 @@ class FlagshipPresetOut(Schema):
 
 class FlagshipArchitectureOut(Schema):
     model_id: Literal["hybrid_pennylane_torch"]
-    status: Literal["NOT_YET_IMPLEMENTED"]
+    status: Literal["IMPLEMENTED", "UNAVAILABLE"]
     stages: list[str]
 
 class AlignmentContractOut(Schema):

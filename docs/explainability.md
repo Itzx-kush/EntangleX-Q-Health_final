@@ -23,3 +23,9 @@ Only the first configured `max_features` original features are perturbed, and ev
 ## Interpretation boundary
 
 Perturbations may be off the data manifold. Importance is not stable clinical evidence. No mechanism maps influential features into disease causes or treatment suggestions. Quantum feature perturbation measures model sensitivity, not an exhaustive account of the internal quantum state or circuit. Repeated holdout inspection for model redesign consumes the holdout's role as an untouched evaluation resource.
+
+## Hybrid SHAP for mixed-type diabetes inputs (2026-09-30)
+
+For `hybrid_pennylane_torch`, SHAP evaluates the complete frozen function: original features → fitted preprocessing/PCA → PennyLane circuit → PyTorch head → positive-class probability. Numeric fills and categorical vocabularies come only from the training partition. Categorical values are deterministically encoded for the SHAP perturbation interface and mapped back to observed categories before model evaluation. Contributions remain at original feature level; quantum gates and latent expectation values are never presented as medical features.
+
+Categorical encoding has no biological meaning. SHAP is model influence, not a causal explanation, diagnosis, or clinical recommendation. Existing numeric-model SHAP, permutation importance, and Qiskit perturbation modes are preserved.

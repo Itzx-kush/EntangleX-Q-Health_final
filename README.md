@@ -257,3 +257,27 @@ Early Stage Diabetes Risk Prediction is the **featured SIH demonstration**, whil
 This foundation does **not** implement or execute that hybrid model. Its capability state is `NOT_YET_IMPLEMENTED`; the UI disables training. Existing Logistic Regression, SVM, Random Forest, VQC, QSVC, QNN, Qiskit/Aer simulation, evidence, robustness, explainability, persistence, reports, and resource-advisor paths remain in place. Real hardware and quantum advantage are not claimed. Prompt 2 is responsible for measured hybrid training execution.
 
 Prompt 2 dependencies are isolated in `backend/requirements-hybrid.txt` for the verified Python 3.11 dependency strategy; Prompt 1 does not install, import for execution, or add them to the default environment.
+
+## SIH Judge Alignment — Executable Hybrid Model (2026-09-30)
+
+`hybrid_pennylane_torch` is now an executable, bounded CPU model: the existing leakage-safe preprocessing/PCA pipeline feeds `AngleEmbedding`, trainable `StronglyEntanglingLayers`, per-qubit Pauli-Z expectation values, and a configurable PyTorch binary-classification head. It returns positive-class probabilities and uses the existing out-of-fold sensitivity-first threshold engine; the untouched holdout does not select the threshold.
+
+### Judge-facing diabetes workflow
+
+1. Activate **Early Stage Diabetes Risk Prediction** in Demo Center.
+2. Inspect data quality and provenance.
+3. Review preprocessing.
+4. Review feature selection and PCA.
+5. Configure a classical baseline.
+6. Configure **PennyLane + PyTorch Hybrid**.
+7. Train one controlled experiment.
+8. Compare classical vs hybrid evidence.
+9. Inspect the sensitivity-first operating point.
+10. Open Research Prediction.
+11. Ask **“Why was this case flagged?”**
+12. Run SHAP and inspect original-feature contributions.
+13. Run frozen-artifact robustness evaluation.
+14. Review simulator/resource and unavailable-hardware status.
+15. Export the evidence report.
+
+The WDBC path remains available. Results are research benchmark evidence—not diagnosis, clinical validation, real-hardware evidence, or proof of quantum advantage.
