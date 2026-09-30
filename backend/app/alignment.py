@@ -8,7 +8,6 @@ from .data.catalog import get_builtin_dataset
 HYBRID_MODEL_ID = "hybrid_pennylane_torch"
 FEATURED_CONTEXT_ID = "early-stage-diabetes"
 IMPLEMENTATION_AVAILABLE = "AVAILABLE"
-IMPLEMENTATION_PENDING = "NOT_YET_IMPLEMENTED"
 IMPLEMENTATION_UNAVAILABLE = "UNAVAILABLE"
 
 MODEL_CAPABILITIES = (
@@ -69,7 +68,7 @@ def alignment_contract() -> dict:
     models = [dict(item) for item in MODEL_CAPABILITIES]
     hybrid = next(item for item in models if item["model_id"] == HYBRID_MODEL_ID)
     hybrid.update({
-        "implementation_status": IMPLEMENTATION_AVAILABLE if hybrid_executable else IMPLEMENTATION_UNAVAILABLE,
+        "implementation_status": IMPLEMENTATION_AVAILABLE,
         "executable": hybrid_executable,
         "training": IMPLEMENTATION_AVAILABLE if hybrid_executable else IMPLEMENTATION_UNAVAILABLE,
     })
@@ -105,7 +104,7 @@ def alignment_contract() -> dict:
             "scientific_status": "Bounded demonstration defaults; not scientifically optimal values.",
             "evidence_requirements": ["same dataset hash", "same sample pool", "same preprocessing and PCA representation", "same split", "same threshold protocol"],
         },
-        "flagship_architecture": {"model_id": HYBRID_MODEL_ID, "status": "IMPLEMENTED" if hybrid_executable else "UNAVAILABLE", "stages": list(ARCHITECTURE_STAGES)},
+        "flagship_architecture": {"model_id": HYBRID_MODEL_ID, "status": "IMPLEMENTED", "stages": list(ARCHITECTURE_STAGES)},
     }
 
 def model_capability(model_id: str) -> dict:

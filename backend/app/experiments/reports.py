@@ -9,7 +9,26 @@ from ..storage.entities import Experiment, ModelRecord, ExplanationRecord
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
 from ..utils.serialization import utcnow
-from .comparison import comparison
+from .comparison import MODEL_NAMES, comparison
+
+def benchmark_report_groups(comparison_data: dict) -> tuple[list[dict], list[dict]]:
+    pairs = comparison_data.get("pairs") or []
+    controlled = [
+        pair for pair in pairs
+        if pair.get("benchmark_type") == "fair_controlled_diabetes_benchmark"
+        and (pair.get("fairness") or {}).get("controlled_comparison") is True
+    ]
+    all_evidence = [{
+        "pair": (
+            f"{((pair.get('model_identities') or {}).get('classical') or {}).get('display_name', pair.get('classical_type'))}"
+            f" vs {((pair.get('model_identities') or {}).get('quantum_or_hybrid') or (pair.get('model_identities') or {}).get('hybrid') or {}).get('display_name', pair.get('quantum_type'))}"
+        ),
+        "status": (pair.get("fairness") or {}).get("status", "NOT CONTROLLED"),
+        "mismatch_reasons": (pair.get("fairness") or {}).get("mismatch_reasons", []),
+        "limitations": pair.get("limitations", []),
+        "evidence": pair,
+    } for pair in pairs]
+    return controlled, all_evidence
 
 def report_data(identity: str) -> dict:
     with session_scope() as session:
@@ -23,7 +42,7 @@ def report_data(identity: str) -> dict:
         "experiment_kind": experiment_kind, "experiment_label": "PRECOMPUTED VERIFIED DEMO EXPERIMENT" if experiment_kind == "precomputed_verified_demo" else "LIVE RESEARCH EXPERIMENT",
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
-        "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": "PennyLane + PyTorch Hybrid" if m.model_type == "hybrid_pennylane_torch" else m.model_type} for m in models],
+        "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": MODEL_NAMES.get(m.model_type, m.model_type)} for m in models],
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
         "comparison": comparison(identity),
         "scientific_boundary": "Model probabilities, test metrics, and simulation results do not establish diagnosis, clinical validity, regulatory approval, or quantum advantage. Uncomputed measurements remain absent, not zero."}
@@ -49,7 +68,7 @@ def html_report(identity: str) -> str:
         sections.append("<h3>Probability calibration diagnostics</h3>" + pre(metrics.get("calibration", "Not computed")))
         sections.append("<h3>Limitations and warnings</h3>" + pre({"limitations": model["details"].get("limitations", []), "warnings": model["details"].get("warnings", []), "error": model["details"].get("error")}))
     sections.append("<h2>Interpretation: model feature influence / quantum perturbation</h2>" + pre(data["interpretation"] or "Not computed; request an explanation for a trained model."))
-    controlled = [pair for pair in data["comparison"]["pairs"] if pair.get("benchmark_type") == "fair_controlled_diabetes_benchmark"]
+    controlled, all_evidence = benchmark_report_groups(data["comparison"])
     sections.append("<h2>FAIR CONTROLLED BENCHMARK</h2>" + pre({
         "dataset_and_provenance": data["dataset"],
         "shared_data_budget_split_preprocessing_and_representation": [
@@ -61,8 +80,8 @@ def html_report(identity: str) -> str:
         "quantum_simulator_metadata": [pair.get("quantum_resources") for pair in controlled],
         "robustness_evidence": [pair.get("robustness") for pair in controlled],
         "scientific_limitations": [pair.get("limitations") for pair in controlled],
-    } if controlled else "No Random Forest / PennyLane + PyTorch hybrid benchmark pair is available."))
-    sections.append("<h2>All classical and quantum model evidence</h2>" + pre({"conclusion": data["comparison"]["conclusion"], "pairs": data["comparison"]["pairs"]}))
+    } if controlled else "No verified controlled Random Forest / PennyLane + PyTorch hybrid benchmark pair is available."))
+    sections.append("<h2>ALL MODEL EVIDENCE</h2>" + pre({"conclusion": data["comparison"]["conclusion"], "pairs": all_evidence}))
     sections.append("<h2>Robustness and degradation evidence</h2>" + pre([
         {"quantum_model": pair["quantum_model"], "classical_model": pair["classical_model"], "robustness": pair.get("robustness", {"status": "not_evaluated"})}
         for pair in data["comparison"]["pairs"]

@@ -443,7 +443,7 @@ class ModelCapabilityOut(Schema):
     model_id: str
     display_name: str
     category: str
-    implementation_status: Literal["AVAILABLE", "NOT_YET_IMPLEMENTED", "UNAVAILABLE"]
+    implementation_status: Literal["AVAILABLE", "UNAVAILABLE"]
     executable: bool
     quantum_framework: str | None = None
     classical_framework: str | None = None

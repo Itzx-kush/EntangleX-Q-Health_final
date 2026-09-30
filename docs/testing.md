@@ -93,3 +93,5 @@ Tests cover the real persisted Early Stage Diabetes hybrid artifact, exact-case 
 ## Fair benchmark validation
 
 Comparison tests cover matching and mismatching dataset hashes, sample pools, splits, PCA/qubit dimensions, sample budgets, seeds, CV folds, and threshold strategies. They also verify neutral deltas, null-preserving metrics, measured timing, `default.qubit` metadata, persistence, paired robustness fingerprints, report export, and the absence of ranking claims. The bounded diabetes integration test executes the real PennyLane + PyTorch training path when hybrid dependencies are installed; it is not replaced with a mocked estimator.
+
+The hardening regression cases additionally cover target and positive/negative-label mismatches, configured `max_samples`, independent preprocessing fingerprints, flagship dataset/model classification, exclusion of uncontrolled pairs from the fair report section, and model-specific VQC/QSVC/QNN presentation.

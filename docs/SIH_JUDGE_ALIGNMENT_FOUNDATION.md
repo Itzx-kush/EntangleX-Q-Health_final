@@ -21,13 +21,13 @@ The prepared `hybrid_pennylane_torch` architecture is:
 
 ## Truthful capability boundary
 
-Prompt 1 provides schemas, API metadata, UI presentation, dependency bounds, and tests only. Hybrid training, prediction, robustness, comparison evidence, and SHAP execution are `NOT_YET_IMPLEMENTED`. No placeholder estimator or fabricated output is used. Real quantum hardware is unavailable and no quantum advantage, clinical validation, diagnosis, or outcome claim is made.
+The original foundation introduced schemas, API metadata, UI presentation, dependency bounds, and tests. The current implementation now includes real PennyLane + PyTorch training, prediction, robustness, controlled comparison evidence, persistence, and SHAP execution. No placeholder estimator or fabricated output is used. Real quantum hardware is unavailable and no quantum advantage, clinical validation, diagnosis, or outcome claim is made.
 
-Existing Qiskit, Qiskit Aer, VQC, QSVC, QNN, classical models, threshold optimization, evidence comparison, frozen-artifact robustness, explainability, resource advice, persistence, registries, reports, and responsive navigation remain supported. Prompt 2 may implement the bounded PennyLane/PyTorch estimator behind the prepared contracts without creating parallel threshold, comparison, or robustness engines.
+Existing Qiskit, Qiskit Aer, VQC, QSVC, QNN, classical models, threshold optimization, evidence comparison, frozen-artifact robustness, explainability, resource advice, persistence, registries, reports, and responsive navigation remain supported. The bounded PennyLane/PyTorch estimator uses those shared threshold, comparison, and robustness engines rather than parallel implementations.
 
 ## Dependency preparation
 
-`backend/requirements-hybrid.txt` isolates `pennylane>=0.43,<0.44` and `torch>=2.7,<2.10` for explicit Prompt 2 installation in the repository's Python 3.11 environment. They are intentionally excluded from `requirements.txt` in Prompt 1 so deployment size and existing verified environments do not change before execution exists.
+`backend/requirements-hybrid.txt` isolates the bounded PennyLane and PyTorch dependencies for explicit installation. Package importability controls execution eligibility, while implementation status and actual runtime verification remain separate facts.
 
 ## SIH Judge Alignment — Executable Hybrid Model (2026-09-30)
 

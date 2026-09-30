@@ -110,6 +110,7 @@ def _fallback_conditions(experiment: Experiment, model: ModelRecord) -> dict:
     conditions = {
         "dataset_id": model.dataset_id,
         "dataset_hash": dataset_hash,
+        "library_slug": provenance.get("library_slug"),
         "target": provenance.get("target"),
         "positive_label": details.get("positive_label") or provenance.get("positive_label"),
         "negative_label": details.get("negative_label") or provenance.get("negative_label"),
@@ -126,6 +127,7 @@ def _fallback_conditions(experiment: Experiment, model: ModelRecord) -> dict:
         "duplicate_policy": config.get("duplicate_policy"),
         "max_samples": config.get("max_samples"),
         "representation": representation,
+        "preprocessing_fingerprint": fingerprint(pipeline) if pipeline else None,
         "threshold_strategy": config.get("threshold_strategy", "fixed"),
         "target_sensitivity": config.get("target_sensitivity"),
     }
@@ -144,18 +146,34 @@ def _verified_equal(left, right, key) -> bool:
 def _fairness(experiment: Experiment, hybrid: ModelRecord, classical: ModelRecord) -> dict:
     h, c = _conditions(experiment, hybrid), _conditions(experiment, classical)
     hr, cr = h.get("representation") or {}, c.get("representation") or {}
+    quantum_qubits = ((hybrid.details or {}).get("quantum") or {}).get("qubits") or hr.get("hybrid_qubits")
+    representation_keys = (
+        "raw_input_features", "selected_feature_count", "feature_selection",
+        "pca_components", "angle_scaling", "final_representation_dimension", "pipeline",
+    )
     checks = {
         "dataset_match": _verified_equal(h, c, "dataset_id"),
         "dataset_hash_match": _verified_equal(h, c, "dataset_hash"),
+        "target_match": _verified_equal(h, c, "target"),
+        "positive_label_match": _verified_equal(h, c, "positive_label"),
+        "negative_label_match": _verified_equal(h, c, "negative_label"),
         "sample_pool_match": (_verified_equal(h, c, "sample_pool_hash") or (
             h.get("sampled_row_indices") is not None and h.get("sampled_row_indices") == c.get("sampled_row_indices")
         )),
         "split_match": h.get("train_indices") is not None and h.get("train_indices") == c.get("train_indices") and h.get("test_indices") == c.get("test_indices"),
         "split_hash_match": _verified_equal(h, c, "split_hash"),
         "preprocessing_match": hr.get("pipeline") is not None and hr.get("pipeline") == cr.get("pipeline"),
-        "feature_representation_match": hr.get("raw_input_features") is not None and hr == cr,
-        "pca_dimension_match": hr.get("pca_components") is not None and hr.get("pca_components") == cr.get("pca_components") == hr.get("hybrid_qubits"),
+        "preprocessing_fingerprint_match": _verified_equal(h, c, "preprocessing_fingerprint"),
+        "feature_representation_match": (
+            hr.get("raw_input_features") is not None
+            and all(hr.get(key) == cr.get(key) for key in representation_keys)
+        ),
+        "pca_dimension_match": (
+            hr.get("pca_components") is not None
+            and hr.get("pca_components") == cr.get("pca_components") == quantum_qubits
+        ),
         "sample_budget_match": h.get("evaluated_row_count") is not None and h.get("evaluated_row_count") == c.get("evaluated_row_count"),
+        "configured_sample_budget_match": _verified_equal(h, c, "max_samples"),
         "cv_fold_match": _verified_equal(h, c, "cv_folds"),
         "seed_match": _verified_equal(h, c, "seed"),
         "threshold_strategy_match": _verified_equal(h, c, "threshold_strategy") and h.get("target_sensitivity") == c.get("target_sensitivity"),
@@ -178,12 +196,15 @@ def _fairness(experiment: Experiment, hybrid: ModelRecord, classical: ModelRecor
         "missing_measurements": missing_measurements,
         "dataset_id": h.get("dataset_id"),
         "dataset_hash": h.get("dataset_hash"),
+        "library_slug": h.get("library_slug"),
         "target": h.get("target"),
         "positive_label": h.get("positive_label"),
         "negative_label": h.get("negative_label"),
         "source_sample_count": h.get("source_row_count"),
         "common_sample_count": h.get("evaluated_row_count"),
         "same_sample_budget": checks["sample_budget_match"],
+        "configured_sample_budget": h.get("max_samples"),
+        "realized_evaluated_sample_count": h.get("evaluated_row_count"),
         "sample_pool_hash": h.get("sample_pool_hash"),
         "split_hash": h.get("split_hash"),
         "train_indices": h.get("train_indices"),
@@ -193,7 +214,7 @@ def _fairness(experiment: Experiment, hybrid: ModelRecord, classical: ModelRecor
         "test_size": h.get("test_size"),
         "threshold_strategy": h.get("threshold_strategy"),
         "target_sensitivity": h.get("target_sensitivity"),
-        "preprocessing_fingerprint": h.get("comparison_fingerprint"),
+        "preprocessing_fingerprint": h.get("preprocessing_fingerprint") if checks["preprocessing_fingerprint_match"] else None,
         "comparison_fingerprint": h.get("comparison_fingerprint") if h.get("comparison_fingerprint") == c.get("comparison_fingerprint") else None,
         "common_representation": hr,
         "selected_feature_representation": {"features": hr.get("raw_input_features"), "preprocessing": hr.get("pipeline")},
@@ -201,15 +222,13 @@ def _fairness(experiment: Experiment, hybrid: ModelRecord, classical: ModelRecor
 
 
 def _neutral_conclusion(performance: dict, cost: dict, quantum_type: str, classical_type: str) -> str:
-    h_name, c_name = MODEL_NAMES.get(quantum_type, "quantum model"), MODEL_NAMES.get(classical_type, "classical model")
+    h_name, c_name = MODEL_NAMES.get(quantum_type, quantum_type), MODEL_NAMES.get(classical_type, classical_type)
     h_s, c_s = performance["sensitivity"]["quantum"], performance["sensitivity"]["classical"]
     if h_s is None or c_s is None:
         sensitivity = "Sensitivity could not be compared because one or both values are undefined."
     else:
         relation = "higher" if h_s > c_s else "lower" if h_s < c_s else "equal"
         sensitivity = f"On this shared held-out benchmark, the {h_name} produced {relation} sensitivity ({h_s:.4f}) than the {c_name} ({c_s:.4f})." if relation != "equal" else f"On this shared held-out benchmark, the {h_name} and {c_name} produced equal sensitivity ({h_s:.4f})."
-        if quantum_type != "hybrid_pennylane_torch" and h_s < c_s:
-            sensitivity += " The classical model produced higher sensitivity than the quantum model."
     h_t, c_t = cost["quantum"].get("final_training_seconds"), cost["classical"].get("final_training_seconds")
     timing = "Comparable final-training timing was not available." if h_t is None or c_t is None else f"Measured final-training time was {h_t:.6f} seconds for {h_name} versus {c_t:.6f} seconds for {c_name}."
     return f"{sensitivity} {timing} These are observed benchmark differences and do not establish clinical validity, statistical superiority, or general quantum advantage."
@@ -250,10 +269,20 @@ def build_evidence_pair(experiment: Experiment, quantum: ModelRecord, classical:
     q_timing, c_timing = _timing(quantum.metrics or {}), _timing(classical.metrics or {})
     cost = {"classical": c_timing, "quantum": q_timing, "deltas_quantum_minus_classical": {key: _difference(q_timing.get(key), c_timing.get(key)) for key in q_timing}, "semantics": "Measured runtime from this experiment; simulator runtime is not real-QPU runtime."}
     fairness = _fairness(experiment, quantum, classical)
-    flagship = quantum.model_type == "hybrid_pennylane_torch" and classical.model_type == "random_forest"
+    conditions, classical_conditions = _conditions(experiment, quantum), _conditions(experiment, classical)
+    flagship = (
+        quantum.model_type == "hybrid_pennylane_torch"
+        and classical.model_type == "random_forest"
+        and conditions.get("library_slug") == classical_conditions.get("library_slug") == "early-stage-diabetes"
+    )
+    quantum_identity = {"id": quantum.id, "type": quantum.model_type, "display_name": MODEL_NAMES.get(quantum.model_type, quantum.model_type)}
     pair = {
         "benchmark_type": "fair_controlled_diabetes_benchmark" if flagship else "historical_model_comparison",
-        "model_identities": {"classical": {"id": classical.id, "type": classical.model_type, "display_name": MODEL_NAMES.get(classical.model_type, classical.model_type)}, "hybrid": {"id": quantum.id, "type": quantum.model_type, "display_name": MODEL_NAMES.get(quantum.model_type, quantum.model_type)}},
+        "model_identities": {
+            "classical": {"id": classical.id, "type": classical.model_type, "display_name": MODEL_NAMES.get(classical.model_type, classical.model_type)},
+            "quantum_or_hybrid": quantum_identity,
+            "hybrid": quantum_identity,
+        },
         "quantum_model": quantum.id, "classical_model": classical.id, "quantum_type": quantum.model_type, "classical_type": classical.model_type,
         "performance": performance, "metric_deltas": {key: value["delta_quantum_minus_classical"] for key, value in performance.items()},
         "holdout_results": {"classical": c_test, "hybrid": q_test, "evaluation_population": "Untouched holdout evaluation"},

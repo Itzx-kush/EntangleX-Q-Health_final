@@ -254,9 +254,9 @@ See [docs/VERIFIED_INSTANT_DEMO.md](docs/VERIFIED_INSTANT_DEMO.md).
 
 Early Stage Diabetes Risk Prediction is the **featured SIH demonstration**, while the existing Medical Dataset Library remains supported. The canonical future model identifier is `hybrid_pennylane_torch`: classical preprocessing and reduction → PennyLane quantum representation → PyTorch output head → positive-class probability → the existing OOF sensitivity-first threshold engine → research risk category → SHAP explanation.
 
-This foundation does **not** implement or execute that hybrid model. Its capability state is `NOT_YET_IMPLEMENTED`; the UI disables training. Existing Logistic Regression, SVM, Random Forest, VQC, QSVC, QNN, Qiskit/Aer simulation, evidence, robustness, explainability, persistence, reports, and resource-advisor paths remain in place. Real hardware and quantum advantage are not claimed. Prompt 2 is responsible for measured hybrid training execution.
+The PennyLane + PyTorch hybrid is implemented and executable when both packages are importable. It participates in the existing training, OOF threshold, prediction, robustness, comparison, persistence, report, and SHAP paths. Package availability, model implementation, and actual runtime verification remain separate facts. Existing Logistic Regression, SVM, Random Forest, VQC, QSVC, QNN, and Qiskit/Aer behavior remains supported. Real hardware and quantum advantage are not claimed.
 
-Prompt 2 dependencies are isolated in `backend/requirements-hybrid.txt` for the verified Python 3.11 dependency strategy; Prompt 1 does not install, import for execution, or add them to the default environment.
+Hybrid dependencies remain isolated in `backend/requirements-hybrid.txt` for explicit installation. The alignment contract reports package installation/importability separately from the implemented architecture and does not claim runtime verification merely because packages import.
 
 ## SIH Judge Alignment — Executable Hybrid Model (2026-09-30)
 

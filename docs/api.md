@@ -93,9 +93,9 @@ The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/dat
 
 ## SIH judge-alignment metadata
 
-`GET /api/alignment` returns one deterministic, typed contract containing model capability states (`AVAILABLE`, `NOT_YET_IMPLEMENTED`, `UNAVAILABLE`), separate package/import/model/execution/simulator/hardware facts, the `early-stage-diabetes` featured context, the non-executing `sih-diabetes-demonstration` preset, and the target architecture stages. The endpoint never starts training and never returns benchmark metrics.
+`GET /api/alignment` returns one deterministic, typed contract containing separate implementation, package importability, execution eligibility, simulator availability, runtime-verification, and hardware-availability facts. The PennyLane + PyTorch architecture is implemented; it is executable only when both packages are importable. The endpoint also describes the `early-stage-diabetes` context and non-executing SIH preset. It never starts training or invents runtime verification.
 
-`POST /api/training/jobs` accepts the bounded `hybrid_pennylane_torch` configuration shape for contract validation, but returns `409 model_not_yet_implemented` if it is selected in Prompt 1. Existing threshold fields retain their current OOF-validation and untouched-holdout semantics.
+`POST /api/training/jobs` executes the real bounded `hybrid_pennylane_torch` implementation when PennyLane and PyTorch are importable; otherwise it returns the dependency-availability error. The model uses the existing OOF-validation threshold and untouched-holdout semantics.
 
 ## Executable PennyLane hybrid contract (2026-09-30)
 
@@ -111,4 +111,6 @@ The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/dat
 
 ## Controlled comparison evidence
 
-`GET /api/experiments/{id}/comparison` preserves its existing model and pair fields and adds persisted evidence for the fair benchmark. Each pair includes `benchmark_type`, `model_identities`, `fairness`, `common_representation`, holdout results, metric/timing deltas, OOF operating points, simulator resources, robustness evidence, and limitations. `fairness.controlled_comparison` is derived from per-model metadata; failed checks produce `mismatch_reasons` and `NOT CONTROLLED`. Missing measurements remain `null` rather than becoming zero. `controlled_benchmarks` contains only verified Random Forest / PennyLane + PyTorch pairs.
+`GET /api/experiments/{id}/comparison` preserves its existing model and pair fields and adds persisted evidence for the fair benchmark. Each pair includes `benchmark_type`, model-specific identities, `fairness`, the complete common representation, holdout results, metric/timing deltas, OOF operating points, simulator resources, robustness evidence, and limitations. `fairness.controlled_comparison` verifies target and labels, configured and realized sample budgets, exact sampled rows, split, preprocessing, representation, CV, seed, and threshold protocol. Failed checks produce `mismatch_reasons` and `NOT CONTROLLED`; missing measurements remain `null`. `controlled_benchmarks` contains only verified Random Forest / PennyLane + PyTorch pairs from the registered `early-stage-diabetes` library dataset.
+
+`preprocessing_fingerprint` is computed only from the material preprocessing pipeline configuration. It is intentionally separate from the broader `comparison_fingerprint`, which also covers data, split, labels, budget, and evaluation conditions.

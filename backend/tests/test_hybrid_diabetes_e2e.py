@@ -115,10 +115,13 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     pair = comparison.json()["pairs"][0]
     assert pair["quantum_type"] == "hybrid_pennylane_torch"
     assert pair["fairness"]["controlled_comparison"] is True
+    assert pair["fairness"]["preprocessing_fingerprint"]
+    assert pair["fairness"]["preprocessing_fingerprint"] != pair["fairness"]["comparison_fingerprint"]
     assert pair["fairness"]["status"] == "CONTROLLED COMPARISON"
     assert all(pair["fairness"][field] for field in [
-        "dataset_match", "dataset_hash_match", "sample_pool_match", "split_match", "split_hash_match",
-        "preprocessing_match", "feature_representation_match", "pca_dimension_match", "sample_budget_match",
+        "dataset_match", "dataset_hash_match", "target_match", "positive_label_match", "negative_label_match",
+        "sample_pool_match", "split_match", "split_hash_match", "preprocessing_match", "preprocessing_fingerprint_match",
+        "feature_representation_match", "pca_dimension_match", "sample_budget_match", "configured_sample_budget_match",
         "cv_fold_match", "seed_match", "threshold_strategy_match", "holdout_match",
     ])
     assert pair["benchmark_type"] == "fair_controlled_diabetes_benchmark"
@@ -142,10 +145,12 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     report = client.get(f"/api/experiments/{experiment_id}/report?format=json")
     assert report.status_code == 200
     report_hybrid = next(model for model in report.json()["models"] if model["model_type"] == "hybrid_pennylane_torch")
-    assert report_hybrid["display_name"] == "PennyLane + PyTorch Hybrid"
+    assert report_hybrid["display_name"] == "PennyLane + PyTorch hybrid"
     assert report_hybrid["details"]["quantum"]["real_hardware"] is False
     report_pair = report.json()["comparison"]["controlled_benchmarks"][0]
     assert report_pair["fairness"]["controlled_comparison"] is True
     reloaded = client.get(f"/api/experiments/{experiment_id}/comparison").json()
     assert reloaded["controlled_benchmarks"][0]["metric_deltas"] == pair["metric_deltas"]
     assert reloaded["controlled_benchmarks"][0]["fairness"]["comparison_fingerprint"] == pair["fairness"]["comparison_fingerprint"]
+    assert reloaded["controlled_benchmarks"][0]["fairness"]["preprocessing_fingerprint"] == pair["fairness"]["preprocessing_fingerprint"]
+    assert reloaded["controlled_benchmarks"][0]["model_identities"] == pair["model_identities"]

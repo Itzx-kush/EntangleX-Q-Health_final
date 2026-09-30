@@ -119,8 +119,8 @@ def test_evidence_pair_contains_deltas_resources_fairness_and_neutral_result():
     assert pair["computational_cost"]["quantum"]["test_inference_seconds_per_sample"] == .01
     assert pair["quantum_resources"]["logical_depth"] == 7
     assert pair["quantum_resources"]["real_hardware"] is False
-    assert pair["fairness"]["preprocessing_fingerprint"] == "fingerprint"
-    assert "classical model produced higher sensitivity" in pair["conclusion"]
+    assert pair["fairness"]["preprocessing_fingerprint"] != pair["fairness"]["comparison_fingerprint"]
+    assert "QNN produced lower sensitivity" in pair["conclusion"]
     assert "general quantum advantage" in pair["conclusion"]
     assert pair["test_metric_delta_quantum_minus_classical"]["sensitivity"] < 0
 

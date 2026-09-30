@@ -10,6 +10,7 @@ import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
 import {Comparison,PredictionPage,Quantum,Robustness,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
+import type {EvidencePair,ModelKind} from '../types/qhealth';
 
 vi.mock('../lib/api',()=>({
   setSessionToken:vi.fn(),
@@ -334,7 +335,16 @@ describe('operating-point and evidence UX',()=>{
   const operatingPoint={selection_strategy:'target_sensitivity' as const,target_sensitivity:.95,target_specificity:null,selected_threshold:.42,threshold_units:'positive_class_probability',threshold_feasible:true,threshold_source:'out_of_fold_validation',validation_metrics:{threshold:.42,sensitivity:.95,specificity:.8,precision:.85,recall:.95,f1:.9,accuracy:.87,roc_auc:.91},holdout_metrics:{sensitivity:.7,specificity:.9},number_of_oof_samples:80,cv_fold_count:3,curve:[{threshold:.2,sensitivity:1,specificity:.4,precision:.6,recall:1,f1:.75,accuracy:.7,roc_auc:.91},{threshold:.42,sensitivity:.95,specificity:.8,precision:.85,recall:.95,f1:.9,accuracy:.87,roc_auc:.91}],interpretation:'Research operating point; not a clinically validated screening cutoff.'};
   const timings={final_training_seconds:1,cv_total_seconds:2,cv_fold_seconds:[1,1],test_inference_seconds:.2,test_inference_seconds_per_sample:.01};
   const experiment={id:'experiment-active',dataset_id:'dataset-active',parent_id:null,status:'succeeded',config:{models:['logistic_regression','qnn']},summary:{},created_at:'2026-09-30T00:00:00Z'} as Awaited<ReturnType<typeof qh.experiments>>[number];
-  const model=(id:string,type:'logistic_regression'|'qnn',dataset='dataset-active',experimentId='experiment-active')=>({id,experiment_id:experimentId,dataset_id:dataset,model_type:type,status:'ready',details:{},metrics:{test:metricRecord,training:metricRecord,validation:{folds:[metricRecord],summary:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{mean:.8,std:.1,valid_folds:3}])) as never,std_definition:'sample'},timing:timings,calibration:{},operating_point:operatingPoint},created_at:'2026-09-30T00:00:00Z'}) as Awaited<ReturnType<typeof qh.models>>[number];
+  const model=(id:string,type:ModelKind,dataset='dataset-active',experimentId='experiment-active')=>({id,experiment_id:experimentId,dataset_id:dataset,model_type:type,status:'ready',details:{},metrics:{test:metricRecord,training:metricRecord,validation:{folds:[metricRecord],summary:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{mean:.8,std:.1,valid_folds:3}])) as never,std_definition:'sample'},timing:timings,calibration:{},operating_point:operatingPoint},created_at:'2026-09-30T00:00:00Z'}) as Awaited<ReturnType<typeof qh.models>>[number];
+  const pairFixture=(quantumType:ModelKind,classicalType:ModelKind,controlled=true,benchmarkType='historical_model_comparison'):EvidencePair=>({
+    benchmark_type:benchmarkType,quantum_model:'quantum-model',classical_model:'classical-model',quantum_type:quantumType,classical_type:classicalType,
+    model_identities:{classical:{id:'classical-model',type:classicalType,display_name:classicalType==='random_forest'?'Random Forest':'Logistic Regression'},quantum_or_hybrid:{id:'quantum-model',type:quantumType,display_name:quantumType==='hybrid_pennylane_torch'?'PennyLane + PyTorch hybrid':'VQC'}},
+    performance:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{classical:.8,quantum:.7,delta_quantum_minus_classical:-.1}])) as EvidencePair['performance'],
+    computational_cost:{classical:{final_training_seconds:1,cv_total_seconds:2,cv_mean_fold_seconds:1,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},quantum:{final_training_seconds:4,cv_total_seconds:8,cv_mean_fold_seconds:4,test_inference_seconds:.4,test_inference_seconds_per_sample:.02},deltas_quantum_minus_classical:{final_training_seconds:3,cv_total_seconds:6,cv_mean_fold_seconds:3,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},semantics:'Measured runtime only.'},
+    quantum_resources:{backend:quantumType==='hybrid_pennylane_torch'?'default.qubit':'aer',execution_kind:'local simulation',qubits:2,quantum_layers:quantumType==='hybrid_pennylane_torch'?1:null,shots:quantumType==='hybrid_pennylane_torch'?null:128,logical_depth:7,gate_counts:{cx:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'COBYLA',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
+    fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),split_hash:'split',common_sample_count:40,source_sample_count:520,preprocessing_fingerprint:'preprocessing',cv_fold_count:2,seed:23,threshold_strategy:'target_sensitivity',controlled_comparison:controlled,status:controlled?'CONTROLLED COMPARISON':'NOT CONTROLLED',mismatch_reasons:controlled?[]:['target match']},
+    operating_points:{classical:operatingPoint,quantum:operatingPoint},robustness:{status:'not_evaluated',note:'Not implemented'},conclusion:'Observed benchmark differences do not establish clinical validity, statistical superiority, or general quantum advantage.',limitations:['benchmark evidence only'],test_metric_delta_quantum_minus_classical:{accuracy:-.1,precision:-.1,recall:-.1,sensitivity:-.1,specificity:-.1,f1:-.1,roc_auc:-.1},final_training_seconds_delta:3,
+  });
 
   it('switches between fixed and sensitivity-first operating-point controls',async()=>{
     localStorage.setItem('qhealth-tictac-draft',JSON.stringify({threshold_strategy:'target_sensitivity',target_sensitivity:.95}));
@@ -347,27 +357,28 @@ describe('operating-point and evidence UX',()=>{
 
   it('renders threshold evidence, quantum resources, costs and truthful limitations',async()=>{
     vi.mocked(qh.experiments).mockResolvedValue([experiment]);
-    const classical=model('classical-model','logistic_regression');
-    const quantum=model('quantum-model','qnn');
+    const classical=model('classical-model','random_forest');
+    const quantum=model('quantum-model','hybrid_pennylane_torch');
     vi.mocked(qh.comparison).mockResolvedValue({
       experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[classical,quantum],split:{split_hash:'split'},comparison_fingerprint:'fingerprint',
       conclusion:'All completed pairs are shown.',
       limitations:['Benchmark only'],
       pairs:[{
-        benchmark_type:'fair_controlled_diabetes_benchmark', quantum_model:quantum.id,classical_model:classical.id,quantum_type:'qnn',classical_type:'logistic_regression',
+        benchmark_type:'fair_controlled_diabetes_benchmark', quantum_model:quantum.id,classical_model:classical.id,quantum_type:'hybrid_pennylane_torch',classical_type:'random_forest',
+        model_identities:{classical:{id:classical.id,type:'random_forest',display_name:'Random Forest'},quantum_or_hybrid:{id:quantum.id,type:'hybrid_pennylane_torch',display_name:'PennyLane + PyTorch hybrid'}},
         performance:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{classical:.8,quantum:.7,delta_quantum_minus_classical:-.1}])) as never,
         computational_cost:{classical:{final_training_seconds:1,cv_total_seconds:2,cv_mean_fold_seconds:1,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},quantum:{final_training_seconds:4,cv_total_seconds:8,cv_mean_fold_seconds:4,test_inference_seconds:.4,test_inference_seconds_per_sample:.02},deltas_quantum_minus_classical:{final_training_seconds:3,cv_total_seconds:6,cv_mean_fold_seconds:3,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},semantics:'Measured runtime only.'},
-        quantum_resources:{backend:'aer',execution_kind:'finite-shot local quantum simulation',qubits:2,shots:128,logical_depth:7,gate_counts:{cx:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'COBYLA',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
-        fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),target:'Early Stage Diabetes Risk Prediction',experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,same_sample_budget:true,preprocessing_fingerprint:'fingerprint',cv_fold_count:3,seed:42,test_size:.25,target_sensitivity:.8,threshold_strategy:'target_sensitivity',controlled_comparison:true,status:'CONTROLLED COMPARISON',split_match:true,common_representation:{pca_components:2,hybrid_qubits:2,selected_feature_count:2}},
+        quantum_resources:{backend:'default.qubit',execution_kind:'local PennyLane quantum simulation',qubits:2,quantum_layers:1,shots:null,logical_depth:7,gate_counts:{RY:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'adam',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
+        fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),target:'Early Stage Diabetes Risk Prediction',experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,same_sample_budget:true,configured_sample_budget:100,realized_evaluated_sample_count:100,preprocessing_fingerprint:'preprocessing',cv_fold_count:3,seed:42,test_size:.25,target_sensitivity:.8,threshold_strategy:'target_sensitivity',controlled_comparison:true,status:'CONTROLLED COMPARISON',split_match:true,common_representation:{pca_components:2,hybrid_qubits:2,selected_feature_count:2}},
         operating_points:{classical:operatingPoint,quantum:operatingPoint},robustness:{status:'not_evaluated',note:'Not implemented'},conclusion:'The classical model produced higher sensitivity. No general quantum advantage established.',limitations:['benchmark evidence only','no clinical validation','simulator-only','no general quantum advantage established'],test_metric_delta_quantum_minus_classical:{accuracy:-.1,precision:-.1,recall:-.1,sensitivity:-.1,specificity:-.1,f1:-.1,roc_auc:-.1},final_training_seconds_delta:3,
       }],
     });
     renderWithProviders(<Comparison/>,['/comparison']);
-    expect(await screen.findByText('Controlled classical vs hybrid evidence')).toBeInTheDocument();
+    expect(await screen.findByText('Classical vs hybrid evidence')).toBeInTheDocument();
     expect(screen.getByText('CONTROLLED DIABETES BENCHMARK')).toBeInTheDocument();
     expect(screen.getAllByText('CONTROLLED COMPARISON').length).toBeGreaterThan(0);
     expect(screen.getByText('HYBRID EXECUTION CONTEXT')).toBeInTheDocument();
-    expect(screen.getByText(/Same sample budget = true/i)).toBeInTheDocument();
+    expect(screen.getByText(/same realized budget = true/i)).toBeInTheDocument();
     expect(screen.getByText('Observed difference (Hybrid − Classical)')).toBeInTheDocument();
     expect(screen.getAllByText(/no general quantum advantage established/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Selected research threshold: 0.4200/i)).toBeInTheDocument();
@@ -382,6 +393,32 @@ describe('operating-point and evidence UX',()=>{
     renderWithProviders(<Comparison/>,['/comparison']);
     expect(await screen.findByText(/Target sensitivity is not achievable/)).toBeInTheDocument();
     expect(screen.queryByText(/Selected research threshold: 0/)).not.toBeInTheDocument();
+  });
+
+  it('uses model-specific names and quantum terminology for a generic VQC comparison',async()=>{
+    const classical=model('classical-model','logistic_regression');
+    const quantum=model('quantum-model','vqc');
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    vi.mocked(qh.comparison).mockResolvedValue({experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[classical,quantum],pairs:[pairFixture('vqc','logistic_regression')],split:{},comparison_fingerprint:'fingerprint',conclusion:'Observed differences.',limitations:[]});
+    renderWithProviders(<Comparison/>,['/comparison']);
+    expect(await screen.findAllByText('VQC')).not.toHaveLength(0);
+    expect(screen.getAllByText('Logistic Regression').length).toBeGreaterThan(0);
+    expect(screen.getByText('QUANTUM EXECUTION CONTEXT')).toBeInTheDocument();
+    expect(screen.getByText('Observed difference (Quantum − Classical)')).toBeInTheDocument();
+    expect(screen.queryByText('PennyLane + PyTorch hybrid')).not.toBeInTheDocument();
+    expect(screen.queryByText('HYBRID EXECUTION CONTEXT')).not.toBeInTheDocument();
+  });
+
+  it('renders backend mismatch status without presenting an uncontrolled pair as controlled',async()=>{
+    const classical=model('classical-model','random_forest');
+    const quantum=model('quantum-model','hybrid_pennylane_torch');
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    vi.mocked(qh.comparison).mockResolvedValue({experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[classical,quantum],pairs:[pairFixture('hybrid_pennylane_torch','random_forest',false,'fair_controlled_diabetes_benchmark')],split:{},comparison_fingerprint:'fingerprint',conclusion:'Observed differences.',limitations:[]});
+    renderWithProviders(<Comparison/>,['/comparison']);
+    expect(await screen.findByText('DIABETES BENCHMARK FAIRNESS CHECK')).toBeInTheDocument();
+    expect(screen.getAllByText(/NOT CONTROLLED/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/target match/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('CONTROLLED DIABETES BENCHMARK')).not.toBeInTheDocument();
   });
 
   it('defaults prediction to active context and preserves all-model historical mode',async()=>{

@@ -126,9 +126,11 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
         "hybrid_quantum_layers": config.hybrid.quantum_layers,
         "pipeline": config.pipeline.model_dump(mode="json"),
     }
+    preprocessing_fingerprint = fingerprint(representation["pipeline"])
     comparison_conditions = {
         "dataset_id": data.dataset.id,
         "dataset_hash": data.dataset.sha256,
+        "library_slug": data.dataset.provenance.get("library_slug"),
         "target": data.dataset.provenance["target"],
         "positive_label": data.dataset.provenance["positive_label"],
         "negative_label": data.dataset.provenance["negative_label"],
@@ -145,6 +147,7 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
         "duplicate_policy": config.duplicate_policy,
         "max_samples": config.max_samples,
         "representation": representation,
+        "preprocessing_fingerprint": preprocessing_fingerprint,
         "threshold_strategy": config.threshold_strategy,
         "target_sensitivity": config.target_sensitivity,
     }
