@@ -39,6 +39,7 @@ const navGroups:NavGroup[]=[
   {label:'Modeling',items:[
     {label:'Training',path:'/training',icon:PlayCircle},
     {label:'Comparison',path:'/comparison',icon:BarChart3},
+    {label:'Robustness Lab',path:'/robustness',icon:ShieldCheck},
     {label:'Quantum Lab',path:'/quantum',icon:Atom},
   ]},
   {label:'Interpretation',items:[

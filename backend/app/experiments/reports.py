@@ -50,6 +50,10 @@ def html_report(identity: str) -> str:
         sections.append("<h3>Limitations and warnings</h3>" + pre({"limitations": model["details"].get("limitations", []), "warnings": model["details"].get("warnings", []), "error": model["details"].get("error")}))
     sections.append("<h2>Interpretation: model feature influence / quantum perturbation</h2>" + pre(data["interpretation"] or "Not computed; request an explanation for a trained model."))
     sections.append("<h2>Quantum vs classical evidence</h2>" + pre({"conclusion": data["comparison"]["conclusion"], "pairs": data["comparison"]["pairs"]}))
+    sections.append("<h2>Robustness and degradation evidence</h2>" + pre([
+        {"quantum_model": pair["quantum_model"], "classical_model": pair["classical_model"], "robustness": pair.get("robustness", {"status": "not_evaluated"})}
+        for pair in data["comparison"]["pairs"]
+    ] or "Not evaluated; run a bounded Robustness Lab condition to add evidence."))
     sections.append("<h2>Clinical validation boundary</h2><p>" + escaped(data["scientific_boundary"]) + "</p><footer>Report generated " + escaped(data["generated_at"]) + ". No raw records are exported.</footer>")
     document = '<!doctype html><html lang="en"><meta charset="utf-8"><title>EntangleX Q-Health research report</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:20px;color:#183442}h1,h2{color:#126675}aside{border-left:5px solid #378593;padding:18px;background:#eff7f7}pre{font:12px/1.5 monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7fa;padding:18px}h2{margin-top:36px}@media print{body{margin:0;max-width:none}pre{font-size:10px}h2,h3{break-after:avoid}}</style><body>' + "".join(sections) + "</body></html>"
     atomic_bytes(safe_path("experiments", identity, ".html"), document.encode("utf-8"))

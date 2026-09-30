@@ -8,7 +8,7 @@ import {ThemeToggle} from '../components/ThemeToggle';
 import {DraftProvider} from '../hooks/useDraft';
 import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
-import {Comparison,PredictionPage,Training} from '../pages/ResearchPagesModels';
+import {Comparison,PredictionPage,Robustness,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
 
 vi.mock('../lib/api',()=>({
@@ -31,6 +31,8 @@ vi.mock('../lib/api',()=>({
     capabilities:vi.fn(()=>Promise.resolve({available:false,runtime_verified:false,execution:'Quantum runtime unavailable'})),
     createJob:vi.fn(()=>Promise.resolve({})),
     comparison:vi.fn(()=>Promise.resolve({})),
+    robustness:vi.fn(()=>Promise.resolve({experiment_id:'',dataset_id:'',sample_count:0,model_count:0,condition_count:0,results:[],limitations:[]})),
+    robustnessHistory:vi.fn(()=>Promise.resolve([])),
     explanations:vi.fn(()=>Promise.resolve([])),
     explain:vi.fn(()=>Promise.resolve({})),
     schema:vi.fn(()=>Promise.resolve({model_id:'',features:[],positive_label:'positive',negative_label:'negative'})),
@@ -245,21 +247,21 @@ describe('settings and Demo Center readiness',()=>{
     expect(document.querySelector('[data-stage="dataset"]')?.textContent).toContain('NOT STARTED');
     expect(document.querySelector('[data-stage="quality"]')?.textContent).toContain('BLOCKED');
     expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('BLOCKED');
-    const routes={dataset:'/datasets',quality:'/quality',preprocessing:'/preprocessing',features:'/features',pca:'/pca',training:'/training',quantum:'/quantum',comparison:'/comparison',explainability:'/explainability',prediction:'/prediction',report:'/experiments'};
+    const routes={dataset:'/datasets',quality:'/quality',preprocessing:'/preprocessing',features:'/features',pca:'/pca',training:'/training',quantum:'/quantum',comparison:'/comparison',robustness:'/robustness',explainability:'/explainability',prediction:'/prediction',report:'/experiments'};
     Object.entries(routes).forEach(([stage,path])=>
       expect(document.querySelector(`[data-stage="${stage}"] a`)).toHaveAttribute('href',path)
     );
-    expect(screen.getByText('Step 1 of 11')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 12')).toBeInTheDocument();
     screen.getAllByRole('link',{name:'Choose Dataset'}).forEach(link=>
       expect(link).toHaveAttribute('href','/datasets')
     );
     fireEvent.click(screen.getByRole('button',{name:/Next/i}));
-    expect(screen.getByText('Step 2 of 11')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 12')).toBeInTheDocument();
     screen.getAllByRole('link',{name:'Open Data Quality'}).forEach(link=>
       expect(link).toHaveAttribute('href','/quality')
     );
     fireEvent.click(screen.getByRole('button',{name:/Previous/i}));
-    expect(screen.getByText('Step 1 of 11')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 12')).toBeInTheDocument();
   });
 
   it('selects a library dataset through the existing API and displays backend metadata',async()=>{
@@ -288,6 +290,7 @@ describe('settings and Demo Center readiness',()=>{
     await waitFor(()=>{
       expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('BLOCKED');
       expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('BLOCKED');
+      expect(document.querySelector('[data-stage="robustness"]')?.textContent).toContain('BLOCKED');
       expect(document.querySelector('[data-stage="explainability"]')?.textContent).toContain('BLOCKED');
       expect(document.querySelector('[data-stage="prediction"]')?.textContent).toContain('BLOCKED');
       expect(document.querySelector('[data-stage="report"]')?.textContent).toContain('BLOCKED');
@@ -306,6 +309,7 @@ describe('settings and Demo Center readiness',()=>{
     await waitFor(()=>{
       expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('COMPLETED');
       expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('READY');
+      expect(document.querySelector('[data-stage="robustness"]')?.textContent).toContain('READY');
       expect(document.querySelector('[data-stage="explainability"]')?.textContent).toContain('READY');
       expect(document.querySelector('[data-stage="prediction"]')?.textContent).toContain('READY');
       expect(document.querySelector('[data-stage="report"]')?.textContent).toContain('READY');
@@ -383,5 +387,54 @@ describe('operating-point and evidence UX',()=>{
     fireEvent.change(screen.getByLabelText('Prediction model scope'),{target:{value:'all'}});
     await waitFor(()=>expect(within(selector).getAllByRole('option')).toHaveLength(3));
     expect(screen.getByRole('option',{name:/historic/i})).toBeInTheDocument();
+  });
+
+  it('runs and renders neutral paired robustness evidence',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:'dataset-active'}));
+    const classical=model('classical-model','logistic_regression');
+    const quantum=model('quantum-model','qnn');
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    vi.mocked(qh.models).mockResolvedValue([classical,quantum]);
+    const evidence=(id:string,type:'logistic_regression'|'qnn',delta:number)=>({
+      id:`result-${id}`,status:'evaluated',reason:null,experiment_id:experiment.id,dataset_id:experiment.dataset_id,dataset_hash:'a'.repeat(64),split_hash:'split',
+      model_id:id,model_type:type,perturbation_type:'missingness',perturbation_level:.05,random_seed:42,sample_count:20,
+      baseline_metrics:metricRecord,perturbed_metrics:{...metricRecord,accuracy:.8+delta,sensitivity:.7+delta,specificity:.9+delta,f1:.72+delta,roc_auc:.82+delta},
+      degradation_delta:{accuracy:delta,precision:delta,recall:delta,sensitivity:delta,specificity:delta,f1:delta,roc_auc:delta},
+      relative_degradation:{accuracy:delta,precision:delta,recall:delta,sensitivity:delta,specificity:delta,f1:delta,roc_auc:delta},
+      undefined_metrics:{},threshold_used:.42,threshold_source:'out_of_fold_validation',preprocessing_context:{},perturbation_metadata:{changed_cells:3},
+      execution_timing:{baseline_inference_seconds:.01,perturbed_inference_seconds:.01},limitations:['Research evaluation only'],reproducibility_metadata:{perturbation_fingerprint:'same'},
+    });
+    vi.mocked(qh.robustness).mockResolvedValue({experiment_id:experiment.id,dataset_id:experiment.dataset_id,sample_count:20,model_count:2,condition_count:2,results:[evidence(classical.id,'logistic_regression',-.05),evidence(quantum.id,'qnn',-.1)] as never,limitations:['No ranking']});
+    renderWithProviders(<Robustness/>,['/robustness']);
+    expect(await screen.findByText('Robustness Lab')).toBeInTheDocument();
+    await waitFor(()=>expect(screen.getByLabelText('Robustness experiment')).toHaveValue(experiment.id));
+    fireEvent.change(screen.getByLabelText('Classical robustness model'),{target:{value:classical.id}});
+    fireEvent.change(screen.getByLabelText('Quantum robustness model'),{target:{value:quantum.id}});
+    fireEvent.change(screen.getByLabelText('Perturbation scenario'),{target:{value:'gaussian_noise'}});
+    expect(screen.getByLabelText('Perturbation level')).toHaveValue('0.05');
+    fireEvent.click(screen.getByRole('button',{name:'Run robustness condition'}));
+    expect(await screen.findByText('Observed degradation under controlled perturbation')).toBeInTheDocument();
+    expect(screen.getAllByText(/perturbed − baseline/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Paired observed differences')).toBeInTheDocument();
+    expect(screen.getByText(/not a winner or advantage claim/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Winner$/i)).not.toBeInTheDocument();
+  });
+
+  it('renders an explicit not-applicable robustness condition',async()=>{
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    const classical=model('classical-model','logistic_regression');
+    vi.mocked(qh.models).mockResolvedValue([classical]);
+    vi.mocked(qh.robustness).mockResolvedValue({experiment_id:experiment.id,dataset_id:experiment.dataset_id,sample_count:20,model_count:1,condition_count:1,results:[{
+      id:'result-na',status:'not_applicable',reason:'No categorical feature with at least two observed training categories is available.',experiment_id:experiment.id,dataset_id:experiment.dataset_id,dataset_hash:'a'.repeat(64),split_hash:'split',
+      model_id:classical.id,model_type:'logistic_regression',perturbation_type:'categorical',perturbation_level:.05,random_seed:42,sample_count:20,baseline_metrics:metricRecord,perturbed_metrics:null,
+      degradation_delta:{accuracy:null,precision:null,recall:null,sensitivity:null,specificity:null,f1:null,roc_auc:null},relative_degradation:{accuracy:null,precision:null,recall:null,sensitivity:null,specificity:null,f1:null,roc_auc:null},undefined_metrics:{accuracy:'undefined'},threshold_used:.5,threshold_source:'configured_fixed_threshold',preprocessing_context:{},perturbation_metadata:null,execution_timing:{baseline_inference_seconds:.01,perturbed_inference_seconds:null},limitations:[],reproducibility_metadata:{},
+    }] as never,limitations:[]});
+    renderWithProviders(<Robustness/>,['/robustness']);
+    await waitFor(()=>expect(screen.getByLabelText('Robustness experiment')).toHaveValue(experiment.id));
+    fireEvent.change(screen.getByLabelText('Classical robustness model'),{target:{value:classical.id}});
+    fireEvent.change(screen.getByLabelText('Perturbation scenario'),{target:{value:'categorical'}});
+    fireEvent.click(screen.getByRole('button',{name:'Run robustness condition'}));
+    expect(await screen.findByText(/not applicable:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/No categorical feature/).length).toBeGreaterThan(0);
   });
 });

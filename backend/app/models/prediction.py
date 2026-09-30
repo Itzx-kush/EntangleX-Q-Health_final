@@ -20,6 +20,11 @@ def get_bundle(identity: str):
     verify_installed_model(record)
     return record, load_model(identity, record.artifact_sha256)
 
+def resolve_operating_threshold(record, bundle) -> tuple[float, str]:
+    supports_probability = bool(record.details.get("supports_probability", hasattr(bundle["estimator"], "predict_proba")))
+    legacy_threshold = bundle["config"]["probability_threshold"] if supports_probability else 0.0
+    return float(bundle.get("operating_threshold", legacy_threshold)), bundle.get("threshold_source", "legacy_fixed_configuration")
+
 def prediction_frame(samples, features, numeric):
     expected = set(features)
     if any(set(sample) != expected for sample in samples):
@@ -79,10 +84,7 @@ def feature_perturbation(estimator, X: pd.DataFrame, background: pd.DataFrame, n
 def predict(identity: str, request: PredictionRequest):
     record, bundle = get_bundle(identity)
     frame = prediction_frame(request.samples, bundle["features"], bundle["numeric"])
-    supports_probability = bool(record.details.get("supports_probability", hasattr(bundle["estimator"], "predict_proba")))
-    legacy_threshold = bundle["config"]["probability_threshold"] if supports_probability else 0.0
-    threshold = float(bundle.get("operating_threshold", legacy_threshold))
-    threshold_source = bundle.get("threshold_source", "legacy_fixed_configuration")
+    threshold, threshold_source = resolve_operating_threshold(record, bundle)
     try:
         _, scores, probabilities = score_outputs(bundle["estimator"], frame, threshold)
         predicted = predictions_at_threshold(scores, threshold)

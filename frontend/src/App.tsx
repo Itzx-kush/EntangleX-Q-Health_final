@@ -10,6 +10,7 @@ const Quality=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Q
 const PipelineStage=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.PipelineStage})));
 const Training=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Training})));
 const Comparison=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Comparison})));
+const Robustness=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Robustness})));
 const Quantum=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Quantum})));
 const Explainability=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.Explainability})));
 const PredictionPage=lazy(()=>import('./pages/ResearchPagesModels').then(m=>({default:m.PredictionPage})));
@@ -30,6 +31,7 @@ export default function App(){
       <Route path="/pca" element={<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary." />}/>
       <Route path="/training" element={<Training/>}/>
       <Route path="/comparison" element={<Comparison/>}/>
+      <Route path="/robustness" element={<Robustness/>}/>
       <Route path="/quantum" element={<Quantum/>}/>
       <Route path="/explainability" element={<Explainability/>}/>
       <Route path="/prediction" element={<PredictionPage/>}/>

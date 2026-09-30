@@ -1,5 +1,5 @@
 import {Bar,BarChart,CartesianGrid,Cell,Line,LineChart,ReferenceLine,ResponsiveContainer,Scatter,ScatterChart,Tooltip,XAxis,YAxis} from 'recharts';
-import type {Dataset,Influence,Metrics,ModelRecord,OperatingPoint} from '../types/qhealth';
+import type {Dataset,Influence,Metrics,ModelRecord,OperatingPoint,RobustnessEvidence} from '../types/qhealth';
 import {metric,modelLabels} from '../utils/format';
 
 const modelColors:Record<string,string>={logistic_regression:'#2563eb',svm:'#0f766e',random_forest:'#f59e0b',vqc:'#7c3aed',qsvc:'#c026d3',qnn:'#0891b2'};
@@ -40,4 +40,12 @@ export function ThresholdTradeoffChart({operatingPoint}:{operatingPoint:Operatin
  const rows=[...operatingPoint.curve].sort((a,b)=>a.threshold-b.threshold);
  if(!rows.length)return <div className="h-[260px] grid place-items-center text-sm muted">No validation threshold curve is available for this legacy experiment.</div>;
  return <div className="h-[300px]" aria-label="Validation sensitivity and specificity by research threshold"><ResponsiveContainer width="100%" height="100%"><LineChart data={rows} margin={{top:12,right:14,left:0,bottom:18}}><CartesianGrid stroke="hsl(var(--border))" vertical={false}/><XAxis dataKey="threshold" type="number" domain={['dataMin','dataMax']} tickLine={false} axisLine={false} tickFormatter={value=>Number(value).toFixed(2)}/><YAxis domain={[0,1]} tickLine={false} axisLine={false} tickFormatter={value=>`${Math.round(Number(value)*100)}%`}/><Tooltip formatter={(value)=>metric(Number(value))} labelFormatter={value=>`Threshold ${Number(value).toFixed(4)}`} contentStyle={{borderRadius:12,border:'1px solid hsl(var(--border))',background:'hsl(var(--card))',fontSize:12}}/><Line type="monotone" dataKey="sensitivity" name="Validation sensitivity" stroke="#dc2626" dot={false} strokeWidth={2}/><Line type="monotone" dataKey="specificity" name="Validation specificity" stroke="#2563eb" dot={false} strokeWidth={2}/>{operatingPoint.selected_threshold!==null&&<ReferenceLine x={operatingPoint.selected_threshold} stroke="#7c3aed" strokeDasharray="4 4" label={{value:'Selected',position:'insideTopRight',fontSize:10}}/>}</LineChart></ResponsiveContainer><p className="mt-1 text-center text-[11px] muted">Selected research threshold: {operatingPoint.selected_threshold===null?'Not feasible':operatingPoint.selected_threshold.toFixed(4)}</p></div>;
+}
+
+export function RobustnessDeltaChart({records}:{records:RobustnessEvidence[]}){
+ const measured=records.filter(record=>record.status==='evaluated'&&record.perturbed_metrics);
+ const names=['accuracy','sensitivity','specificity','f1','roc_auc'] as const;
+ if(!measured.length)return <div className="h-[260px] grid place-items-center text-sm muted">No evaluated perturbation values are available.</div>;
+ const rows=names.map(name=>({metric:name,...Object.fromEntries(measured.map(record=>[record.model_id,record.degradation_delta[name]]))}));
+ return <div className="h-[300px]" aria-label="Observed degradation delta chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} margin={{top:12,right:14,left:0,bottom:20}}><CartesianGrid vertical={false} stroke="hsl(var(--border))"/><XAxis dataKey="metric" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={value=>Number(value).toFixed(2)}/><Tooltip formatter={(value)=>Number(value).toFixed(4)} contentStyle={{borderRadius:12,border:'1px solid hsl(var(--border))',background:'hsl(var(--card))',fontSize:12}}/><ReferenceLine y={0} stroke="hsl(var(--foreground))"/>{measured.map(record=><Bar key={record.model_id} dataKey={record.model_id} name={modelLabels[record.model_type]} fill={modelColors[record.model_type]||'#2563eb'} radius={[4,4,0,0]}/>)}</BarChart></ResponsiveContainer><p className="mt-1 text-center text-[11px] muted">Observed change: perturbed − baseline</p></div>;
 }

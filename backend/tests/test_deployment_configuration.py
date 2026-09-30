@@ -10,7 +10,7 @@ from app.storage.files import safe_path
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT_ROUTES = {
     "/", "/datasets", "/quality", "/preprocessing", "/features", "/pca",
-    "/training", "/comparison", "/quantum", "/explainability", "/prediction",
+    "/training", "/comparison", "/robustness", "/quantum", "/explainability", "/prediction",
     "/experiments", "/experiments/:id", "/demo", "/settings",
 }
 

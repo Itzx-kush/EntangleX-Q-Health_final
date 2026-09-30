@@ -43,6 +43,7 @@ describe('SIH Demo Center state matrix',()=>{
       preprocessing:'BLOCKED',
       training:'BLOCKED',
       comparison:'BLOCKED',
+      robustness:'BLOCKED',
       explainability:'BLOCKED',
       prediction:'BLOCKED',
       report:'BLOCKED',
@@ -58,6 +59,7 @@ describe('SIH Demo Center state matrix',()=>{
     expect(state.stages.pca).toBe('READY');
     expect(state.stages.training).toBe('READY');
     expect(state.stages.comparison).toBe('BLOCKED');
+    expect(state.stages.robustness).toBe('BLOCKED');
   });
 
   it('reports a current-dataset active job as in progress',()=>{
@@ -75,6 +77,7 @@ describe('SIH Demo Center state matrix',()=>{
     expect(state.readyModels).toHaveLength(0);
     expect(state.stages.training).toBe('BLOCKED');
     expect(state.stages.comparison).toBe('BLOCKED');
+    expect(state.stages.robustness).toBe('BLOCKED');
     expect(state.stages.explainability).toBe('BLOCKED');
     expect(state.stages.prediction).toBe('BLOCKED');
     expect(state.stages.report).toBe('BLOCKED');
@@ -98,6 +101,7 @@ describe('SIH Demo Center state matrix',()=>{
     const state=deriveDemoState('dataset-a',[current],[first,second],[],true);
     expect(state.stages.training).toBe('COMPLETED');
     expect(state.stages.comparison).toBe('READY');
+    expect(state.stages.robustness).toBe('READY');
     expect(state.stages.explainability).toBe('READY');
     expect(state.stages.prediction).toBe('READY');
     expect(state.stages.report).toBe('READY');

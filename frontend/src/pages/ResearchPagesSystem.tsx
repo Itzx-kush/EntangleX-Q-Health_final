@@ -18,6 +18,7 @@ const demoStages:{key:DemoStageKey;label:string;copy:string;path:string;action:s
   {key:'training',label:'Training',copy:'Create one real backend experiment under shared evaluation conditions.',path:'/training',action:'Run Training'},
   {key:'quantum',label:'Classical / Quantum',copy:'Inspect supported classical models and simulator-backed quantum execution honestly.',path:'/quantum',action:'Open Quantum Lab'},
   {key:'comparison',label:'Comparison',copy:'Compare at least two ready models from the same completed experiment.',path:'/comparison',action:'Compare Models'},
+  {key:'robustness',label:'Robustness',copy:'Measure frozen-model degradation under controlled, reproducible perturbations.',path:'/robustness',action:'Open Robustness Lab'},
   {key:'explainability',label:'Explainability',copy:'Measure feature influence for a ready model without implying biological causation.',path:'/explainability',action:'View Explanation'},
   {key:'prediction',label:'Prediction',copy:'Generate a research-only output from the exact ready-model input schema.',path:'/prediction',action:'Make Prediction'},
   {key:'report',label:'Report',copy:'Review experiment provenance, model records, limitations and report exports.',path:'/experiments',action:'View Experiment'},
@@ -80,7 +81,7 @@ export function DemoCenter(){
     }
     if(key==='quantum')return health.data?.quantum.execution||'Quantum capability has not been reported yet.';
     if(key==='comparison')return state.readyModels.length>=2?'Two or more ready models belong to the current experiment.':'Requires two ready models from the current completed experiment.';
-    if(key==='explainability'||key==='prediction')return state.readyModels.length?'A ready model belongs to the current completed experiment.':'Requires a ready model from the current dataset experiment.';
+    if(key==='robustness'||key==='explainability'||key==='prediction')return state.readyModels.length?'A ready model belongs to the current completed experiment.':'Requires a ready model from the current dataset experiment.';
     if(key==='report')return experiment?'Experiment evidence and report export are tied to the current dataset.':'Requires a completed experiment for the active dataset.';
     return '';
   };

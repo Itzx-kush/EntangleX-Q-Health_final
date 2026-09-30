@@ -5,10 +5,11 @@ from sqlalchemy import select
 from ..database import session_scope
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
+from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
 from ..storage.entities import Experiment, ModelRecord, Job
 from ..storage.repository import recent, require
-from .schemas import ExperimentOut, ModelOut, JobOut, TrainingConfig, TrainingResponse, Schema
+from .schemas import ExperimentOut, ModelOut, JobOut, RobustnessRecordOut, RobustnessRequest, TrainingConfig, TrainingResponse, Schema
 
 class ExperimentDetailOut(Schema):
     experiment: ExperimentOut
@@ -32,6 +33,14 @@ def get_experiment(identity: UUID):
 @router.get("/{identity}/comparison", response_model=dict)
 def compare_models(identity: UUID):
     return comparison(str(identity))
+
+@router.post("/{identity}/robustness", response_model=dict)
+def run_robustness(identity: UUID, request: RobustnessRequest):
+    return evaluate_robustness(str(identity), request)
+
+@router.get("/{identity}/robustness", response_model=list[RobustnessRecordOut])
+def robustness_history(identity: UUID):
+    return list_robustness(str(identity))
 
 @router.post("/{identity}/rerun", response_model=TrainingResponse, status_code=202)
 def rerun(identity: UUID):

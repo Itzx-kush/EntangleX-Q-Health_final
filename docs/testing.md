@@ -46,6 +46,22 @@ resource rendering, active-context filtering, historical-record access,
 scientific limitations, and the corrected “Validation, holdout, and runtime”
 terminology.
 
+## Robustness and degradation coverage
+
+`test_robustness.py` covers deterministic seeded perturbations, realized
+missingness, Gaussian noise, numerical outliers, categorical corruption,
+explicit not-applicable conditions, undefined relative metrics, signed deltas,
+bounded sample counts, persisted history, locked-threshold preservation,
+baseline reproduction, shared perturbation fingerprints, and a guard that
+fails if the endpoint attempts to call the fitted pipeline's training method.
+
+The optional QNN end-to-end test exercises one real paired classical/quantum
+Gaussian-noise condition and verifies that the existing comparison evidence
+object exposes the stored robustness scenario without ranking either model.
+Frontend interaction tests cover scenario/model selection, request execution,
+baseline/perturbed/delta rendering, paired neutral language, and explicit
+not-applicable display.
+
 ## Separate verification levels
 
 `python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests does not independently establish Docker compatibility, clinical validity or model generalization. The post-generation Task 1 records separately document the native backend/frontend runtime checks and the Docker limitation.

@@ -4,12 +4,12 @@ import {useMutation,useQuery} from '@tanstack/react-query';
 import {ArrowRight,Atom,BarChart3,Brain,CheckCircle2,Play,RotateCcw,ShieldAlert,SlidersHorizontal} from 'lucide-react';
 import {Button,Card,Badge,Input,Select} from '../components/ui';
 import {ErrorBanner,EmptyState,Loading,MetricCard,ModelSelect,Notice,PageHeader,StatusBadge,JsonDisclosure,metricNames} from '../components/Shared';
-import {MetricBars,InfluenceBars,RocChart,ThresholdTradeoffChart} from '../components/Charts';
+import {MetricBars,InfluenceBars,RocChart,ThresholdTradeoffChart,RobustnessDeltaChart} from '../components/Charts';
 import {StageNav} from './ResearchPagesCore';
 import {qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId,isQuantum} from '../utils/format';
-import type {EvidencePair,Experiment,ModelKind,ModelRecord} from '../types/qhealth';
+import type {EvidencePair,Experiment,ModelKind,ModelRecord,PerturbationType,RobustnessEvidence} from '../types/qhealth';
 import {GlareHover,BorderGlow,Reveal,QuantumVisual,SpotlightPanel} from '../components/reactbits';
 
 
@@ -29,6 +29,10 @@ function contextModels(models:ModelRecord[]|undefined,experiments:Experiment[]|u
  if(scope==='all'||!datasetId)return models||[];
  const experiment=latestExperimentForDataset(experiments,datasetId);
  return experiment?(models||[]).filter(model=>model.dataset_id===datasetId&&model.experiment_id===experiment.id):[];
+}
+
+function measuredDifference(quantum:number|null|undefined,classical:number|null|undefined){
+ return quantum===null||quantum===undefined||classical===null||classical===undefined?null:quantum-classical;
 }
 
 export function Training(){
@@ -135,6 +139,62 @@ function EvidencePanel({pair}:{pair:EvidencePair}){
   <Notice tone="blue"><strong>Interpretation:</strong> {pair.conclusion}</Notice>
   <Notice tone="amber"><strong>Limitations:</strong> {pair.limitations.join(' ')}</Notice>
  </div>;
+}
+
+export function Robustness(){
+ const {draft}=useDraft();
+ const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
+ const models=useQuery({queryKey:['models'],queryFn:qh.models});
+ const [scope,setScope]=useState<'active'|'all'>(draft.dataset_id?'active':'all');
+ const [experimentId,setExperimentId]=useState('');
+ const [classicalId,setClassicalId]=useState('');
+ const [quantumId,setQuantumId]=useState('');
+ const [kind,setKind]=useState<PerturbationType>('missingness');
+ const [level,setLevel]=useState(.05);
+ const [seed,setSeed]=useState(42);
+ const [maxSamples,setMaxSamples]=useState(32);
+ const visibleExperiments=scope==='active'&&draft.dataset_id?(experiments.data||[]).filter(item=>item.dataset_id===draft.dataset_id):experiments.data||[];
+ const experimentModels=(models.data||[]).filter(model=>model.experiment_id===experimentId&&model.status==='ready');
+ const classical=experimentModels.filter(model=>!isQuantum(model.model_type));
+ const quantumModels=experimentModels.filter(model=>isQuantum(model.model_type));
+ const levels=kind==='outliers'?[3]:[.05,.1];
+ useEffect(()=>{if(!visibleExperiments.some(item=>item.id===experimentId)){setExperimentId(visibleExperiments[0]?.id||'');setClassicalId('');setQuantumId('')}},[scope,draft.dataset_id,experiments.data,experimentId]);
+ useEffect(()=>{if(!levels.includes(level))setLevel(levels[0])},[kind]);
+ const run=useMutation({mutationFn:()=>qh.robustness(experimentId,{model_ids:[classicalId,quantumId].filter(Boolean),scenarios:[{perturbation_type:kind,level}],random_seed:seed,max_samples:maxSamples})});
+ const records=run.data?.results||[];
+ const shownMetrics=['accuracy','sensitivity','specificity','f1','roc_auc'] as const;
+ return <div>
+  <PageHeader eyebrow="03 / Robustness" title="Robustness Lab" description="Measure frozen classical and quantum model behavior under identical, deterministic perturbations of the same bounded held-out samples." actions={<Link className="btn btn-outline" to="/comparison"><ArrowRight size={14}/>Comparison</Link>}/>
+  <StageNav current="/robustness"/><ErrorBanner error={(experiments.error as Error)?.message||(models.error as Error)?.message||(run.error as Error)?.message}/>
+  <Notice tone="amber">Research evaluation only. The locked research operating threshold remains unchanged; models are not refit and no clinical robustness or quantum advantage is claimed.</Notice>
+  <Card className="mt-5" title="Controlled benchmark condition" description="Select one bounded perturbation. Both selected models receive the same perturbed sample matrix and seed.">
+   <div className="grid gap-4 md:grid-cols-3">
+    <label className="field"><span>Record scope</span><Select aria-label="Robustness record scope" value={scope} onChange={event=>setScope(event.target.value as 'active'|'all')}><option value="active" disabled={!draft.dataset_id}>Active dataset + latest workflow</option><option value="all">All registered models</option></Select></label>
+    <label className="field"><span>Experiment</span><Select aria-label="Robustness experiment" value={experimentId} onChange={event=>{setExperimentId(event.target.value);setClassicalId('');setQuantumId('')}}><option value="">Select experiment</option>{visibleExperiments.map(item=><option value={item.id} key={item.id}>{shortId(item.id)} · {item.status}</option>)}</Select></label>
+    <label className="field"><span>Scenario</span><Select aria-label="Perturbation scenario" value={kind} onChange={event=>setKind(event.target.value as PerturbationType)}><option value="missingness">Missingness</option><option value="gaussian_noise">Gaussian noise</option><option value="outliers">Numerical outliers</option><option value="categorical">Categorical perturbation</option></Select></label>
+    <label className="field"><span>Level</span><Select aria-label="Perturbation level" value={level} onChange={event=>setLevel(Number(event.target.value))}>{levels.map(value=><option value={value} key={value}>{kind==='outliers'?`±${value} training SD`:`${Math.round(value*100)}%`}</option>)}</Select></label>
+    <label className="field"><span>Classical model</span><Select aria-label="Classical robustness model" value={classicalId} onChange={event=>setClassicalId(event.target.value)}><option value="">None</option>{classical.map(model=><option value={model.id} key={model.id}>{modelLabels[model.model_type]} · {shortId(model.id)}</option>)}</Select></label>
+    <label className="field"><span>Quantum model</span><Select aria-label="Quantum robustness model" value={quantumId} onChange={event=>setQuantumId(event.target.value)}><option value="">None</option>{quantumModels.map(model=><option value={model.id} key={model.id}>{modelLabels[model.model_type]} · {shortId(model.id)}</option>)}</Select></label>
+    <label className="field"><span>Random seed</span><Input aria-label="Robustness random seed" type="number" value={seed} onChange={event=>setSeed(Number(event.target.value))}/></label>
+    <label className="field"><span>Maximum held-out samples</span><Input aria-label="Robustness maximum samples" type="number" min="8" max="64" value={maxSamples} onChange={event=>setMaxSamples(Number(event.target.value))}/></label>
+   </div>
+   <Button className="mt-4" disabled={!experimentId||(!classicalId&&!quantumId)||run.isPending} onClick={()=>run.mutate()}><Play size={14}/>{run.isPending?'Evaluating controlled perturbation…':'Run robustness condition'}</Button>
+  </Card>
+  {run.isPending&&<div className="mt-5"><Loading/></div>}
+  {run.data&&<div className="mt-5 space-y-5">
+   <Card title="Observed degradation under controlled perturbation" description={`Benchmark condition: ${kind.replaceAll('_',' ')} at ${level}. Degradation Δ means perturbed − baseline.`}><RobustnessDeltaChart records={records}/></Card>
+   <div className="grid gap-5 lg:grid-cols-2">{records.map(record=><RobustnessResult key={record.id||record.model_id} record={record} metrics={shownMetrics}/>)}</div>
+   {records.length===2&&records.every(record=>record.status==='evaluated')&&<Card title="Paired observed differences" description="The values below compare each model's degradation delta (quantum − classical). They are descriptive measurements, not a winner or advantage claim."><div className="table-wrap"><table className="data-table"><thead><tr><th>Metric</th><th>Quantum Δ − Classical Δ</th></tr></thead><tbody>{shownMetrics.map(name=><tr key={name}><td>{name}</td><td>{metric(measuredDifference(records.find(record=>isQuantum(record.model_type))?.degradation_delta[name],records.find(record=>!isQuantum(record.model_type))?.degradation_delta[name]),name!=='roc_auc')}</td></tr>)}</tbody></table></div></Card>}
+   <JsonDisclosure label="Reproducibility metadata and limitations" value={run.data}/>
+  </div>}
+ </div>;
+}
+
+function RobustnessResult({record,metrics}:{record:RobustnessEvidence;metrics:readonly ('accuracy'|'sensitivity'|'specificity'|'f1'|'roc_auc')[]}){
+ return <Card title={modelLabels[record.model_type]} description={`${record.perturbation_type.replaceAll('_',' ')} · seed ${record.random_seed} · ${record.sample_count} held-out samples`}>
+  {record.status!=='evaluated'?<Notice tone="amber"><strong>{record.status.replaceAll('_',' ')}:</strong> {record.reason||'This condition could not be evaluated.'}</Notice>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Metric</th><th>Baseline</th><th>Perturbed</th><th>Δ</th></tr></thead><tbody>{metrics.map(name=><tr key={name}><td>{name}</td><td>{metric(record.baseline_metrics[name],name!=='roc_auc')}</td><td>{metric(record.perturbed_metrics?.[name],name!=='roc_auc')}</td><td>{metric(record.degradation_delta[name],name!=='roc_auc')}</td></tr>)}</tbody></table></div>}
+  <p className="mt-3 text-xs muted">Threshold {record.threshold_used.toFixed(4)} · {record.threshold_source.replaceAll('_',' ')} · frozen model, no threshold reselection.</p>
+ </Card>;
 }
 
 export function Quantum(){
