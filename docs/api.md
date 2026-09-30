@@ -90,3 +90,9 @@ Request bodies are bounded before multipart parsing. Reports and API responses s
 - `POST /api/datasets/inspect` accepts multipart `file` plus optional `target` and `positive_label` fields. It returns safe schema statistics, ranked target candidates, heuristic confidence, class metadata and whether manual selection is required. It does not register or persist the upload.
 
 The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/datasets/demo` contracts remain available. Final registration always reparses and validates the bytes; inspection is advisory and never becomes a second dataset registry.
+
+## SIH judge-alignment metadata
+
+`GET /api/alignment` returns one deterministic, typed contract containing model capability states (`AVAILABLE`, `NOT_YET_IMPLEMENTED`, `UNAVAILABLE`), separate package/import/model/execution/simulator/hardware facts, the `early-stage-diabetes` featured context, the non-executing `sih-diabetes-demonstration` preset, and the target architecture stages. The endpoint never starts training and never returns benchmark metrics.
+
+`POST /api/training/jobs` accepts the bounded `hybrid_pennylane_torch` configuration shape for contract validation, but returns `409 model_not_yet_implemented` if it is selected in Prompt 1. Existing threshold fields retain their current OOF-validation and untouched-holdout semantics.

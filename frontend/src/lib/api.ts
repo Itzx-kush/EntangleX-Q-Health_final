@@ -1,4 +1,4 @@
-import type {Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig} from '../types/qhealth';
+import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -43,6 +43,7 @@ export const api={
 
 export const qh={
   health:()=>api.get<Health>('/health'),
+  alignment:()=>api.get<AlignmentContract>('/alignment'),
   systemStatus:()=>api.get<SystemStatus>('/system/status'),
   summary:()=>api.get<{counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number};recent_experiments:Experiment[];disclaimer:string}>('/summary'),
   datasets:()=>api.get<Dataset[]>('/datasets'),

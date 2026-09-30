@@ -1,0 +1,4 @@
+# Prompt 1 compatibility envelope for the Python 3.11 environment.
+# Install explicitly for Prompt 2; these packages are not imported or executed by Prompt 1.
+pennylane>=0.43,<0.44
+torch>=2.7,<2.10
