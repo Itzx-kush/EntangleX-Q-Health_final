@@ -286,3 +286,9 @@ The WDBC path remains available. Results are research benchmark evidence—not d
 ## SIH Judge Alignment — Hybrid SHAP Refinement (2026-09-30)
 
 Hybrid local explanations answer **“Why was this case flagged?”** for the exact submitted case. The response records the final positive-class probability, persisted OOF operating threshold, predicted class, original feature values, signed SHAP contributions, direction, and method `SHAP — Final Hybrid Output`. Dataset-level explanations are separately labeled as mean absolute SHAP contribution across bounded held-out cases. Background rows are bounded to 20 and come only from the training partition; explanation requests remain bounded to 32 cases and never retrain or mutate the artifact. SHAP describes model behavior—not biological causation, clinical diagnosis, or a complete causal interpretation of the simulator-executed quantum circuit.
+
+## Fair controlled diabetes benchmark
+
+The judge-facing flagship benchmark compares **Random Forest** with the **PennyLane + PyTorch hybrid** on the registered `early-stage-diabetes` dataset. A pair is labelled **CONTROLLED COMPARISON** only after backend verification of the dataset SHA-256, sampled rows, train/holdout indices, preprocessing and PCA representation, sample budget, seed, CV folds, duplicate policy, and OOF threshold protocol. PCA components must equal the hybrid qubit count. The API and report preserve measured holdout metrics, confusion counts, timing, simulator resources, fairness checks, and neutral metric deltas. The browser renders this persisted evidence and does not calculate authoritative benchmark results.
+
+The SIH preset uses bounded, editable demonstration defaults (40 samples, PCA/qubits 2, one quantum layer, two CV folds, seed 23, test size 0.25, target sensitivity 0.80). These are not scientifically optimal values, and activating the preset never starts training automatically.

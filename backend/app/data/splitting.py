@@ -26,7 +26,23 @@ class PreparedData:
     excluded_by_sampling: int
 
     def split_metadata(self) -> dict:
-        return {"split_hash": self.split_hash, "train_count": len(self.train), "test_count": len(self.test), "evaluated_sample_count": len(self.train) + len(self.test), "source_sample_count": len(self.frame), "dropped_duplicate_count": self.dropped_duplicates, "excluded_by_sampling": self.excluded_by_sampling, "cv_folds": len(self.cv), "scheme": "stratified random holdout + stratified CV on training only", "independent_samples_assumed": True}
+        sampled = sorted([*self.train.tolist(), *self.test.tolist()])
+        return {
+            "split_hash": self.split_hash,
+            "sample_pool_hash": fingerprint({"dataset_hash": self.dataset.sha256, "sampled_row_indices": sampled}),
+            "sampled_row_indices": sampled,
+            "train_indices": self.train.tolist(),
+            "test_indices": self.test.tolist(),
+            "train_count": len(self.train),
+            "test_count": len(self.test),
+            "evaluated_sample_count": len(self.train) + len(self.test),
+            "source_sample_count": len(self.frame),
+            "dropped_duplicate_count": self.dropped_duplicates,
+            "excluded_by_sampling": self.excluded_by_sampling,
+            "cv_folds": len(self.cv),
+            "scheme": "stratified random holdout + stratified CV on training only",
+            "independent_samples_assumed": True,
+        }
 
 def prepare_data(config: TrainingConfig) -> PreparedData:
     dataset, frame = load_frame(str(config.dataset_id))

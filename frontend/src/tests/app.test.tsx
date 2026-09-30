@@ -354,17 +354,21 @@ describe('operating-point and evidence UX',()=>{
       conclusion:'All completed pairs are shown.',
       limitations:['Benchmark only'],
       pairs:[{
-        quantum_model:quantum.id,classical_model:classical.id,quantum_type:'qnn',classical_type:'logistic_regression',
+        benchmark_type:'fair_controlled_diabetes_benchmark', quantum_model:quantum.id,classical_model:classical.id,quantum_type:'qnn',classical_type:'logistic_regression',
         performance:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{classical:.8,quantum:.7,delta_quantum_minus_classical:-.1}])) as never,
         computational_cost:{classical:{final_training_seconds:1,cv_total_seconds:2,cv_mean_fold_seconds:1,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},quantum:{final_training_seconds:4,cv_total_seconds:8,cv_mean_fold_seconds:4,test_inference_seconds:.4,test_inference_seconds_per_sample:.02},deltas_quantum_minus_classical:{final_training_seconds:3,cv_total_seconds:6,cv_mean_fold_seconds:3,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},semantics:'Measured runtime only.'},
         quantum_resources:{backend:'aer',execution_kind:'finite-shot local quantum simulation',qubits:2,shots:128,logical_depth:7,gate_counts:{cx:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'COBYLA',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
-        fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,preprocessing_fingerprint:'fingerprint',cv_fold_count:3,seed:42,threshold_strategy:'target_sensitivity',controlled_comparison:true},
+        fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),target:'Early Stage Diabetes Risk Prediction',experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,same_sample_budget:true,preprocessing_fingerprint:'fingerprint',cv_fold_count:3,seed:42,test_size:.25,target_sensitivity:.8,threshold_strategy:'target_sensitivity',controlled_comparison:true,status:'CONTROLLED COMPARISON',split_match:true,common_representation:{pca_components:2,hybrid_qubits:2,selected_feature_count:2}},
         operating_points:{classical:operatingPoint,quantum:operatingPoint},robustness:{status:'not_evaluated',note:'Not implemented'},conclusion:'The classical model produced higher sensitivity. No general quantum advantage established.',limitations:['benchmark evidence only','no clinical validation','simulator-only','no general quantum advantage established'],test_metric_delta_quantum_minus_classical:{accuracy:-.1,precision:-.1,recall:-.1,sensitivity:-.1,specificity:-.1,f1:-.1,roc_auc:-.1},final_training_seconds_delta:3,
       }],
     });
     renderWithProviders(<Comparison/>,['/comparison']);
-    expect(await screen.findByText('Quantum vs classical evidence')).toBeInTheDocument();
-    expect(screen.getByText('QUANTUM RESOURCES')).toBeInTheDocument();
+    expect(await screen.findByText('Controlled classical vs hybrid evidence')).toBeInTheDocument();
+    expect(screen.getByText('CONTROLLED DIABETES BENCHMARK')).toBeInTheDocument();
+    expect(screen.getAllByText('CONTROLLED COMPARISON').length).toBeGreaterThan(0);
+    expect(screen.getByText('HYBRID EXECUTION CONTEXT')).toBeInTheDocument();
+    expect(screen.getByText(/Same sample budget = true/i)).toBeInTheDocument();
+    expect(screen.getByText('Observed difference (Hybrid − Classical)')).toBeInTheDocument();
     expect(screen.getAllByText(/no general quantum advantage established/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Selected research threshold: 0.4200/i)).toBeInTheDocument();
     expect(screen.getByText('Validation, holdout, and runtime')).toBeInTheDocument();

@@ -39,3 +39,7 @@ The local token is not account management, RBAC, tenant separation or compliance
 ## Exact medical disclaimer
 
 > **Research Prototype:** This platform provides model-generated disease-risk predictions for research and decision-support purposes. Predictions are based on benchmark or user-provided datasets and are not a substitute for professional medical diagnosis, treatment, or clinical validation.
+
+## Controlled benchmark limitations
+
+“Controlled” means the compared records passed explicit equality checks for their data, split, preprocessing, representation, budget, CV, seed, and threshold protocol. It does not mean the experiment is clinically validated or statistically powered. The same split and sample budget prevent information-budget and evaluation-population confounding, while OOF threshold selection keeps the holdout untouched; repeated human inspection can still overfit research decisions. One small simulator benchmark cannot establish clinical improvement, statistical superiority, or general quantum advantage. Metric deltas describe observed differences only and are not an overall score or recommendation.

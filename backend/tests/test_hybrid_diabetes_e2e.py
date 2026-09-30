@@ -115,7 +115,19 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     pair = comparison.json()["pairs"][0]
     assert pair["quantum_type"] == "hybrid_pennylane_torch"
     assert pair["fairness"]["controlled_comparison"] is True
+    assert pair["fairness"]["status"] == "CONTROLLED COMPARISON"
+    assert all(pair["fairness"][field] for field in [
+        "dataset_match", "dataset_hash_match", "sample_pool_match", "split_match", "split_hash_match",
+        "preprocessing_match", "feature_representation_match", "pca_dimension_match", "sample_budget_match",
+        "cv_fold_match", "seed_match", "threshold_strategy_match", "holdout_match",
+    ])
+    assert pair["benchmark_type"] == "fair_controlled_diabetes_benchmark"
+    assert pair["holdout_results"]["evaluation_population"] == "Untouched holdout evaluation"
+    assert pair["operating_points"]["protocol"].startswith("OOF validation threshold")
     assert pair["quantum_resources"]["backend"] == "default.qubit"
+    assert pair["quantum_resources"]["real_hardware"] is False
+    assert pair["quantum_resources"]["shots"] is None
+    assert "winner" not in pair["conclusion"].lower()
 
     classical = next(model for model in detail["models"] if model["model_type"] == "random_forest")
     robustness = client.post(f"/api/experiments/{experiment_id}/robustness", json={
@@ -132,3 +144,8 @@ def test_real_diabetes_hybrid_training_prediction_persistence_shap_and_compariso
     report_hybrid = next(model for model in report.json()["models"] if model["model_type"] == "hybrid_pennylane_torch")
     assert report_hybrid["display_name"] == "PennyLane + PyTorch Hybrid"
     assert report_hybrid["details"]["quantum"]["real_hardware"] is False
+    report_pair = report.json()["comparison"]["controlled_benchmarks"][0]
+    assert report_pair["fairness"]["controlled_comparison"] is True
+    reloaded = client.get(f"/api/experiments/{experiment_id}/comparison").json()
+    assert reloaded["controlled_benchmarks"][0]["metric_deltas"] == pair["metric_deltas"]
+    assert reloaded["controlled_benchmarks"][0]["fairness"]["comparison_fingerprint"] == pair["fairness"]["comparison_fingerprint"]

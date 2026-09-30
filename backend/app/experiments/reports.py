@@ -49,7 +49,20 @@ def html_report(identity: str) -> str:
         sections.append("<h3>Probability calibration diagnostics</h3>" + pre(metrics.get("calibration", "Not computed")))
         sections.append("<h3>Limitations and warnings</h3>" + pre({"limitations": model["details"].get("limitations", []), "warnings": model["details"].get("warnings", []), "error": model["details"].get("error")}))
     sections.append("<h2>Interpretation: model feature influence / quantum perturbation</h2>" + pre(data["interpretation"] or "Not computed; request an explanation for a trained model."))
-    sections.append("<h2>Quantum vs classical evidence</h2>" + pre({"conclusion": data["comparison"]["conclusion"], "pairs": data["comparison"]["pairs"]}))
+    controlled = [pair for pair in data["comparison"]["pairs"] if pair.get("benchmark_type") == "fair_controlled_diabetes_benchmark"]
+    sections.append("<h2>FAIR CONTROLLED BENCHMARK</h2>" + pre({
+        "dataset_and_provenance": data["dataset"],
+        "shared_data_budget_split_preprocessing_and_representation": [
+            {"fairness": pair.get("fairness"), "common_representation": pair.get("common_representation")} for pair in controlled
+        ],
+        "threshold_protocol": [pair.get("operating_points") for pair in controlled],
+        "classical_and_hybrid_holdout_results": [pair.get("holdout_results") for pair in controlled],
+        "metric_and_timing_deltas": [{"metrics": pair.get("metric_deltas"), "timing": pair.get("computational_cost")} for pair in controlled],
+        "quantum_simulator_metadata": [pair.get("quantum_resources") for pair in controlled],
+        "robustness_evidence": [pair.get("robustness") for pair in controlled],
+        "scientific_limitations": [pair.get("limitations") for pair in controlled],
+    } if controlled else "No Random Forest / PennyLane + PyTorch hybrid benchmark pair is available."))
+    sections.append("<h2>All classical and quantum model evidence</h2>" + pre({"conclusion": data["comparison"]["conclusion"], "pairs": data["comparison"]["pairs"]}))
     sections.append("<h2>Robustness and degradation evidence</h2>" + pre([
         {"quantum_model": pair["quantum_model"], "classical_model": pair["classical_model"], "robustness": pair.get("robustness", {"status": "not_evaluated"})}
         for pair in data["comparison"]["pairs"]

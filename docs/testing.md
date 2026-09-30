@@ -89,3 +89,7 @@ Focused tests execute an unmocked PennyLane QNode and PyTorch head, verify quant
 ## Hybrid SHAP refinement validation (2026-09-30)
 
 Tests cover the real persisted Early Stage Diabetes hybrid artifact, exact-case prediction SHAP, global SHAP, original names/values, signed directions, OOF-threshold context, mixed categorical/numeric reconstruction, unseen-category and missing-feature failures, unavailable/failing SHAP behavior, and no-placeholder guarantees. Frontend tests assert that hybrid method state visibly reads `SHAP — Final Hybrid Output`, never presents permutation as the executed method, and renders positive/negative groups, probability, threshold, original values, and the causality limitation.
+
+## Fair benchmark validation
+
+Comparison tests cover matching and mismatching dataset hashes, sample pools, splits, PCA/qubit dimensions, sample budgets, seeds, CV folds, and threshold strategies. They also verify neutral deltas, null-preserving metrics, measured timing, `default.qubit` metadata, persistence, paired robustness fingerprints, report export, and the absence of ranking claims. The bounded diabetes integration test executes the real PennyLane + PyTorch training path when hybrid dependencies are installed; it is not replaced with a mocked estimator.
