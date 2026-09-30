@@ -91,3 +91,9 @@ and hardware execution remains unavailable in the verified configuration.
 The additive `hybrid_pennylane_torch` path uses the existing fitted sklearn preprocessing pipeline, then a PennyLane `default.qubit` QNode with Y-axis `AngleEmbedding`, trainable `StronglyEntanglingLayers`, and one Pauli-Z expectation output per qubit. A PyTorch CPU head consumes those expectations and trains jointly with the circuit using `BCEWithLogitsLoss` and Adam or SGD. Quantum parameters participate in backpropagation; fixed precomputed quantum features are not used.
 
 Qiskit VQC/QSVC/QNN configuration remains separate. A shared experiment containing both families must use matching PCA and qubit dimensions. Circuit resources are derived from the instantiated PennyLane template where available; they are logical simulator metadata, not hardware cost. Real hardware and general quantum advantage remain unestablished.
+
+## Shared representation for the flagship comparison
+
+Both paired models consume the same leakage-safe representation: raw inputs → imputation/categorical handling → scaling → feature selection → PCA → bounded/angle-scaled values. Random Forest consumes that PCA representation directly; the hybrid then applies the PennyLane transformation, expectation values, and PyTorch output head. For a controlled pair, PCA dimensionality must equal logical qubits. The sensitivity-first threshold is selected from out-of-fold training predictions and frozen before both models are evaluated on the untouched, identical holdout population.
+
+PennyLane `default.qubit` timing is measured local simulator/runtime timing. Logical depth, gate summaries, and parameter counts are not estimates of real-QPU wall-clock cost. Exact expectation execution has no fabricated shot count.

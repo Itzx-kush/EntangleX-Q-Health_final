@@ -485,6 +485,8 @@ class FlagshipPresetOut(Schema):
     models: list[str]
     auto_start_training: Literal[False]
     threshold_strategy: Literal["target_sensitivity"]
+    configuration: dict[str, Any]
+    scientific_status: str
     evidence_requirements: list[str]
 
 class FlagshipArchitectureOut(Schema):

@@ -9,7 +9,7 @@ from ..evaluation.calibration import base_pipeline
 from ..evaluation.metrics import classification_metrics, probability_diagnostics, score_outputs, summarize_cv
 from ..evaluation.thresholds import predictions_at_threshold, select_operating_point
 from ..feature_engineering.pipeline import describe_preprocessor
-from ..utils.serialization import clean_json, software_versions
+from ..utils.serialization import clean_json, fingerprint, software_versions
 from .factory import build_estimator
 
 def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoint: Callable[[str], None]) -> tuple[dict, dict, dict]:
@@ -109,12 +109,53 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
         limitations.append("A disclosed stratified subset was selected before splitting; all compared models use exactly that subset.")
     if config.calibration == "isotonic":
         limitations.append("Isotonic calibration can overfit small calibration samples; examine independent calibration evidence.")
+    split_metadata = data.split_metadata()
+    preprocessing = describe_preprocessor(fitted_pipeline.named_steps["preprocessor"])
+    representation = {
+        "raw_input_features": list(data.features),
+        "selected_feature_count": len(preprocessing["selected_features"]),
+        "feature_selection": {
+            "method": config.pipeline.selection,
+            "k_features": config.pipeline.k_features,
+            "variance_threshold": config.pipeline.variance_threshold,
+        },
+        "pca_components": config.pipeline.pca_components,
+        "angle_scaling": config.pipeline.angle_scaling,
+        "final_representation_dimension": len(preprocessing["output_features"]),
+        "hybrid_qubits": config.hybrid.qubits,
+        "hybrid_quantum_layers": config.hybrid.quantum_layers,
+        "pipeline": config.pipeline.model_dump(mode="json"),
+    }
+    comparison_conditions = {
+        "dataset_id": data.dataset.id,
+        "dataset_hash": data.dataset.sha256,
+        "target": data.dataset.provenance["target"],
+        "positive_label": data.dataset.provenance["positive_label"],
+        "negative_label": data.dataset.provenance["negative_label"],
+        "source_row_count": len(data.frame),
+        "evaluated_row_count": split_metadata["evaluated_sample_count"],
+        "sample_pool_hash": split_metadata["sample_pool_hash"],
+        "sampled_row_indices": split_metadata["sampled_row_indices"],
+        "train_indices": split_metadata["train_indices"],
+        "test_indices": split_metadata["test_indices"],
+        "split_hash": data.split_hash,
+        "seed": config.seed,
+        "test_size": config.test_size,
+        "cv_folds": config.cv_folds,
+        "duplicate_policy": config.duplicate_policy,
+        "max_samples": config.max_samples,
+        "representation": representation,
+        "threshold_strategy": config.threshold_strategy,
+        "target_sensitivity": config.target_sensitivity,
+    }
+    comparison_conditions["comparison_fingerprint"] = fingerprint(comparison_conditions)
     details = {
         "task": "binary_classification", "positive_label": data.dataset.provenance["positive_label"],
         "negative_label": data.dataset.provenance["negative_label"], "input_features": data.features,
         "numeric_features": data.numeric, "dataset_provenance": data.dataset.provenance,
-        "split": data.split_metadata(), "configuration": config.model_dump(mode="json"),
-        "preprocessing": describe_preprocessor(fitted_pipeline.named_steps["preprocessor"]),
+        "split": split_metadata, "configuration": config.model_dump(mode="json"),
+        "comparison_conditions": comparison_conditions, "common_representation": representation,
+        "preprocessing": preprocessing,
         "software": software_versions(), "quantum": quantum,
         "optimization_objective": getattr(classifier, "loss_curve_", []),
         "probability_status": "uncalibrated model probability" if config.calibration == "none" else f"internally {config.calibration}-calibrated benchmark probability; not clinical risk",
