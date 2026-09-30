@@ -63,6 +63,8 @@ class TrainingConfig(Schema):
     max_samples: int | None = Field(default=160, ge=30, le=100000)
     duplicate_policy: Literal["reject", "drop_exact"] = "reject"
     probability_threshold: float = Field(default=0.5, gt=0, lt=1)
+    threshold_strategy: Literal["fixed", "target_sensitivity"] = "fixed"
+    target_sensitivity: float = Field(default=0.95, gt=0, le=1)
     calibration: Literal["none", "sigmoid", "isotonic"] = "none"
     calibration_folds: int = Field(default=3, ge=2, le=5)
     @model_validator(mode="after")
@@ -251,6 +253,7 @@ class PredictionOut(Schema):
     negative_label: str
     probability_status: str
     decision_rule: str
+    threshold_source: str = "legacy_fixed_configuration"
     risk_thresholds: tuple[float, float]
     predictions: list[PredictionItem]
     influence: list[dict[str, Any]] | None

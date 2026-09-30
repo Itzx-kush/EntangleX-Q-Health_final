@@ -15,6 +15,8 @@ def test_classical_training_outputs_are_computed(kind, config):
     assert len(metrics["validation"]["folds"]) == config.cv_folds
     assert details["split"]["split_hash"] == data.split_hash
     assert metrics["timing"]["final_training_seconds"] >= 0
+    assert metrics["operating_point"]["threshold_source"] == "configured_fixed_threshold"
+    assert metrics["operating_point"]["selected_threshold"] == (config.probability_threshold if kind != "svm" else 0.0)
     from uuid import uuid4
     identity = str(uuid4())
     digest = save_model(identity, bundle)
@@ -42,6 +44,7 @@ def test_http_experiment_prediction_report_and_rerun(client, config, registered)
     identity = created["experiment"]["id"]
     result = client.get(f"/api/experiments/{identity}").json()
     model = next(m for m in result["models"] if m["status"] == "ready")
+    assert model["metrics"]["operating_point"]["threshold_source"] == "configured_fixed_threshold"
     comparison = client.get(f"/api/experiments/{identity}/comparison").json()
     assert comparison["experiment_id"] == identity
     assert model["details"]["dataset_provenance"]["dataset_hash"] == registered.sha256
@@ -62,6 +65,9 @@ def test_http_experiment_prediction_report_and_rerun(client, config, registered)
     assert rerun["experiment"]["id"] != identity
     assert rerun["experiment"]["parent_id"] == identity
     assert poll_job(client, rerun["job"]["id"])["status"] == "succeeded"
+    rerun_detail = client.get(f"/api/experiments/{rerun['experiment']['id']}").json()
+    rerun_model = next(m for m in rerun_detail["models"] if m["status"] == "ready")
+    assert rerun_model["metrics"]["operating_point"]["selected_threshold"] == model["metrics"]["operating_point"]["selected_threshold"]
 
 
 def test_create_job_success(client, config, registered):

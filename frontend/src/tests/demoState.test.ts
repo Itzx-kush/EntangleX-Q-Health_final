@@ -7,7 +7,7 @@ const experiment=(id:string,datasetId:string,status='succeeded',createdAt='2026-
   dataset_id:datasetId,
   parent_id:null,
   status,
-  config:{dataset_id:datasetId,models:['logistic_regression'],pipeline:{} as never,quantum:{} as never,parameters:{} as never,seed:17,test_size:.2,cv_folds:2,max_samples:80,duplicate_policy:'reject',probability_threshold:.5,calibration:'none',calibration_folds:3,features:null},
+  config:{dataset_id:datasetId,models:['logistic_regression'],pipeline:{} as never,quantum:{} as never,parameters:{} as never,seed:17,test_size:.2,cv_folds:2,max_samples:80,duplicate_policy:'reject',probability_threshold:.5,threshold_strategy:'fixed',target_sensitivity:.95,calibration:'none',calibration_folds:3,features:null},
   summary:{},
   created_at:createdAt,
 });

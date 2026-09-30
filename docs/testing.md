@@ -31,6 +31,21 @@ Windows PowerShell variants are in the README. Quantum tests are opt-in because 
 
 Frontend tests cover absent-measurement formatting, zero-valued metrics, job states, the visible disclaimer and in-memory token transport without local-storage persistence. The production build additionally runs TypeScript checking when dependencies are installed.
 
+## Operating-point and evidence coverage
+
+`test_thresholds_and_evidence.py` covers fixed-threshold compatibility,
+validation-only sensitivity-first selection, specificity maximization,
+deterministic tie-breaking, truthful infeasibility, locked holdout evaluation,
+performance/timing deltas, logical quantum-resource extraction, missing legacy
+metadata, neutral conclusions, and unfavorable quantum results.
+
+The training/registry regression checks persisted operating points and
+same-seed rerun reproducibility. Frontend interaction coverage checks strategy
+and target controls, selected and infeasible operating points, evidence and
+resource rendering, active-context filtering, historical-record access,
+scientific limitations, and the corrected “Validation, holdout, and runtime”
+terminology.
+
 ## Separate verification levels
 
 `python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests does not independently establish Docker compatibility, clinical validity or model generalization. The post-generation Task 1 records separately document the native backend/frontend runtime checks and the Docker limitation.

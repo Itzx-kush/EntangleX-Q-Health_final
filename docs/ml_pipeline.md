@@ -39,3 +39,22 @@ Measured timings distinguish final fit, CV including validation work, and held-o
 Raw LR/RF/VQC probability is a model output, not externally validated clinical probability. SVM and QSVC deliberately use margin-only scoring unless an explicitly supported classical calibration wrapper is selected. No sigmoid is silently applied to QSVC margins.
 
 Optional sigmoid/isotonic `CalibratedClassifierCV` wraps the **entire** sklearn pipeline with inner stratified CV and `ensemble=False`; preprocessing is refitted inside each inner training fold. Class support is checked before submission. The final model is trained on the outer training partition and calibrated using internally generated training out-of-fold scores. Holdout reliability curves and Brier scores are reported separately. Neither establishes clinical calibration. Quantum calibration is intentionally disabled pending a validated adapter strategy.
+
+## Research operating-point selection
+
+`threshold_strategy=fixed` preserves the established configured probability
+threshold and the zero decision-score boundary for margin-only estimators.
+`threshold_strategy=target_sensitivity` instead collects the already-computed
+out-of-fold validation scores from the training-partition CV loop.
+
+The sensitivity-first selector considers every OOF threshold meeting the
+requested sensitivity, then maximizes specificity, sensitivity, F1, and finally
+the higher threshold as a deterministic tie-break. The result is locked before
+the final fit and before the untouched holdout is evaluated. Test labels and
+scores are never inputs to threshold selection.
+
+The persisted record includes the curve, units, feasibility, selected
+threshold, validation and holdout metrics, OOF sample count, fold count, and
+threshold source. An infeasible validation result never silently lowers the
+target or invents a threshold. These are research operating points, not
+clinically validated screening cutoffs.

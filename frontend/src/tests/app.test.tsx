@@ -8,6 +8,7 @@ import {ThemeToggle} from '../components/ThemeToggle';
 import {DraftProvider} from '../hooks/useDraft';
 import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
+import {Comparison,PredictionPage,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
 
 vi.mock('../lib/api',()=>({
@@ -28,6 +29,13 @@ vi.mock('../lib/api',()=>({
     inspectDataset:vi.fn(()=>Promise.resolve({})),
     upload:vi.fn(()=>Promise.resolve({})),
     capabilities:vi.fn(()=>Promise.resolve({available:false,runtime_verified:false,execution:'Quantum runtime unavailable'})),
+    createJob:vi.fn(()=>Promise.resolve({})),
+    comparison:vi.fn(()=>Promise.resolve({})),
+    explanations:vi.fn(()=>Promise.resolve([])),
+    explain:vi.fn(()=>Promise.resolve({})),
+    schema:vi.fn(()=>Promise.resolve({model_id:'',features:[],positive_label:'positive',negative_label:'negative'})),
+    sample:vi.fn(()=>Promise.resolve({features:{},sample:'Sample',source:'Public benchmark'})),
+    predict:vi.fn(()=>Promise.resolve({})),
   },
 }));
 
@@ -311,5 +319,69 @@ describe('settings and Demo Center readiness',()=>{
     vi.mocked(qh.health).mockRejectedValueOnce(new Error('Backend unavailable'));
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>expect(screen.getAllByText('Backend unavailable').length).toBeGreaterThan(0));
+  });
+});
+
+describe('operating-point and evidence UX',()=>{
+  const metricRecord={accuracy:.8,precision:.75,recall:.7,sensitivity:.7,specificity:.9,f1:.72,roc_auc:.82,true_positive:7,true_negative:9,false_positive:1,false_negative:3,confusion_matrix:[[9,1],[3,7]],sample_count:20,roc_curve:{fpr:[0,1],tpr:[0,1],thresholds:[null,.5]},undefined_metrics:[]};
+  const operatingPoint={selection_strategy:'target_sensitivity' as const,target_sensitivity:.95,target_specificity:null,selected_threshold:.42,threshold_units:'positive_class_probability',threshold_feasible:true,threshold_source:'out_of_fold_validation',validation_metrics:{threshold:.42,sensitivity:.95,specificity:.8,precision:.85,recall:.95,f1:.9,accuracy:.87,roc_auc:.91},holdout_metrics:{sensitivity:.7,specificity:.9},number_of_oof_samples:80,cv_fold_count:3,curve:[{threshold:.2,sensitivity:1,specificity:.4,precision:.6,recall:1,f1:.75,accuracy:.7,roc_auc:.91},{threshold:.42,sensitivity:.95,specificity:.8,precision:.85,recall:.95,f1:.9,accuracy:.87,roc_auc:.91}],interpretation:'Research operating point; not a clinically validated screening cutoff.'};
+  const timings={final_training_seconds:1,cv_total_seconds:2,cv_fold_seconds:[1,1],test_inference_seconds:.2,test_inference_seconds_per_sample:.01};
+  const experiment={id:'experiment-active',dataset_id:'dataset-active',parent_id:null,status:'succeeded',config:{models:['logistic_regression','qnn']},summary:{},created_at:'2026-09-30T00:00:00Z'} as Awaited<ReturnType<typeof qh.experiments>>[number];
+  const model=(id:string,type:'logistic_regression'|'qnn',dataset='dataset-active',experimentId='experiment-active')=>({id,experiment_id:experimentId,dataset_id:dataset,model_type:type,status:'ready',details:{},metrics:{test:metricRecord,training:metricRecord,validation:{folds:[metricRecord],summary:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{mean:.8,std:.1,valid_folds:3}])) as never,std_definition:'sample'},timing:timings,calibration:{},operating_point:operatingPoint},created_at:'2026-09-30T00:00:00Z'}) as Awaited<ReturnType<typeof qh.models>>[number];
+
+  it('switches between fixed and sensitivity-first operating-point controls',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({threshold_strategy:'target_sensitivity',target_sensitivity:.95}));
+    renderWithProviders(<Training/>,['/training']);
+    expect(screen.getByLabelText('Operating point')).toHaveValue('target_sensitivity');
+    expect(screen.getByLabelText(/Target sensitivity/)).toHaveValue(.95);
+    expect(screen.queryByLabelText('Fixed research threshold')).not.toBeInTheDocument();
+    expect(screen.getByText(/not a clinically validated screening cutoff/i)).toBeInTheDocument();
+  });
+
+  it('renders threshold evidence, quantum resources, costs and truthful limitations',async()=>{
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    const classical=model('classical-model','logistic_regression');
+    const quantum=model('quantum-model','qnn');
+    vi.mocked(qh.comparison).mockResolvedValue({
+      experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[classical,quantum],split:{split_hash:'split'},comparison_fingerprint:'fingerprint',
+      conclusion:'All completed pairs are shown.',
+      limitations:['Benchmark only'],
+      pairs:[{
+        quantum_model:quantum.id,classical_model:classical.id,quantum_type:'qnn',classical_type:'logistic_regression',
+        performance:Object.fromEntries(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'].map(name=>[name,{classical:.8,quantum:.7,delta_quantum_minus_classical:-.1}])) as never,
+        computational_cost:{classical:{final_training_seconds:1,cv_total_seconds:2,cv_mean_fold_seconds:1,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},quantum:{final_training_seconds:4,cv_total_seconds:8,cv_mean_fold_seconds:4,test_inference_seconds:.4,test_inference_seconds_per_sample:.02},deltas_quantum_minus_classical:{final_training_seconds:3,cv_total_seconds:6,cv_mean_fold_seconds:3,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},semantics:'Measured runtime only.'},
+        quantum_resources:{backend:'aer',execution_kind:'finite-shot local quantum simulation',qubits:2,shots:128,logical_depth:7,gate_counts:{cx:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'COBYLA',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
+        fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,preprocessing_fingerprint:'fingerprint',cv_fold_count:3,seed:42,threshold_strategy:'target_sensitivity',controlled_comparison:true},
+        operating_points:{classical:operatingPoint,quantum:operatingPoint},robustness:{status:'not_evaluated',note:'Not implemented'},conclusion:'The classical model produced higher sensitivity. No general quantum advantage established.',limitations:['benchmark evidence only','no clinical validation','simulator-only','no general quantum advantage established'],test_metric_delta_quantum_minus_classical:{accuracy:-.1,precision:-.1,recall:-.1,sensitivity:-.1,specificity:-.1,f1:-.1,roc_auc:-.1},final_training_seconds_delta:3,
+      }],
+    });
+    renderWithProviders(<Comparison/>,['/comparison']);
+    expect(await screen.findByText('Quantum vs classical evidence')).toBeInTheDocument();
+    expect(screen.getByText('QUANTUM RESOURCES')).toBeInTheDocument();
+    expect(screen.getAllByText(/no general quantum advantage established/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Selected research threshold: 0.4200/i)).toBeInTheDocument();
+    expect(screen.getByText('Validation, holdout, and runtime')).toBeInTheDocument();
+  });
+
+  it('shows an infeasible target without inventing a threshold',async()=>{
+    const infeasibleModel=model('classical-model','logistic_regression');
+    infeasibleModel.metrics.operating_point={...operatingPoint,threshold_feasible:false,selected_threshold:null,validation_metrics:null,infeasible_reason:'Target sensitivity is not achievable on the validation folds under the current model configuration.'};
+    vi.mocked(qh.experiments).mockResolvedValue([experiment]);
+    vi.mocked(qh.comparison).mockResolvedValue({experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[infeasibleModel],pairs:[],split:{},comparison_fingerprint:'fingerprint',conclusion:'No pair',limitations:[]});
+    renderWithProviders(<Comparison/>,['/comparison']);
+    expect(await screen.findByText(/Target sensitivity is not achievable/)).toBeInTheDocument();
+    expect(screen.queryByText(/Selected research threshold: 0/)).not.toBeInTheDocument();
+  });
+
+  it('defaults prediction to active context and preserves all-model historical mode',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:'dataset-active'}));
+    vi.mocked(qh.experiments).mockResolvedValue([experiment,{...experiment,id:'experiment-old',dataset_id:'dataset-old',created_at:'2026-09-01T00:00:00Z'}]);
+    vi.mocked(qh.models).mockResolvedValue([model('active-model','logistic_regression'),model('historical-model','logistic_regression','dataset-old','experiment-old')]);
+    renderWithProviders(<PredictionPage/>,['/prediction']);
+    const selector=await screen.findByLabelText('Registered model');
+    await waitFor(()=>expect(within(selector).getAllByRole('option')).toHaveLength(2));
+    fireEvent.change(screen.getByLabelText('Prediction model scope'),{target:{value:'all'}});
+    await waitFor(()=>expect(within(selector).getAllByRole('option')).toHaveLength(3));
+    expect(screen.getByRole('option',{name:/historic/i})).toBeInTheDocument();
   });
 });

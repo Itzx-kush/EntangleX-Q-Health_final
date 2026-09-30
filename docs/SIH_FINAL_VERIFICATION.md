@@ -255,3 +255,47 @@ The deployable backend now validates and hydrates two repository-packaged, genui
 - Manifest schema v2 restores the genuine completed `Job` for each packaged experiment (`succeeded`, 100% progress, source final-state text, and source timestamps).
 - Packaged model integrity is explicitly SHA-256 over decoded raw dill bytes. This is separate from the unchanged HMAC integrity used when normal live-trained models are saved at runtime.
 - Uploaded/custom datasets resolve to `requires_processing` at the registered-dataset readiness boundary and remain eligible for the normal live pipeline. Public samples remain allowed for built-in benchmarks and the legacy demo, and blocked for uploaded datasets.
+
+## Sensitivity-first operating point and evidence engine — 2026-09-30
+
+This entry records a new implementation and executed verification pass. It does
+not rewrite or supersede the historical records above.
+
+### Implemented
+
+- Added deterministic fixed and target-sensitivity research operating points.
+- Sensitivity-first thresholds are selected only from training-partition
+  out-of-fold validation scores, maximizing specificity with deterministic
+  sensitivity/F1/threshold tie-breaks.
+- The selected threshold is locked before final fitting and untouched holdout
+  evaluation. Infeasible evidence returns no selected threshold.
+- Persisted evidence includes threshold source, units, OOF curve, feasibility,
+  validation/holdout metrics, OOF sample count, and CV fold count.
+- Added structured quantum/classical performance, measured timing, logical
+  resource, fairness, operating-point, limitation, and neutral-conclusion
+  evidence while preserving the prior comparison delta fields.
+- Added compact comparison tables, threshold trade-off rendering, active
+  dataset/current-experiment defaults, explicit historical mode, and corrected
+  “Validation, holdout, and runtime” terminology.
+
+### Executed verification
+
+- Targeted backend threshold/evidence/registry suite: **27 passed**, one
+  pre-existing TestClient deprecation warning.
+- Full non-quantum backend regression: **120 passed, 35 deselected**, two
+  existing warnings.
+- Optional simulator-backed quantum regression: **35 passed, 120 deselected**,
+  15 warnings from bounded optimizer/deprecation paths.
+- Focused sensitivity-first Logistic Regression + QNN API workflow, including
+  comparison, prediction, and JSON report: **1 passed**.
+- Frontend Vitest suite: **4 files, 32 tests passed**. jsdom emitted expected
+  zero-size ResponsiveContainer warnings; no test failed.
+- Frontend TypeScript check and Vite production build: **PASS**, 2,281 modules
+  transformed.
+
+The backend verification environment used Python 3.13 rather than the
+repository's supported Python 3.11 baseline; the pinned dependency set
+installed and the recorded suites passed. Visible-browser, Docker, Render, real
+quantum hardware, external validation, clinical cutoff validation, robustness
+benchmarking, and general quantum advantage were not verified or claimed in
+this pass.
