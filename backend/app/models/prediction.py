@@ -7,6 +7,7 @@ from ..database import session_scope
 from ..demo_readiness import verify_installed_model
 from ..evaluation.metrics import score_outputs
 from ..evaluation.thresholds import predictions_at_threshold
+from ..explainability.hybrid_shap import HybridShapAdapter, local_contract
 from ..storage.entities import ModelRecord
 from ..storage.files import load_model
 from ..storage.repository import require
@@ -81,51 +82,6 @@ def feature_perturbation(estimator, X: pd.DataFrame, background: pd.DataFrame, n
         influences.append({"feature": feature, "magnitude": float(np.mean((np.abs(score_plus - baseline) + np.abs(score_minus - baseline)) / 2)), "delta_plus": float(np.mean(score_plus - baseline)), "delta_minus": float(np.mean(score_minus - baseline)), "perturbation": note})
     return sorted(influences, key=lambda row: row["magnitude"], reverse=True)
 
-def hybrid_shap_influence(estimator, X: pd.DataFrame, background: pd.DataFrame, features: list[str], numeric: list[str], threshold: float, seed: int):
-    """Real local SHAP at original-feature level for one frozen hybrid prediction."""
-    try:
-        import shap
-    except ImportError as exc:
-        raise AppError("shap_unavailable", "Install requirements-explainability.txt before requesting hybrid SHAP influence.", 503) from exc
-    categories, numeric_fill = {}, {}
-    for feature in features:
-        if feature in numeric:
-            numeric_fill[feature] = float(pd.to_numeric(background[feature], errors="coerce").median())
-        else:
-            observed = sorted(background[feature].dropna().astype(str).unique().tolist())
-            if not observed:
-                raise AppError("shap_category_support", "A categorical feature has no observed training values for SHAP reconstruction.")
-            categories[feature] = observed
-    def encode(frame):
-        encoded = np.zeros((len(frame), len(features)), dtype=float)
-        for index, feature in enumerate(features):
-            if feature in numeric:
-                encoded[:, index] = pd.to_numeric(frame[feature], errors="coerce").fillna(numeric_fill[feature]).to_numpy(float)
-            else:
-                mapping = {value: position for position, value in enumerate(categories[feature])}
-                encoded[:, index] = frame[feature].map(lambda value: mapping.get(str(value), 0) if pd.notna(value) else 0).to_numpy(float)
-        return encoded
-    def decode(values):
-        values = np.asarray(values, dtype=float); rebuilt = {}
-        for index, feature in enumerate(features):
-            if feature in numeric:
-                rebuilt[feature] = values[:, index]
-            else:
-                choices = categories[feature]
-                positions = np.clip(np.rint(values[:, index]).astype(int), 0, len(choices) - 1)
-                rebuilt[feature] = [choices[position] for position in positions]
-        return pd.DataFrame(rebuilt, columns=features)
-    def model_output(values):
-        _, scores, _ = score_outputs(estimator, decode(values), threshold)
-        return scores
-    reference = encode(background.iloc[:min(20, len(background))])
-    explainer = shap.Explainer(model_output, reference, algorithm="permutation", feature_names=features, seed=seed)
-    values = np.asarray(explainer(encode(X), max_evals=2 * len(features) + 1).values, dtype=float)[0]
-    return sorted(
-        ({"feature": feature, "magnitude": float(abs(value)), "signed_mean": float(value), "perturbation": "SHAP contribution to the final hybrid positive-class output."} for feature, value in zip(features, values)),
-        key=lambda item: item["magnitude"], reverse=True,
-    )
-
 def predict(identity: str, request: PredictionRequest):
     record, bundle = get_bundle(identity)
     frame = prediction_frame(request.samples, bundle["features"], bundle["numeric"])
@@ -141,15 +97,24 @@ def predict(identity: str, request: PredictionRequest):
         p = float(probabilities[index]) if probabilities is not None else None
         category = None if p is None else "LOW" if p < low else "MEDIUM" if p < high else "HIGH"
         results.append({"sample": f"Sample #{index + 1}", "predicted_class": bundle["positive_label"] if label else bundle["negative_label"], "probability_positive": p, "decision_score": float(scores[index]) if probabilities is None else None, "research_risk_category": category})
-    influence = None
+    influence, explanation = None, None
     if request.include_influence:
         background, _ = background_for(bundle)
-        try:
-            influence = hybrid_shap_influence(bundle["estimator"], frame, background, bundle["features"], bundle["numeric"], threshold, bundle["config"]["seed"]) if record.model_type == "hybrid_pennylane_torch" else feature_perturbation(bundle["estimator"], frame, background, bundle["numeric"], threshold, max_features=min(60, len(bundle["features"])))
-        except ValueError as exc:
-            raise AppError("perturbation_domain", "A perturbation is outside the feature engineering domain. Disable local influence for this sample.") from exc
+        if record.model_type == "hybrid_pennylane_torch":
+            shap_result = HybridShapAdapter(bundle["estimator"], background, bundle["features"], bundle["numeric"], threshold, bundle["config"]["seed"]).explain(frame, repeats=1)
+            explanation = local_contract(
+                shap_result, threshold=threshold, threshold_source=threshold_source,
+                predicted_class=results[0]["predicted_class"], positive_label=bundle["positive_label"], negative_label=bundle["negative_label"],
+                risk_category=results[0]["research_risk_category"],
+            )
+            influence = explanation["contributions"]
+        else:
+            try:
+                influence = feature_perturbation(bundle["estimator"], frame, background, bundle["numeric"], threshold, max_features=min(60, len(bundle["features"])))
+            except ValueError as exc:
+                raise AppError("perturbation_domain", "A perturbation is outside the feature engineering domain. Disable local influence for this sample.") from exc
     return {"model_id": identity, "model_type": record.model_type, "positive_label": bundle["positive_label"], "negative_label": bundle["negative_label"],
         "probability_status": record.details["probability_status"] if probabilities is not None else "Decision score only; no model probability or risk category is available.",
         "decision_rule": f"Positive model probability >= {threshold}" if probabilities is not None else f"Decision score >= {threshold}",
-        "threshold_source": threshold_source, "risk_thresholds": request.risk_thresholds,
-        "predictions": results, "influence": influence, "limitations": ["Research predictions are not diagnoses or medical advice.", "Risk thresholds are demonstration/research thresholds, not clinically validated cutoffs.", "Feature contribution reflects model behavior, not biological causation, clinical diagnosis, or a complete explanation of quantum internals.", "Inputs and predictions are not persisted by this endpoint."], "disclaimer": DISCLAIMER}
+        "operating_threshold": threshold, "threshold_source": threshold_source, "risk_thresholds": request.risk_thresholds,
+        "predictions": results, "influence": influence, "explanation": explanation, "limitations": ["Research predictions are not diagnoses or medical advice.", "Risk thresholds are demonstration/research thresholds, not clinically validated cutoffs.", "Feature contribution reflects model behavior, not biological causation, clinical diagnosis, or a complete explanation of quantum internals.", "Inputs and predictions are not persisted by this endpoint."], "disclaimer": DISCLAIMER}

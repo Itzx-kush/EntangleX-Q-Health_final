@@ -278,6 +278,40 @@ class PredictionItem(Schema):
     decision_score: float | None
     research_risk_category: str | None
 
+class HybridShapContributionOut(Schema):
+    feature: str
+    original_value: str | float | int | bool | None
+    contribution: float
+    signed_mean: float
+    magnitude: float
+    absolute_contribution: float
+    direction: Literal["toward_positive", "toward_negative", "neutral"]
+    interpretation: str
+
+class HybridPredictionContextOut(Schema):
+    probability_positive: float
+    operating_threshold: float
+    threshold_source: str
+    predicted_class: str
+    positive_label: str
+    negative_label: str
+    research_risk_category: str | None
+    base_value: float
+
+class HybridLocalExplanationOut(Schema):
+    method: Literal["shap"]
+    method_display: Literal["SHAP — Final Hybrid Output"]
+    scope: Literal["local_case"]
+    model_type: Literal["hybrid_pennylane_torch"]
+    model_display_name: Literal["PennyLane + PyTorch Hybrid"]
+    output_semantics: Literal["final positive-class probability"]
+    prediction_context: HybridPredictionContextOut
+    contributions: list[HybridShapContributionOut]
+    background_source: Literal["training partition only"]
+    background_sample_count: int
+    explained_case_count: Literal[1]
+    limitations: list[str]
+
 class PredictionOut(Schema):
     model_id: str
     model_type: str
@@ -285,10 +319,12 @@ class PredictionOut(Schema):
     negative_label: str
     probability_status: str
     decision_rule: str
+    operating_threshold: float
     threshold_source: str = "legacy_fixed_configuration"
     risk_thresholds: tuple[float, float]
     predictions: list[PredictionItem]
     influence: list[dict[str, Any]] | None
+    explanation: HybridLocalExplanationOut | None = None
     limitations: list[str]
     disclaimer: str
 

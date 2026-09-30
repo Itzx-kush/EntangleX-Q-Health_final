@@ -29,3 +29,14 @@ Perturbations may be off the data manifold. Importance is not stable clinical ev
 For `hybrid_pennylane_torch`, SHAP evaluates the complete frozen function: original features → fitted preprocessing/PCA → PennyLane circuit → PyTorch head → positive-class probability. Numeric fills and categorical vocabularies come only from the training partition. Categorical values are deterministically encoded for the SHAP perturbation interface and mapped back to observed categories before model evaluation. Contributions remain at original feature level; quantum gates and latent expectation values are never presented as medical features.
 
 Categorical encoding has no biological meaning. SHAP is model influence, not a causal explanation, diagnosis, or clinical recommendation. Existing numeric-model SHAP, permutation importance, and Qiskit perturbation modes are preserved.
+
+## Judge-aligned local and global hybrid SHAP (2026-09-30)
+
+Hybrid SHAP explains the complete frozen function from original raw features through fitted preprocessing, the PennyLane circuit, and the PyTorch head to the **final positive-class probability**. It does not explain a raw logit and does not claim causal access to quantum internals.
+
+- **Local case explanation:** tied to the exact prediction request; includes original values, signed contribution, positive/negative direction, probability, persisted OOF threshold, class, background count, and limitations.
+- **Global explanation:** reports mean absolute SHAP contribution across a bounded held-out subset and labels the explained-case count. It is not “medical importance.”
+- **Mixed inputs:** category vocabularies and numeric fills come only from training rows. Unseen categories are rejected for SHAP instead of silently remapped. Encoded perturbations are decoded to valid observed categories before the complete model is evaluated.
+- **Bounds:** at most 20 deterministic training-background rows and 32 explained rows; no training, threshold selection, artifact mutation, or arbitrary file access occurs during explanation.
+
+Existing classical permutation/numeric-SHAP behavior and Qiskit perturbation explanations remain distinct. All explanations are model interpretation, not medical causation or clinical validation.
