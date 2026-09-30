@@ -62,6 +62,7 @@ class TrainingManager:
                     "split": data.split_metadata(), "software": software_versions(),
                     "comparison_fingerprint": fingerprint({"dataset": data.dataset.sha256, "split": data.split_hash,
                         "features": data.features, "pipeline": config.pipeline.model_dump(), "threshold": config.probability_threshold,
+                        "threshold_strategy": config.threshold_strategy, "target_sensitivity": config.target_sensitivity,
                         "calibration": config.calibration, "class_weight": config.parameters.class_weight}),
                     "limitations": data.quality["warnings"]})
                 session.add(experiment)

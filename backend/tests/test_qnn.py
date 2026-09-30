@@ -195,6 +195,8 @@ def test_qnn_shared_pipeline_training(config):
 def test_qnn_training_job_registry_prediction_report_and_comparison(client, config, registered):
     values = qnn_training_values(config)
     values["models"] = ["logistic_regression", "qnn"]
+    values["threshold_strategy"] = "target_sensitivity"
+    values["target_sensitivity"] = 0.8
     created = client.post("/api/training/jobs", json=values)
     assert created.status_code == 202, created.text
     job_id = created.json()["job"]["id"]
@@ -211,15 +213,21 @@ def test_qnn_training_job_registry_prediction_report_and_comparison(client, conf
     qnn_model = next(item for item in detail.json()["models"] if item["model_type"] == "qnn")
     assert qnn_model["status"] == "ready"
     assert qnn_model["details"]["quantum"]["model_type"] == "qnn"
+    assert qnn_model["metrics"]["operating_point"]["threshold_source"] == "out_of_fold_validation"
+    assert qnn_model["metrics"]["operating_point"]["threshold_feasible"] is True
     circuit = client.get(f"/api/models/{qnn_model['id']}/circuit")
     assert circuit.status_code == 200
     assert circuit.json()["model_type"] == "qnn"
     comparison = client.get(f"/api/experiments/{experiment_id}/comparison")
     assert comparison.status_code == 200
-    assert any(pair["quantum_type"] == "qnn" for pair in comparison.json()["pairs"])
+    pair = next(pair for pair in comparison.json()["pairs"] if pair["quantum_type"] == "qnn")
+    assert pair["performance"]["sensitivity"]["quantum"] == qnn_model["metrics"]["test"]["sensitivity"]
+    assert pair["quantum_resources"]["real_hardware"] is False
+    assert pair["fairness"]["threshold_strategy"] == "target_sensitivity"
     report = client.get(f"/api/experiments/{experiment_id}/report?format=json")
     assert report.status_code == 200
     assert '"qnn"' in report.text
+    assert '"out_of_fold_validation"' in report.text
     from app.data.service import load_frame
 
     _, frame = load_frame(registered.id)
@@ -229,3 +237,4 @@ def test_qnn_training_job_registry_prediction_report_and_comparison(client, conf
     output = prediction.json()["predictions"][0]
     assert output["probability_positive"] is not None
     assert output["decision_score"] is None
+    assert prediction.json()["threshold_source"] == "out_of_fold_validation"

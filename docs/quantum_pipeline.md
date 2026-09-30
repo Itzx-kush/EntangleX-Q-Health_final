@@ -35,3 +35,18 @@ No fallback fabricates a quantum prediction. Missing packages, invalid shapes or
 ## Scientific claims
 
 Quantum simulation runs on classical hardware. Real hardware execution is not implemented. Comparing prediction quality and measured local computation is legitimate, but this MVP does not establish asymptotic speedup, general quantum advantage, clinical validity or statistically significant superiority. A classical win, a sensitivity-specificity tradeoff, higher quantum cost or no measurable benefit are all valid reported outcomes.
+
+## Quantum/classical evidence records
+
+For each completed quantum/classical pair in one experiment, comparison now
+returns a structured evidence object while preserving the original delta
+fields. It contains actual held-out performance values and signed deltas,
+measured final-training/CV/inference timings, recorded quantum backend and
+logical circuit resources, shared dataset/split/preprocessing context, each
+model's research operating point, and a neutral descriptive conclusion.
+
+Logical depth, gates, qubits, shots, and parameter counts are reported as
+logical resources and simulator settings, not converted into hardware runtime
+or financial cost. Missing legacy metadata remains absent. Unfavorable quantum
+results remain visible. The evidence engine never emits a general quantum
+advantage or clinical-validation conclusion.

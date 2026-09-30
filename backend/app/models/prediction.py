@@ -6,6 +6,7 @@ from ..data.service import load_frame
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
 from ..evaluation.metrics import score_outputs
+from ..evaluation.thresholds import predictions_at_threshold
 from ..storage.entities import ModelRecord
 from ..storage.files import load_model
 from ..storage.repository import require
@@ -78,9 +79,13 @@ def feature_perturbation(estimator, X: pd.DataFrame, background: pd.DataFrame, n
 def predict(identity: str, request: PredictionRequest):
     record, bundle = get_bundle(identity)
     frame = prediction_frame(request.samples, bundle["features"], bundle["numeric"])
-    threshold = bundle["config"]["probability_threshold"]
+    supports_probability = bool(record.details.get("supports_probability", hasattr(bundle["estimator"], "predict_proba")))
+    legacy_threshold = bundle["config"]["probability_threshold"] if supports_probability else 0.0
+    threshold = float(bundle.get("operating_threshold", legacy_threshold))
+    threshold_source = bundle.get("threshold_source", "legacy_fixed_configuration")
     try:
-        predicted, scores, probabilities = score_outputs(bundle["estimator"], frame, threshold)
+        _, scores, probabilities = score_outputs(bundle["estimator"], frame, threshold)
+        predicted = predictions_at_threshold(scores, threshold)
     except ValueError as exc:
         raise AppError("prediction_domain", "Input values are outside the configured model transformation domain.") from exc
     low, high = request.risk_thresholds
@@ -98,5 +103,6 @@ def predict(identity: str, request: PredictionRequest):
             raise AppError("perturbation_domain", "A perturbation is outside the feature engineering domain. Disable local influence for this sample.") from exc
     return {"model_id": identity, "model_type": record.model_type, "positive_label": bundle["positive_label"], "negative_label": bundle["negative_label"],
         "probability_status": record.details["probability_status"] if probabilities is not None else "Decision score only; no model probability or risk category is available.",
-        "decision_rule": f"Positive model probability >= {threshold}" if probabilities is not None else "Decision score >= 0", "risk_thresholds": request.risk_thresholds,
+        "decision_rule": f"Positive model probability >= {threshold}" if probabilities is not None else f"Decision score >= {threshold}",
+        "threshold_source": threshold_source, "risk_thresholds": request.risk_thresholds,
         "predictions": results, "influence": influence, "limitations": ["Research predictions are not diagnoses or medical advice.", "Risk thresholds are demonstration/research thresholds, not clinically validated cutoffs.", "Feature influence is model sensitivity, not medical causation or complete quantum-circuit interpretation.", "Inputs and predictions are not persisted by this endpoint."], "disclaimer": DISCLAIMER}
