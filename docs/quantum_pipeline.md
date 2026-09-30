@@ -50,3 +50,38 @@ logical resources and simulator settings, not converted into hardware runtime
 or financial cost. Missing legacy metadata remains absent. Unfavorable quantum
 results remain visible. The evidence engine never emits a general quantum
 advantage or clinical-validation conclusion.
+
+## Adaptive resource and experiment-budget advisor
+
+`POST /api/quantum/resource-advisor` performs a cheap, deterministic planning
+check; it never builds or executes a quantum circuit. Policy
+`bounded-simulator-resource-policy-v1` reads the authoritative Pydantic schema
+bounds and runtime quantum sample cap, then applies one documented, stricter
+single-workstation policy: at most 6 qubits, 2 feature-map repetitions, 2
+ansatz repetitions, 100 requested optimizer iterations, 4096 Aer shots, and
+the configured `quantum_max_samples` value. A dimension at or above 75% of a
+policy limit is labelled near budget. These are engineering guardrails inside
+the wider valid request schema, not hardware or model-quality limits.
+
+The resource profile keeps circuit width/repetitions, optimizer iterations,
+Aer shots, sample count, backend, entanglement, and noise mode separate.
+Statevector execution reports shots as not applicable. Logical depth, gate
+count, and parameter count remain null until an actual generated or fitted
+circuit supplies them; they are never guessed.
+
+For near/over-budget numeric dimensions, recommendations reduce pressure in
+the fixed order shots, optimizer iterations, ansatz repetitions, feature-map
+repetitions, qubits, and sample count. Targets come from the validated default
+configuration and the configured sample cap. Every output includes the
+original request, changed fields and reasons, before/after profiles, and policy
+version. The backend validates the proposed quantum/PCA/sample combination
+through `TrainingConfig`. Nothing changes until the user explicitly selects
+**Apply recommended configuration**; applying only updates the existing draft
+and does not launch training.
+
+Observed history uses only ready records with the same model type, backend, and
+qubit count, bounded to 20 matches ranked by matching request context and
+configuration factors. Median/range values come only from recorded `final_training_seconds`; per-run CV, inference, objective,
+circuit, and sample context remain visible. No wall-clock value is extrapolated
+for a new request. Local simulator resource dimensions are not QPU performance,
+and hardware execution remains unavailable in the verified configuration.

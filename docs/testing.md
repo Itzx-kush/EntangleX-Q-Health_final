@@ -62,6 +62,22 @@ Frontend interaction tests cover scenario/model selection, request execution,
 baseline/perturbed/delta rendering, paired neutral language, and explicit
 not-applicable display.
 
+## Quantum resource-advisor coverage
+
+`test_resource_advisor.py` covers within-, near-, and over-budget states;
+deterministic profiles and recommendations; canonical schema/policy bounds;
+unchanged input objects; recommendation order; validation through
+`TrainingConfig`; PCA/qubit compatibility; statevector shot semantics; explicit
+simulator/hardware separation; malformed API inputs; policy versioning; real
+recorded history aggregation; and the no-history/null-timing state. Tests also
+assert that no fabricated `estimated_runtime` field exists.
+
+Frontend coverage renders resource and budget states, changed parameters,
+actual historical timing, no-history messaging, and the hardware limitation.
+It verifies that the draft remains unchanged after analysis and changes only
+after the explicit Apply action, including synchronized qubit/PCA dimensions
+and bounded sample count.
+
 ## Separate verification levels
 
 `python scripts/check_source.py` parses Python/JSON and checks required files without importing the application. That is a static inspection, not tests. Frontend source parsing is also not a dependency-resolved type check or browser render. Passing local unit tests does not independently establish Docker compatibility, clinical validity or model generalization. The post-generation Task 1 records separately document the native backend/frontend runtime checks and the Docker limitation.

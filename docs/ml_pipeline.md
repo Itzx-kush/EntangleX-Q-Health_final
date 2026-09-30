@@ -83,3 +83,14 @@ when the baseline is zero. These synthetic perturbations are off-manifold
 stress tests, not external validation, hospital/population shift evidence,
 patient-safety evidence, clinical robustness, model ranking, or quantum
 advantage.
+
+## Resource advice does not alter model selection
+
+The quantum resource advisor is a pre-execution engineering aid. It does not
+inspect labels, CV outputs, holdout metrics, operating-point curves, robustness
+results, or prediction quality when assigning resource labels. Consequently it
+cannot select a model, threshold, clinical operating point, or quantum
+advantage. Applying a recommendation updates only the existing quantum
+configuration, matching PCA dimension, and common sample budget after an
+explicit user action; normal `TrainingConfig` validation and the complete
+training pipeline still apply.

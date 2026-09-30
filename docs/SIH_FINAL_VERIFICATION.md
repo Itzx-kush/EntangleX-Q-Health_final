@@ -341,3 +341,44 @@ validation, hospital/population shift evidence, clinical robustness, patient
 safety evidence, model ranking, or general quantum advantage. Docker, Render,
 visible-browser responsive QA, and real quantum hardware were not exercised in
 this pass.
+
+## Adaptive quantum resource advisor — 2026-09-30
+
+This entry records the resource-advisor implementation and executed
+verification without replacing earlier evidence.
+
+### Implemented
+
+- Added canonical policy `bounded-simulator-resource-policy-v1`, with validated
+  schema bounds, explicit single-workstation thresholds, near-budget semantics,
+  and a deterministic reduction order.
+- Added interpretable circuit, optimization, measurement, sample, backend, and
+  noise dimensions without a black-box score or fabricated runtime estimate.
+- Added valid smaller configuration recommendations checked through
+  `TrainingConfig`, including qubit/PCA compatibility. Recommendations require
+  an explicit Apply action and never start training.
+- Added historical evidence from recorded ready-model timing/resource fields
+  using exact model/backend/qubit matching. Missing history returns null timing
+  rather than an estimate.
+- Added policy/advisor APIs and integrated the workflow into Quantum Lab with
+  observed-history and real-hardware limitation messaging.
+
+### Executed verification
+
+- Advisor-specific backend suite: **7 passed**, one existing TestClient
+  deprecation warning.
+- Targeted advisor, threshold/evidence, and robustness regression:
+  **18 passed**, one existing warning.
+- Full non-quantum backend regression: **131 passed, 35 deselected**, two
+  existing warnings.
+- Optional simulator-backed quantum regression: **35 passed, 131 deselected**,
+  15 bounded optimizer/deprecation warnings.
+- Frontend Vitest suite: **4 files, 36 tests passed**. Existing jsdom
+  ResponsiveContainer size warnings remained non-failing.
+- Frontend TypeScript check and Vite production build: **PASS**, 2,281 modules
+  transformed.
+- Static Python/JSON source validation and diff whitespace check: **PASS**.
+
+The advisor does not execute circuits, predict model quality, estimate
+wall-clock time for unseen requests, or infer QPU performance. Docker, Render,
+visible-browser responsive QA, and real quantum hardware were not exercised.

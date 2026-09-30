@@ -356,3 +356,16 @@ class CircuitOut(Schema):
     text: str
     gates: list[dict[str, Any]]
     limitation: str
+
+class ResourceAdvisorRequest(Schema):
+    model_type: Literal["vqc", "qsvc", "qnn"]
+    quantum: QuantumConfig = Field(default_factory=QuantumConfig)
+    feature_dimension: int = Field(ge=2, le=100)
+    sample_count: int = Field(ge=30, le=100000)
+    dataset_id: UUID | None = None
+    experiment_id: UUID | None = None
+    @model_validator(mode="after")
+    def quantum_representation(self):
+        if self.feature_dimension != self.quantum.qubits:
+            raise ValueError("Quantum feature dimension must equal the configured qubit count.")
+        return self
