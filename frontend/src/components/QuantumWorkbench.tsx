@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Link} from 'react-router-dom';
 import {useMutation,useQuery} from '@tanstack/react-query';
 import {
-  Activity,ArrowUpRight,Atom,CheckCircle2,ChevronRight,Clock3,
+  Activity,ArrowUpRight,Atom,ChevronRight,Clock3,
   Cpu,ExternalLink,Eye,FlaskConical,Gauge,Layers3,Play,RefreshCw,
   ServerCog,SlidersHorizontal,TerminalSquare
 } from 'lucide-react';
@@ -193,8 +193,8 @@ export function QuantumWorkbench(){
           {advice&&<div className="qb-advisor-result">
             <StatusStrip items={[
               {label:'Complexity',value:String(advice.resource_profile?.circuit_complexity||'—'),status:'neutral'},
-              {label:'Simulation fit',value:String(advice.resource_profile?.simulation_feasibility||'—'),status:advice.resource_profile?.simulation_feasibility==='FEASIBLE'?'good':'warning'},
-              {label:'Budget',value:String(advice.budget_policy?.status||advice.budget_policy?.semantics||'—'),status:'neutral'}
+              {label:'Simulation fit',value:String(advice.resource_profile?.execution_kind||'—'),status:advice.resource_profile?.hardware_execution?'neutral':'good'},
+              {label:'Budget',value:String(advice.budget_status?.status||advice.budget_policy?.semantics||'—'),status:'neutral'}
             ]}/>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <Notice tone="blue"><strong>Recommendation:</strong> {advice.recommendation?.reason||'No recommendation reason returned.'}</Notice>
