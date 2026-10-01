@@ -2,6 +2,10 @@ import type {CSSProperties,ReactNode} from 'react';
 import {useId,useMemo,useState} from 'react';
 import {Area,AreaChart,Bar,BarChart,Cell,CartesianGrid,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 
+export function TremorBadge({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'green'|'amber'|'red'|'purple'}){
+  return <span className={'tremor-badge tone-'+tone}>{children}</span>;
+}
+
 export function TremorCard({children,className='',title,description,action}:{children:ReactNode;className?:string;title?:ReactNode;description?:ReactNode;action?:ReactNode}){
   return <section className={'tremor-card glass-card '+className}>
     {(title||description||action)&&<header className="tremor-card-head">
