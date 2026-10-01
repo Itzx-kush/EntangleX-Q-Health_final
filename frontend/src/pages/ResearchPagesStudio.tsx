@@ -10,6 +10,7 @@ import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
 import type {Experiment} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
+import {WorkbenchRail} from '../components/TremorWorkbench';
 
 export function Experiments(){
   const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
@@ -29,12 +30,7 @@ export function Experiments(){
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
     <StageNav current="/experiments"/>
     <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message}/>
-    <div className="stat-grid my-5">
-      <MetricCard label="RECORDED" value={list.data?.length??'—'} detail="Backend experiment records"/>
-      <MetricCard label="VISIBLE" value={rows.length} detail="Current registry filter"/>
-      <MetricCard label="ACTIVE FILTER" value={status==='all'?'All states':status.replaceAll('_',' ')} detail="Status"/>
-      <MetricCard label="REPRODUCIBILITY" value="Tracked" detail="Seed + configuration retained"/>
-    </div>
+    <WorkbenchRail items={[{label:'Recorded',value:list.data?.length??'—',detail:'Backend experiment records',tone:'blue'},{label:'Visible',value:rows.length,detail:'Current registry filter',tone:'purple'},{label:'Active filter',value:status==='all'?'All states':status.replaceAll('_',' '),detail:'Status scope',tone:'amber'},{label:'Reproducibility',value:'Tracked',detail:'Seed + configuration retained',tone:'green'}]}/>
     <Card title="Experiment registry" description="The main research landscape: searchable, filterable and drillable like a biomedical evidence dashboard.">
       <div className="controls mb-4">
         <label className="field min-w-[240px] flex-1"><span>Search</span><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Experiment, dataset, model…"/></label>
@@ -57,6 +53,7 @@ export function ExperimentDetail(){
   return <div>
     <PageHeader eyebrow="Research Studio · Evidence" title={'Experiment '+shortId(id)} description="Inspect provenance, job state, measured model records and the exact configuration behind one Q‑Health research experiment." actions={<Link className="btn btn-outline" to="/experiments"><ArrowLeft size={13}/>All experiments</Link>}/>
     <StageNav current="/experiments"/>
+    <WorkbenchRail items={[{label:'Status',value:detail.experiment.status.replaceAll('_',' '),detail:'Backend experiment state',tone:detail.experiment.status==='completed'?'green':'amber'},{label:'Models',value:detail.models.length,detail:'Persisted model records',tone:'purple'},{label:'Ready models',value:detail.models.filter(model=>model.status==='ready').length,detail:'Measured evidence available',tone:'green'},{label:'Jobs',value:detail.jobs.length,detail:'Execution records',tone:'blue'}]}/>
     <ErrorBanner error={(action.error as Error)?.message}/>
     <Card className="mt-5" title="Experiment context" description="A drill-down evidence surface modeled on TICTAC-style research detail views.">
       <div className="flex flex-wrap items-center gap-2"><StatusBadge value={detail.experiment.status}/><Badge tone={detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'blue':'green'}>{detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'PRECOMPUTED VERIFIED DEMO EXPERIMENT':'LIVE RESEARCH EXPERIMENT'}</Badge><span className="text-xs muted">{dateTime(detail.experiment.created_at)}</span><span className="mono text-xs muted">Dataset {shortId(detail.experiment.dataset_id)}</span></div>
