@@ -3,6 +3,7 @@ import {Navigate,Route,Routes} from 'react-router-dom';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
+import {QuantumWorkbench} from './components/QuantumWorkbench';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -32,7 +33,7 @@ export default function App(){
       <Route path="/training" element={<Training/>}/>
       <Route path="/comparison" element={<Comparison/>}/>
       <Route path="/robustness" element={<Robustness/>}/>
-      <Route path="/quantum" element={<Quantum/>}/>
+      <Route path="/quantum" element={<QuantumWorkbench/>}/>
       <Route path="/explainability" element={<Explainability/>}/>
       <Route path="/prediction" element={<PredictionPage/>}/>
       <Route path="/experiments" element={<Experiments/>}/>
