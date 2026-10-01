@@ -12,6 +12,7 @@ import './styles/reference-theme.css';
 import './styles/logo-system.css';
 import './sidebar-layout-fix.css';
 import './responsive-adaptation.css';
+import './styles/tremor.css';
 
 const queryClient=new QueryClient({defaultOptions:{queries:{staleTime:3000,retry:1}}});
 

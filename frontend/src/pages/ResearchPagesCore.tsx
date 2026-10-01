@@ -12,36 +12,86 @@ import {useDraft} from '../hooks/useDraft';
 import {shortId,dateTime} from '../utils/format';
 import type {Dataset,DatasetInspection,Preview} from '../types/qhealth';
 import {AnimatedSection,BlurText,BorderGlow,ClickSpark,GlareHover,GradientText,Magnet,QuantumVisual,Reveal,ShinyText,SpotlightPanel} from '../components/reactbits';
+import {TremorBarChart,TremorDonut,TremorMetric,TremorProgressBar,TremorTracker} from '../components/TremorUI';
 
 export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Robustness','/robustness'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
 export function StageNav({current}:{current:string}){return <AnimatedSection className="flex flex-wrap gap-2 border-y py-3"><span className="stage-chip border-primary/20 text-primary"><ShinyText>RESEARCH PATHWAY</ShinyText></span>{stages.map((s,i)=><Link key={s[1]} to={s[1]} className={'stage-chip ' + (current===s[1]?'bg-primary/10 text-primary border-primary/20':'border-border text-muted-foreground')} style={{animationDelay:`${i*35}ms`}}>{s[0]} <ArrowRight size={10}/></Link>)}</AnimatedSection>}
 
 export function Overview(){
- const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:7000}); const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
- return <div>
-  <section className="grid items-center gap-8 pb-10 pt-6 lg:grid-cols-[1.08fr_.92fr]">
-   <AnimatedSection className="page-hero pb-0"><div className="eyebrow"><ShinyText>Biomedical ML · Quantum research · Evidence workspace</ShinyText></div><h1 className="headline"><BlurText>Illuminate model behavior through </BlurText><GradientText>controlled biomedical research.</GradientText></h1><p className="subhead">Q‑Health connects dataset evidence, reproducible preprocessing, classical and quantum learning, held-out comparison, explainability and research prediction in one traceable workflow.</p><div className="mt-7 max-w-2xl"><SearchBar/></div><div className="mt-6 flex flex-wrap gap-2"><Magnet><ClickSpark><Link className="btn btn-primary" to="/datasets">Enter Data Lab <ArrowRight size={14}/></Link></ClickSpark></Magnet><Magnet><Link className="btn btn-outline" to="/experiments">Explore experiments</Link></Magnet></div></AnimatedSection>
-   <BorderGlow className="hero-visual"><div className="hero-visual-grid"/><MolecularBackground/><div className="hero-visual-content"><div className="text-center"><div className="stage-chip mx-auto mb-6"><ShinyText>RESEARCH PATHWAY</ShinyText></div><QuantumVisual/><div className="hero-orbit"><div className="hero-core grid place-items-center"><Atom size={30}/></div></div><div className="mt-5 grid grid-cols-2 gap-2 text-[10px] font-semibold"><span className="stage-chip">DATA</span><span className="stage-chip">CLASSICAL</span><span className="stage-chip">QUANTUM</span><span className="stage-chip">EVALUATION</span></div></div></div></BorderGlow>
+ const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:7000});
+ const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
+ const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,refetchInterval:15000});
+ const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary,refetchInterval:30000});
+ const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:12000});
+ const system=useQuery({queryKey:['system-status'],queryFn:qh.systemStatus,refetchInterval:15000});
+ const datasetScale=(library.data??[]).slice(0,7).map(item=>({name:item.name.length>18?item.name.slice(0,17)+'…':item.name,samples:item.row_count,features:item.feature_count}));
+ const registered=datasets.data??[];
+ const statusCounts=Object.entries((experiments.data??[]).reduce<Record<string,number>>((acc,e)=>{acc[e.status]=(acc[e.status]??0)+1;return acc},{})).map(([name,value])=>({name:name.replaceAll('_',' '),value}));
+ const healthBlocks=registered.slice(0,12).map(d=>({label:d.name,status:d.quality.blockers.length?'error':d.quality.warnings.length?'warning':'good',tooltip:d.name+' · '+(d.quality.blockers.length?'blocked':d.quality.warnings.length?'warning':'clear')} as const));
+ const capabilityCount=system.data?.model_capabilities?.length??0;
+ const implementedCount=system.data?.model_capabilities?.filter(m=>m.implementation_status==='AVAILABLE').length??0;
+ const executableCount=system.data?.model_capabilities?.filter(m=>m.executable).length??0;
+ const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.implementation_status==='AVAILABLE'?(m.executable?100:75):0}))??[];
+ const focus=registered[0];
+ const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
+ return <div className="tremor-dashboard">
+  <section className="tremor-dashboard-top">
+   <div><div className="eyebrow">ENTANGLEX Q-HEALTH · RESEARCH CONTROL CENTER</div><h1 className="tremor-dashboard-title">Biomedical AI &amp; quantum research workspace</h1><p className="tremor-dashboard-subtitle">A production-style analytics surface for datasets, model runs, controlled comparisons, robustness evidence and explainability. Every metric below is sourced from the existing Q‑Health APIs.</p></div>
+   <div className="tremor-dashboard-actions"><Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link><Link className="btn btn-outline" to="/experiments">Experiment registry</Link></div>
   </section>
+
+  <div className="tremor-grid-4">
+   <TremorMetric label="DATASETS" value={summary.data?.counts.datasets??'—'} detail="Registered biomedical inputs" icon={<Database size={15}/>}/>
+   <TremorMetric label="EXPERIMENTS" value={summary.data?.counts.experiments??'—'} detail="Recorded research runs" icon={<FlaskConical size={15}/>}/>
+   <TremorMetric label="READY MODELS" value={summary.data?.counts.ready_models??'—'} detail="Backend-reported ready artifacts" icon={<Brain size={15}/>}/>
+   <TremorMetric label="ACTIVE JOBS" value={summary.data?.counts.active_jobs??'—'} detail="Queued or running work" icon={<RefreshCw size={15}/>}/>
+  </div>
+
+  <div className="tremor-grid-main">
+   <Card title="Dataset scale" description="Registered built-in datasets and their available sample counts.">
+    {datasetScale.length?<TremorBarChart data={datasetScale} category="name" value="samples" height={270} showGrid/>:<EmptyState title="No datasets in the library">The backend has not returned dataset library records yet.</EmptyState>}
+   </Card>
+   <Card title="Experiment status" description="Current experiment registry state from the live API.">
+    {statusCounts.length?<TremorDonut data={statusCounts} nameKey="name" valueKey="value" centerLabel={statusCounts.reduce((s,x)=>s+x.value,0)} height={190}/>:<EmptyState title="No experiments yet">Create a run from Model Lab to populate this distribution.</EmptyState>}
+   </Card>
+  </div>
+
+  <div className="tremor-grid-wide">
+   <Card title="Dataset readiness tracker" description={healthBlocks.length?'Each block represents one registered dataset; hover for its live quality status.':'Register datasets to activate the tracker.'}>
+    {healthBlocks.length?<TremorTracker items={healthBlocks}/>:<TremorTracker items={Array.from({length:10},(_,i)=>({label:String(i+1),status:'neutral' as const}))}/>}
+    <div className="mt-3 flex flex-wrap gap-3 text-[10px] muted"><span><i className="inline-block size-2 rounded-full bg-emerald-500 mr-1"/>Clear</span><span><i className="inline-block size-2 rounded-full bg-amber-500 mr-1"/>Warnings</span><span><i className="inline-block size-2 rounded-full bg-red-500 mr-1"/>Blockers</span><span className="ml-auto">{registered.length} registered</span></div>
+   </Card>
+   <Card title="Model capability surface" description="Backend-reported implementation and execution states.">
+    <div className="space-y-3">
+     {modelReadiness.length?modelReadiness.map(item=><TremorProgressBar key={item.label} value={item.value} label={item.label} detail={item.detail}/>):<TremorProgressBar value={0} label="Waiting for capability metadata" detail="System status endpoint not yet available"/>}
+     <div className="grid grid-cols-3 gap-2 pt-2"><TremorMetric label="CAPABILITIES" value={capabilityCount}/><TremorMetric label="AVAILABLE" value={implementedCount}/><TremorMetric label="EXECUTABLE" value={executableCount}/></div>
+    </div>
+   </Card>
+  </div>
+
+  <div className="tremor-grid-main">
+   <Card title="Current dataset class balance" description={focus?focus.name:'Select a dataset in Data Lab'}>
+    {focusClass.length?<div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]"><ValueBars items={focusClass}/><div className="space-y-3">{[['Samples',focus.provenance.row_count.toLocaleString()],['Features',String(focus.provenance.feature_count)],['Target',focus.provenance.target],['Positive',focus.provenance.positive_label]].map(([k,v])=><div className="tremor-list-row" key={k}><span className="tremor-metric-label">{k}</span><strong className="ml-auto text-xs break-all text-right">{v}</strong></div>)}</div></div>:<EmptyState title="No registered dataset">Use Data Lab to register the early-stage diabetes dataset or another biomedical benchmark.</EmptyState>}
+   </Card>
+   <Card title="Runtime monitor" description="Live backend state; no capability is inferred by the UI.">
+    <div className="space-y-4"><div className="flex items-center justify-between"><span className="tremor-metric-label">BACKEND</span><Badge tone={health.isError?'red':'green'}>{health.isError?'Offline':health.data?'Connected':'Checking'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">QUANTUM</span><Badge tone={health.data?.quantum.available?'purple':'amber'}>{health.data?.quantum.available?'Available':'Not reported'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">RUNTIME VERIFIED</span><strong className="text-xs">{health.data?.quantum.runtime_verified?'Yes':'No'}</strong></div><div className="rounded-lg border p-3 text-[11px] muted">{health.data?.quantum.execution||'Quantum execution state will appear when reported by the backend.'}</div></div>
+   </Card>
+  </div>
+
+  <div className="tremor-grid-main">
+   <Card title="Recent experiments" description="Live registry entries returned by the existing experiment API.">
+    {summary.isLoading?<Loading/>:summary.data?.recent_experiments?.length?<div>{summary.data.recent_experiments.slice(0,6).map(e=><Link key={e.id} to={'/experiments/'+e.id} className="tremor-list-row"><div><strong className="text-xs">{shortId(e.id)}</strong><p className="mt-1 text-[10px] muted">{dateTime(e.created_at)}</p></div><span className="ml-auto"><StatusBadge value={e.status}/></span></Link>)}</div>:<EmptyState title="No experiments yet">Create the first run from Model Lab.</EmptyState>}
+   </Card>
+   <Card title="Research guardrails" description="The UI surfaces evidence without turning research output into clinical claims.">
+    <Notice tone="amber">Predictions support research and decision support only. They are not clinical diagnoses, treatment decisions, or validation.</Notice>
+    <div className="mt-4 space-y-2 text-xs muted"><div className="flex items-center justify-between"><span>Shared API source</span><strong className="text-foreground">Live backend</strong></div><div className="flex items-center justify-between"><span>Selection threshold</span><strong className="text-foreground">Backend-defined</strong></div><div className="flex items-center justify-between"><span>Model comparison</span><strong className="text-foreground">Evidence-based</strong></div></div>
+   </Card>
+  </div>
+
   <StageNav current="/"/>
   <ResearchPipeline/>
-  <div className="stat-grid my-6">
-   <MetricCard label="DATASETS" value={summary.data?.counts.datasets ?? '—'} detail="Registered biomedical inputs" icon={<Database size={16}/>}/>
-   <MetricCard label="EXPERIMENTS" value={summary.data?.counts.experiments ?? '—'} detail="Recorded research runs" icon={<FlaskConical size={16}/>}/>
-   <MetricCard label="READY MODELS" value={summary.data?.counts.ready_models ?? '—'} detail="Backend-reported models" icon={<Brain size={16}/>}/>
-   <MetricCard label="ACTIVE JOBS" value={summary.data?.counts.active_jobs ?? '—'} detail="Queued or running jobs" icon={<RefreshCw size={16}/>}/>
-  </div>
-  <div className="content-grid">
-   <Card title="Research landscape" description="A biomedical evidence workflow adapted from the research-product structure of TICTAC."><div className="grid gap-3 md:grid-cols-3"><Link to="/datasets" className="rounded-xl border p-4 hover:bg-muted"><Database className="text-primary"/><strong className="mt-3 block">Data Lab</strong><p className="mt-1 text-xs muted">Register and validate deidentified biomedical inputs.</p></Link><Link to="/training" className="rounded-xl border p-4 hover:bg-muted"><GitCompareArrows className="text-primary"/><strong className="mt-3 block">Model Lab</strong><p className="mt-1 text-xs muted">Run shared classical and quantum representations.</p></Link><Link to="/quantum" className="rounded-xl border p-4 hover:bg-muted"><Atom className="text-primary"/><strong className="mt-3 block">Quantum Lab</strong><p className="mt-1 text-xs muted">Inspect QNN, VQC and QSVC circuit structures.</p></Link></div></Card>
-   <Card title="Runtime state"><div className="space-y-3 text-sm"><div className="flex justify-between"><span className="muted">Backend</span><strong>{health.isError ? 'Offline' : health.data ? 'Connected' : 'Checking'}</strong></div><div className="flex justify-between"><span className="muted">Quantum runtime</span><strong>{health.data?.quantum.available ? 'Available' : 'Not reported'}</strong></div><p className="text-xs muted">{health.data?.quantum.execution || 'Quantum execution state will appear here.'}</p></div></Card>
-  </div>
-  <div className="two-grid mt-5">
-   <Card title="Recent experiments" description="Returned from the live summary endpoint.">{summary.isLoading?<Loading/>:summary.data?.recent_experiments?.length?<div className="space-y-2">{summary.data.recent_experiments.map(e=><Link to={'/experiments/' + e.id} className="flex items-center justify-between rounded-xl border p-3 hover:bg-muted" key={e.id}><div><strong className="text-sm">{shortId(e.id)}</strong><small className="ml-2 muted">{dateTime(e.created_at)}</small></div><StatusBadge value={e.status}/></Link>)}</div>:<EmptyState title="No experiments yet">Create the first experiment from Model Lab.</EmptyState>}</Card>
-   <Card title="Research boundary"><Notice tone="amber">Predictions support research and decision support only. They are not clinical diagnoses or validation.</Notice></Card>
-  </div>
  </div>
 }
-
 export function Datasets(){
  const {draft,selectDataset,clearDataset}=useDraft();
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets});
