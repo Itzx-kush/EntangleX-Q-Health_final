@@ -3,7 +3,7 @@ import {cn} from '../lib/utils';
 import {ClickSpark} from './reactbits';
 import {TremorBadge,TremorCard} from './TremorUI';
 
-export function Button({className='',variant='primary',...props}:{variant?:'primary'|'outline'|'ghost'}&ButtonHTMLAttributes<HTMLButtonElement>){return <ClickSpark><button className={cn('btn',variant==='primary'?'btn-primary':variant==='outline'?'btn-outline':'btn-ghost',className)} {...props}/></ClickSpark>;}
+export function Button({className='',variant='primary',type='button',...props}:{variant?:'primary'|'outline'|'ghost'}&ButtonHTMLAttributes<HTMLButtonElement>){return <ClickSpark><button type={type} className={cn('btn',variant==='primary'?'btn-primary':variant==='outline'?'btn-outline':'btn-ghost',className)} {...props}/></ClickSpark>;}
 export function LinkButton({children,to,className='',variant='primary'}:{children:ReactNode;to:string;className?:string;variant?:'primary'|'outline'|'ghost'}){return <a href={to} className={cn('btn',variant==='primary'?'btn-primary':variant==='outline'?'btn-outline':'btn-ghost',className)}>{children}</a>;}
 export function Input(props:InputHTMLAttributes<HTMLInputElement>){return <input className="input" {...props}/>;}
 export function Select(props:SelectHTMLAttributes<HTMLSelectElement>){return <select className="select" {...props}/>;}

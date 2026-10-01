@@ -1,20 +1,20 @@
 import type {ReactNode} from 'react';
 import {Link} from 'react-router-dom';
-import {AlertTriangle,ArrowRight,Atom,Database,LoaderCircle} from 'lucide-react';
+import {ArrowRight,Atom,Database,LoaderCircle} from 'lucide-react';
 import {Card,Badge,Select} from './ui';
 import {modelLabels,metric,shortId} from '../utils/format';
 import type {Dataset,ModelRecord,Metrics,MetricName} from '../types/qhealth';
 import {AnimatedSection,BlurText,GradientText,Reveal,ShinyText} from './reactbits';
-import {TremorMetric} from './TremorUI';
+import {TremorAccordion,TremorCallout,TremorMetric} from './TremorUI';
 
 export function PageHeader({eyebrow,title,description,actions}:{eyebrow:string;title:string;description:string;actions?:ReactNode}){return <AnimatedSection className="page-hero"><div className="flex flex-wrap items-end justify-between gap-5"><div><div className="eyebrow"><ShinyText>{eyebrow}</ShinyText></div><h1 className="headline"><BlurText>{title}</BlurText></h1><p className="subhead"><GradientText>{description}</GradientText></p></div>{actions&&<div className="flex flex-wrap gap-2">{actions}</div>}</div></AnimatedSection>}
 export function StatusBadge({value}:{value:string}){const tone=['ready','succeeded','completed'].includes(value)?'green':['failed','cancelled','interrupted'].includes(value)?'red':value==='running'||value==='queued'?'amber':'blue';return <Badge tone={tone}>{value.replaceAll('_',' ')}</Badge>}
 export function MetricCard({label,value,detail,icon}:{label:string;value:ReactNode;detail?:string;icon?:ReactNode}){return <TremorMetric label={label} value={value} detail={detail} icon={icon}/>}
-export function ErrorBanner({error}:{error?:string}){return error?<div className="error-callout flex items-start gap-3"><AlertTriangle size={16}/><span className="text-sm">{error}</span></div>:null}
+export function ErrorBanner({error}:{error?:string}){return error?<TremorCallout tone="red" title="Request failed">{error}</TremorCallout>:null}
 export function EmptyState({title,children}:{title:string;children:ReactNode}){return <Card className="py-12 text-center"><div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-muted"><Atom size={18}/></div><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm muted">{children}</p></Card>}
 export function Loading(){return <Reveal><div className="tremor-card rb-shimmer flex items-center gap-2 p-5 text-sm muted"><LoaderCircle size={15} className="animate-spin"/>Loading research data…</div></Reveal>}
-export function Notice({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'amber'|'green'}){return <div className={tone==='amber'?'callout border-amber-500/20 bg-amber-500/5':tone==='green'?'callout border-emerald-500/20 bg-emerald-500/5':'callout'}>{children}</div>}
-export function JsonDisclosure({label,value}:{label:string;value:unknown}){return <details className="mt-4 rounded-xl border bg-muted/30 p-3"><summary className="cursor-pointer text-xs font-semibold">{label}</summary><pre className="mt-3 max-h-[360px] overflow-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed muted">{JSON.stringify(value,null,2)}</pre></details>}
+export function Notice({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'amber'|'green'}){return <TremorCallout tone={tone}>{children}</TremorCallout>}
+export function JsonDisclosure({label,value}:{label:string;value:unknown}){return <TremorAccordion className="mt-4" label={label}><pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed muted">{JSON.stringify(value,null,2)}</pre></TremorAccordion>}
 export function ModelSelect({models,value,onChange,quantumOnly=false}:{models:ModelRecord[];value:string;onChange:(v:string)=>void;quantumOnly?:boolean}){const available=models.filter(m=>m.status==='ready'&&(!quantumOnly||['vqc','qsvc','qnn'].includes(m.model_type)));return <label className="field"><span>Registered model</span><Select value={value} onChange={e=>onChange(e.target.value)}><option value="">Choose completed model</option>{available.map(m=><option key={m.id} value={m.id}>{modelLabels[m.model_type]} · {shortId(m.id)}</option>)}</Select></label>}
 export function MetricRow({label,value}:{label:string;value:number|null|undefined}){return <div className="flex items-center justify-between border-b py-2 last:border-b-0"><span className="text-xs muted">{label}</span><strong className="mono text-xs">{metric(value)}</strong></div>}
 export const metricNames:MetricName[]=['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'];
