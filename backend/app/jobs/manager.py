@@ -3,7 +3,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from uuid import uuid4
-from sqlalchemy import select
+from sqlalchemy import func, select
 from ..artifacts.service import register_file, register_metadata
 from ..api.schemas import TrainingConfig
 from ..config import get_settings
@@ -28,6 +28,7 @@ class TrainingManager:
     def __init__(self):
         self.executor = None
         self.lock = Lock()
+        self.futures = {}
 
     def start(self):
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="qhealth-training")
@@ -38,6 +39,13 @@ class TrainingManager:
                 job.updated_at = utcnow()
                 require(session, Experiment, job.experiment_id).status = "interrupted"
                 if job.run_id:
+                    for model in session.scalars(select(ModelRecord).where(
+                        ModelRecord.run_id == job.run_id,
+                        ModelRecord.status.in_(("queued", "running")),
+                    )):
+                        model.status = "failed"
+                        model.progress = None
+                        model.details = {**model.details, "execution_state": "Interrupted"}
                     run = require(session, Run, job.run_id)
                     if run.status not in {"completed", "failed", "cancelled"}:
                         transition(session, run, "failed", failure={
@@ -70,7 +78,15 @@ class TrainingManager:
                 job.status = "cancelled"
                 job.state = "Server shutdown cancelled the queued or running execution."
                 job.updated_at = utcnow()
+                require(session, Experiment, job.experiment_id).status = "cancelled"
                 if job.run_id:
+                    for model in session.scalars(select(ModelRecord).where(
+                        ModelRecord.run_id == job.run_id,
+                        ModelRecord.status.in_(("queued", "running")),
+                    )):
+                        model.status = "cancelled"
+                        model.progress = None
+                        model.details = {**model.details, "execution_state": "Cancelled"}
                     run = require(session, Run, job.run_id)
                     if run.status not in {"completed", "failed", "cancelled"}:
                         transition(session, run, "cancelled")
@@ -156,7 +172,13 @@ class TrainingManager:
                     if experiment.dataset_id != str(config.dataset_id):
                         raise AppError("experiment_dataset_mismatch", "The experiment and run configuration must use the same dataset.", 409)
                 else:
+                    sequence = session.scalar(
+                        select(func.count()).select_from(Experiment).where(Experiment.dataset_id == str(config.dataset_id))
+                    ) or 0
+                    dataset_name = " ".join(str(data.dataset.name).split())[:200] or "Dataset"
+                    experiment_name = f"{dataset_name} · Training {sequence + 1:02d}"
                     experiment = Experiment(id=str(uuid4()), dataset_id=str(config.dataset_id), parent_id=parent_id,
+                        name=experiment_name,
                         config=config.model_dump(mode="json"), summary={"dataset_provenance": data.provenance,
                         "split": data.split_metadata(), "software": software_versions(),
                         "comparison_fingerprint": fingerprint({"dataset": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256, "split": data.split_hash,
@@ -186,31 +208,64 @@ class TrainingManager:
                 )
                 job = Job(id=job_id, experiment_id=experiment.id, run_id=run.id)
                 session.add(job)
+                executions = []
+                for kind in config.models:
+                    model = ModelRecord(
+                        id=str(uuid4()), experiment_id=experiment.id, run_id=run.id,
+                        dataset_id=str(config.dataset_id), model_type=kind, status="queued",
+                        progress=0, artifact_sha256=None,
+                        details={"execution_state": "Queued"}, metrics={},
+                    )
+                    session.add(model)
+                    executions.append((kind, model.id))
                 session.flush()
                 transition(session, run, "queued")
             try:
-                self.executor.submit(self._run, job.id, experiment.id, run.id, config)
+                future = self.executor.submit(self._run, job.id, experiment.id, run.id, config, executions)
+                self.futures[job.id] = future
+                future.add_done_callback(lambda _future, queued_job_id=job.id: self.futures.pop(queued_job_id, None))
             except RuntimeError as exc:
                 self._finish(job.id, experiment.id, run.id, "failed", "Worker could not accept the job.")
                 raise AppError("worker_unavailable", "Worker could not accept the job.", 503) from exc
         return job, experiment, run
 
     def cancel(self, identity: str):
+        cancel_queued = False
         with session_scope() as session:
             job = require(session, Job, identity)
             if job.status in ACTIVE:
                 job.status = "cancel_requested"
                 job.state = "Cancellation requested; current fit may finish before stopping."
                 job.updated_at = utcnow()
-            return job
+                future = self.futures.get(job.id)
+                cancel_queued = bool(future and future.cancel())
+                experiment_id, run_id = job.experiment_id, job.run_id
+            else:
+                return job
+        if cancel_queued and run_id:
+            self.futures.pop(identity, None)
+            self._finish(
+                identity, experiment_id, run_id, "cancelled",
+                "Cancelled before the queued execution started.",
+            )
+            with session_scope() as session:
+                return require(session, Job, identity)
+        with session_scope() as session:
+            return require(session, Job, identity)
 
-    def _checkpoint(self, job_id: str, state: str, progress: int):
+    def _checkpoint(self, job_id: str, state: str, progress: int, model_id: str | None = None):
         with session_scope() as session:
             job = require(session, Job, job_id)
             if job.status == "cancel_requested":
                 raise CancelledError()
             job.status, job.state, job.progress = "running", state, min(99, progress)
             job.updated_at = utcnow()
+            if model_id:
+                model = require(session, ModelRecord, model_id)
+                if model.status in {"queued", "running"}:
+                    model.status = "running"
+                    model.progress = None
+                    model.details = {**model.details, "execution_state": state}
             if job.run_id:
                 run = require(session, Run, job.run_id)
                 if run.status == "queued":
@@ -225,6 +280,18 @@ class TrainingManager:
             experiment = require(session, Experiment, experiment_id)
             experiment.status = status
             experiment.summary = {**experiment.summary, "completed_at": utcnow().isoformat()}
+            unfinished = session.scalars(select(ModelRecord).where(
+                ModelRecord.run_id == run_id,
+                ModelRecord.status.in_(("queued", "running")),
+            ))
+            child_status = "cancelled" if status == "cancelled" else "failed"
+            for model in unfinished:
+                model.status = child_status
+                model.progress = None
+                model.details = {
+                    **model.details,
+                    "execution_state": "Cancelled" if status == "cancelled" else "Failed",
+                }
             run = require(session, Run, run_id)
             if status in {"succeeded", "partial"}:
                 transition(session, run, "completed", result_summary={
@@ -240,30 +307,33 @@ class TrainingManager:
                     "message": "Scientific execution failed; inspect safe job and model failure metadata.",
                 })
 
-    def _run(self, job_id: str, experiment_id: str, run_id: str, config: TrainingConfig):
+    def _run(self, job_id: str, experiment_id: str, run_id: str, config: TrainingConfig, executions: list[tuple[str, str]]):
         failures, successes = 0, 0
         try:
-            self._checkpoint(job_id, "Validating immutable data and reproducible partitions", 1)
+            self._checkpoint(job_id, "Validating immutable data and reproducible partitions", 0)
             data = prepare_data(config)
             with session_scope() as session:
                 require(session, Experiment, experiment_id).status = "running"
-            total_steps, current_step = len(config.models) * (config.cv_folds + 2) + 1, 1
+            steps_per_model = config.cv_folds + 4
+            total_steps, current_step = len(executions) * steps_per_model, 0
+            current_model_id = None
             def checkpoint(state):
                 nonlocal current_step
-                self._checkpoint(job_id, state, int(current_step * 100 / total_steps))
                 current_step += 1
-            for kind in config.models:
-                identity = str(uuid4())
-                self._checkpoint(job_id, f"Preparing {kind}", int(current_step * 100 / total_steps))
+                self._checkpoint(job_id, state, int(current_step * 100 / total_steps), current_model_id)
+            for index, (kind, identity) in enumerate(executions):
+                current_model_id = identity
+                checkpoint(f"Preparing {kind}")
                 try:
                     bundle, metrics, details = train_model(kind, config, data, checkpoint)
                     # A cancelled fit is not persisted as a completed model.
-                    self._checkpoint(job_id, f"Persisting {kind}", int(current_step * 100 / total_steps))
+                    checkpoint(f"Persisting {kind}")
                     artifact_hash = save_model(identity, bundle)
                     with session_scope() as session:
-                        model = ModelRecord(id=identity, experiment_id=experiment_id, run_id=run_id, dataset_id=str(config.dataset_id),
-                            model_type=kind, status="ready", artifact_sha256=artifact_hash, metrics=metrics, details=details)
-                        session.add(model)
+                        model = require(session, ModelRecord, identity)
+                        model.status, model.progress = "ready", 100
+                        model.artifact_sha256, model.metrics = artifact_hash, metrics
+                        model.details = {**details, "execution_state": "Completed"}
                         session.flush()
                         model_path = safe_path("models", identity, ".dill")
                         register_file(
@@ -298,10 +368,14 @@ class TrainingManager:
                              "message": exc.message if isinstance(exc, AppError) else "Model training failed. Review pipeline dimensions, package versions, and optimization configuration."}
                     logger.warning("model_failure job_id=%s model_type=%s exception_type=%s", job_id, kind, type(exc).__name__)
                     with session_scope() as session:
-                        session.add(ModelRecord(id=identity, experiment_id=experiment_id, run_id=run_id, dataset_id=str(config.dataset_id),
-                            model_type=kind, status="failed", details={"error": error, "configuration": config.model_dump(mode="json")}, metrics={}))
+                        model = require(session, ModelRecord, identity)
+                        model.status, model.progress = "failed", None
+                        model.details = {"execution_state": "Failed", "error": error, "configuration": config.model_dump(mode="json")}
+                        model.metrics = {}
                         job = require(session, Job, job_id)
                         job.errors = [*job.errors, error]
+                    current_step = (index + 1) * steps_per_model
+                    self._checkpoint(job_id, f"{kind} failed; continuing remaining models", int(current_step * 100 / total_steps))
             status = "succeeded" if not failures else "partial" if successes else "failed"
             self._finish(job_id, experiment_id, run_id, status, f"Finished: {successes} model(s) persisted; {failures} model(s) failed.", successes=successes, failures=failures)
             # A private metadata snapshot; public reports are built separately.
@@ -320,5 +394,7 @@ class TrainingManager:
         except Exception as exc:
             logger.warning("job_failure job_id=%s exception_type=%s", job_id, type(exc).__name__)
             self._finish(job_id, experiment_id, run_id, "failed", "Job failed; inspect dataset integrity, configuration, and dependency installation.", successes=successes, failures=failures)
+        finally:
+            self.futures.pop(job_id, None)
 
 manager = TrainingManager()
