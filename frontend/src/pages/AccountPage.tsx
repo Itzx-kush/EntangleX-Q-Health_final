@@ -1,4 +1,4 @@
-import {CalendarClock,CheckCircle2,KeyRound,LogIn,LogOut,Palette,ShieldCheck,UserRound} from 'lucide-react';
+import {CalendarClock,CheckCircle2,Github,KeyRound,LogIn,LogOut,Palette,ShieldCheck,UserRound} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {AccountAvatar,accountEmail,accountName,accountProvider} from '../auth/AccountIdentity';
 import {useAuth} from '../auth/AuthProvider';
@@ -14,7 +14,7 @@ function dateLabel(value:string|undefined){
 }
 
 export function AccountPage(){
-  const {user,isAuthenticated,error,signingOut,signOut}=useAuth();
+  const {user,profile,isAuthenticated,error,signingOut,signOut}=useAuth();
   const {beginUpgrade,hasMigratableState}=useGuestMigration();
 
   if(!isAuthenticated)return <div>
@@ -41,22 +41,24 @@ export function AccountPage(){
     {error&&<div className="account-page-error" role="alert"><ShieldCheck size={17}/><span><strong>Account action unavailable</strong>{error}</span></div>}
 
     <section className="account-identity-panel" aria-labelledby="account-identity-title">
-      <AccountAvatar user={user} size="large"/>
+      <AccountAvatar user={user} profile={profile} size="large"/>
       <div className="account-identity-copy">
         <span className="account-kicker">Authenticated identity</span>
-        <h2 id="account-identity-title">{accountName(user)}</h2>
-        <p>{accountEmail(user)}</p>
-        <div><Badge tone="green">Signed in</Badge><Badge tone="blue">{accountProvider(user)}</Badge></div>
+        <h2 id="account-identity-title">{accountName(user,profile)}</h2>
+        <p>{accountEmail(user,profile)}</p>
+        <div><Badge tone="green">Signed in</Badge><Badge tone="blue">{profile?.provider==='github'&&<Github size={12}/>} {accountProvider(user,profile)}</Badge></div>
       </div>
       <div className="account-session-seal"><CheckCircle2 size={20}/><span><strong>Session active</strong><small>Managed securely by Supabase Auth</small></span></div>
     </section>
 
     <div className="account-content-grid">
-      <Card title="Account identity" description="Information supplied by your authenticated Google account.">
+      <Card title="Account identity" description="Information supplied by your active authenticated account.">
         <dl className="account-details">
-          <div><dt><UserRound size={15}/>Display name</dt><dd>{accountName(user)}</dd></div>
-          <div><dt><KeyRound size={15}/>Email</dt><dd>{accountEmail(user)}</dd></div>
-          <div><dt><ShieldCheck size={15}/>Authentication provider</dt><dd>{accountProvider(user)}</dd></div>
+          <div><dt><UserRound size={15}/>Display name</dt><dd>{accountName(user,profile)}</dd></div>
+          {profile?.username&&<div><dt>{profile.provider==='github'?<Github size={15}/>:<UserRound size={15}/>}Provider username</dt><dd>@{profile.username.replace(/^@/,'')}</dd></div>}
+          <div><dt><KeyRound size={15}/>Email</dt><dd>{accountEmail(user,profile)}</dd></div>
+          <div><dt>{profile?.provider==='github'?<Github size={15}/>:<ShieldCheck size={15}/>}Authentication provider</dt><dd>{accountProvider(user,profile)}</dd></div>
+          <div><dt><ShieldCheck size={15}/>Connected accounts</dt><dd>{profile?.connectedProviders.length?profile.connectedProviders.map(provider=>provider==='github'?'GitHub':'Google').join(' · '):accountProvider(user,profile)}</dd></div>
           <div><dt><CalendarClock size={15}/>Account established</dt><dd>{dateLabel(user?.created_at)}</dd></div>
         </dl>
         <details className="account-technical-details">
