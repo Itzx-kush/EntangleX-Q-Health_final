@@ -232,7 +232,7 @@ function LivePipelineStage({endpoint,title,eyebrow,description}:{endpoint:string
  const addRatio=()=>pipeline({ratios:[...draft.pipeline.ratios,{name:'ratio_'+(draft.pipeline.ratios.length+1),numerator:'',denominator:''}]});
  return <div>
   <PageHeader eyebrow={eyebrow} title={title} description={description} actions={<Button disabled={!draft.dataset_id||m.isPending} onClick={()=>m.mutate()}><Play size={14}/>{m.isPending?'Calculating…':'Request backend preview'}</Button>}/>
-  <StageNav current={stage==='preprocessing'?'/preprocessing':stage==='features'?'/features':'/pca'}/>
+  <StageNav current={stage==='preprocessing'?'/preprocessing':stage==='features'?'/features':'/pca'}/><ErrorBanner error={(m.error as Error)?.message}/>
   <WorkbenchRail items={[
    {label:'Stage',value:stage==='preprocessing'?'Prepare':stage==='features'?'Select':'Reduce',detail:'Backend-authoritative step',tone:'blue'},
    {label:'Source features',value:sourceFeatures.length||'—',detail:'Registered dimensions',tone:'purple'},
