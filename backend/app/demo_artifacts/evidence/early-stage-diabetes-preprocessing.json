@@ -1,0 +1,526 @@
+{
+  "artifact_version": "sih-verified-diabetes-v3",
+  "configuration": {
+    "calibration": "none",
+    "calibration_folds": 3,
+    "cv_folds": 2,
+    "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+    "duplicate_policy": "drop_exact",
+    "features": null,
+    "hybrid": {
+      "backend": "default.qubit",
+      "batch_size": 16,
+      "classical_activation": "relu",
+      "classical_hidden_dimensions": [
+        8
+      ],
+      "deterministic_seed": 2026,
+      "epochs": 5,
+      "feature_map": "angle",
+      "learning_rate": 0.01,
+      "model_type": "hybrid_pennylane_torch",
+      "optimizer": "adam",
+      "quantum_layers": 1,
+      "qubits": 4,
+      "sample_cap": 60
+    },
+    "max_samples": 60,
+    "models": [
+      "logistic_regression",
+      "svm",
+      "random_forest",
+      "vqc",
+      "qsvc",
+      "qnn",
+      "hybrid_pennylane_torch"
+    ],
+    "parameters": {
+      "class_weight": null,
+      "forest_max_depth": 8,
+      "forest_trees": 80,
+      "logistic_c": 1.0,
+      "svm_c": 1.0,
+      "svm_kernel": "rbf"
+    },
+    "pipeline": {
+      "angle_scaling": true,
+      "imputer": "median",
+      "k_features": 12,
+      "log_features": [],
+      "lower_quantile": 0.01,
+      "outlier_strategy": "none",
+      "pca_components": 4,
+      "pca_whiten": false,
+      "ratios": [],
+      "scaler": "standard",
+      "selection": "anova",
+      "upper_quantile": 0.99,
+      "variance_threshold": 0.0
+    },
+    "probability_threshold": 0.5,
+    "quantum": {
+      "ansatz_reps": 1,
+      "backend": "statevector",
+      "entanglement": "linear",
+      "feature_map_reps": 1,
+      "maxiter": 5,
+      "noise_probability": 0.0,
+      "optimizer": "COBYLA",
+      "qubits": 4,
+      "shots": 1024
+    },
+    "seed": 2026,
+    "target_sensitivity": 0.9,
+    "test_size": 0.2,
+    "threshold_strategy": "target_sensitivity"
+  },
+  "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+  "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+  "evidence_type": "preprocessing",
+  "experiment_id": "3b0c615b-ccce-429e-b353-7c40ebd9d626",
+  "fitted_preprocessing": {
+    "output_features": [
+      "PC1",
+      "PC2",
+      "PC3",
+      "PC4"
+    ],
+    "pca_explained_variance": [
+      0.4115608518103752,
+      0.16792165638106765,
+      0.14748486477389294,
+      0.11798151664020334
+    ],
+    "pca_loadings": [
+      [
+        -0.13219629243236908,
+        0.13219629243236924,
+        0.32408912641935667,
+        -0.3240891264193566,
+        0.350863056277319,
+        -0.350863056277319,
+        0.3307905025507573,
+        -0.3307905025507573,
+        0.2310335945027863,
+        -0.23103359450278627,
+        0.3026328068418105,
+        -0.30263280684181043
+      ],
+      [
+        -0.4987318985592907,
+        0.49873189855929095,
+        -0.13864405692211632,
+        0.13864405692211612,
+        0.2586666376065407,
+        -0.25866663760654074,
+        -0.3036959991635903,
+        0.3036959991635902,
+        -0.23131834677475294,
+        0.231318346774753,
+        0.1392711454909897,
+        -0.1392711454909898
+      ],
+      [
+        -0.22738584375555862,
+        0.2273858437555586,
+        -0.44195904014460535,
+        0.4419590401446054,
+        -0.21613322749394215,
+        0.21613322749394184,
+        0.15531566019644277,
+        -0.1553156601964426,
+        0.39966229241352047,
+        -0.3996622924135203,
+        0.14967100783918125,
+        -0.1496710078391812
+      ],
+      [
+        -0.40385774644008793,
+        0.4038577464400878,
+        0.1832322324386209,
+        -0.18323223243862097,
+        -0.1880877897827048,
+        0.18808778978270482,
+        0.29930383711706277,
+        -0.2993038371170628,
+        -0.09070963274516063,
+        0.09070963274516071,
+        -0.4124764582188788,
+        0.41247645821887885
+      ]
+    ],
+    "selected_features": [
+      "categorical_feature_0002",
+      "categorical_feature_0003",
+      "categorical_feature_0004",
+      "categorical_feature_0005",
+      "categorical_feature_0006",
+      "categorical_feature_0007",
+      "categorical_feature_0012",
+      "categorical_feature_0013",
+      "categorical_feature_0020",
+      "categorical_feature_0021",
+      "categorical_feature_0024",
+      "categorical_feature_0025"
+    ],
+    "selection_scores": [
+      {
+        "feature": "numeric__age",
+        "score": 3.7000758767985613,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0002",
+        "score": 6.743851078167116,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0003",
+        "score": 6.7438510781671255,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0004",
+        "score": 23.84662576687117,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0005",
+        "score": 23.84662576687117,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0006",
+        "score": 33.06250000000001,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0007",
+        "score": 33.06250000000001,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0008",
+        "score": 3.616671412300696,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0009",
+        "score": 3.6166714123006836,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0010",
+        "score": 0.4786742034943485,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0011",
+        "score": 0.4786742034943485,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0012",
+        "score": 11.028688524590176,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0013",
+        "score": 11.028688524590164,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0014",
+        "score": 2.2803447276940942,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0015",
+        "score": 2.2803447276940902,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0016",
+        "score": 3.3170665212649917,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0017",
+        "score": 3.3170665212649917,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0018",
+        "score": 0.0,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0019",
+        "score": 0.0,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0020",
+        "score": 10.59210526315789,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0021",
+        "score": 10.592105263157894,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0022",
+        "score": 1.3547120418848202,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0023",
+        "score": 1.3547120418848126,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0024",
+        "score": 7.8297872340425485,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0025",
+        "score": 7.829787234042553,
+        "selected": true
+      },
+      {
+        "feature": "categorical_feature_0026",
+        "score": 4.42710706150343,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0027",
+        "score": 4.427107061503413,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0028",
+        "score": 0.005849440488302658,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0029",
+        "score": 0.005849440488302658,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0030",
+        "score": 0.4062499999999911,
+        "selected": false
+      },
+      {
+        "feature": "categorical_feature_0031",
+        "score": 0.4062499999999997,
+        "selected": false
+      }
+    ],
+    "stages": [
+      "engineer",
+      "columns",
+      "select",
+      "pca",
+      "angles"
+    ]
+  },
+  "model_ids": [
+    "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+    "aca8bd30-ec00-42cd-a91c-18d8933b1647",
+    "522fcc97-ec2b-4615-aac2-b2a7dd5e23bb",
+    "b20376c4-20c0-42c4-9006-7bd291599c0e",
+    "495e35b3-87b8-4d3d-bf50-8936227c3fbb",
+    "da169e05-91c7-4d46-b970-3e15a6c2dd42",
+    "7f50f3c6-15af-469c-9115-d0ac26111835"
+  ],
+  "representation": {
+    "angle_scaling": true,
+    "feature_selection": {
+      "k_features": 12,
+      "method": "anova",
+      "variance_threshold": 0.0
+    },
+    "final_representation_dimension": 4,
+    "hybrid_quantum_layers": 1,
+    "hybrid_qubits": 4,
+    "pca_components": 4,
+    "pipeline": {
+      "angle_scaling": true,
+      "imputer": "median",
+      "k_features": 12,
+      "log_features": [],
+      "lower_quantile": 0.01,
+      "outlier_strategy": "none",
+      "pca_components": 4,
+      "pca_whiten": false,
+      "ratios": [],
+      "scaler": "standard",
+      "selection": "anova",
+      "upper_quantile": 0.99,
+      "variance_threshold": 0.0
+    },
+    "raw_input_features": [
+      "age",
+      "gender",
+      "polyuria",
+      "polydipsia",
+      "sudden_weight_loss",
+      "weakness",
+      "polyphagia",
+      "genital_thrush",
+      "visual_blurring",
+      "itching",
+      "irritability",
+      "delayed_healing",
+      "partial_paresis",
+      "muscle_stiffness",
+      "alopecia",
+      "obesity"
+    ],
+    "selected_feature_count": 12
+  },
+  "scientific_scope": "Research benchmark demonstration; not clinical validation or medical advice.",
+  "split": {
+    "cv_folds": 2,
+    "dropped_duplicate_count": 269,
+    "evaluated_sample_count": 60,
+    "excluded_by_sampling": 191,
+    "independent_samples_assumed": true,
+    "sample_pool_hash": "5b653a04e6f6e7ba297b3645783678a840768e62fa7beaffe6e60847fb90b210",
+    "sampled_row_indices": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      12,
+      24,
+      28,
+      29,
+      34,
+      37,
+      40,
+      42,
+      43,
+      44,
+      49,
+      52,
+      61,
+      65,
+      66,
+      76,
+      80,
+      87,
+      89,
+      102,
+      108,
+      111,
+      112,
+      120,
+      124,
+      131,
+      136,
+      138,
+      139,
+      145,
+      149,
+      153,
+      191,
+      196,
+      197,
+      208,
+      210,
+      216,
+      219,
+      222,
+      231,
+      233,
+      235,
+      247,
+      323,
+      325,
+      326,
+      332,
+      502,
+      503,
+      505,
+      507,
+      512,
+      517,
+      519
+    ],
+    "scheme": "stratified random holdout + stratified CV on training only",
+    "source_sample_count": 520,
+    "split_hash": "226d2bc1b97f0a931a94ebd3d188ce04f085589ec824b707e8d4a08b2ecbaa6a",
+    "test_count": 12,
+    "test_indices": [
+      502,
+      108,
+      210,
+      34,
+      7,
+      76,
+      196,
+      507,
+      233,
+      139,
+      61,
+      49
+    ],
+    "train_count": 48,
+    "train_indices": [
+      216,
+      519,
+      136,
+      111,
+      512,
+      191,
+      66,
+      231,
+      326,
+      52,
+      222,
+      219,
+      65,
+      503,
+      120,
+      89,
+      149,
+      332,
+      138,
+      29,
+      37,
+      208,
+      197,
+      112,
+      247,
+      80,
+      44,
+      5,
+      42,
+      153,
+      102,
+      28,
+      4,
+      3,
+      124,
+      323,
+      43,
+      24,
+      12,
+      87,
+      145,
+      6,
+      40,
+      235,
+      517,
+      131,
+      325,
+      505
+    ]
+  }
+}

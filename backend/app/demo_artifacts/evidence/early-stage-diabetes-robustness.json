@@ -1,0 +1,2481 @@
+{
+  "artifact_version": "sih-verified-diabetes-v3",
+  "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+  "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+  "evidence_type": "robustness",
+  "experiment_id": "3b0c615b-ccce-429e-b353-7c40ebd9d626",
+  "method": "controlled-perturbation-v1",
+  "model_ids": [
+    "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+    "aca8bd30-ec00-42cd-a91c-18d8933b1647",
+    "522fcc97-ec2b-4615-aac2-b2a7dd5e23bb",
+    "b20376c4-20c0-42c4-9006-7bd291599c0e",
+    "495e35b3-87b8-4d3d-bf50-8936227c3fbb",
+    "da169e05-91c7-4d46-b970-3e15a6c2dd42",
+    "7f50f3c6-15af-469c-9115-d0ac26111835"
+  ],
+  "results": [
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 0,
+        "false_positive": 4,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "roc_auc": 0.34375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.75,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6120322996433079,
+            0.592739448820556,
+            0.5743426219511963,
+            0.541147683683709,
+            0.5408727601358783,
+            0.5401524523475617,
+            0.5199218752891934,
+            0.5186743267956594,
+            0.5047668906291226
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.25,
+            0.25,
+            0.375,
+            0.375,
+            0.375,
+            0.625,
+            0.875,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.0,
+        "true_negative": 0,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 0,
+        "false_positive": 4,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "roc_auc": 0.34375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.75,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6120322996433079,
+            0.592739448820556,
+            0.5743426219511963,
+            0.541147683683709,
+            0.5408727601358783,
+            0.5401524523475617,
+            0.5199218752891934,
+            0.5186743267956594,
+            0.5047668906291226
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.25,
+            0.25,
+            0.375,
+            0.375,
+            0.375,
+            0.625,
+            0.875,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.0,
+        "true_negative": 0,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+      "model_type": "hybrid_pennylane_torch",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": null
+      },
+      "timing_seconds": {
+        "baseline": 0.032204698999976245,
+        "perturbed": 0.03043926800000918
+      },
+      "undefined_metrics": {
+        "relative_specificity": "Relative change is undefined because the baseline metric is zero."
+      }
+    },
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 0,
+        "false_positive": 4,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "roc_auc": 0.34375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.75,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6120322996433079,
+            0.592739448820556,
+            0.5743426219511963,
+            0.541147683683709,
+            0.5408727601358783,
+            0.5401524523475617,
+            0.5199218752891934,
+            0.5186743267956594,
+            0.5047668906291226
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.25,
+            0.25,
+            0.375,
+            0.375,
+            0.375,
+            0.625,
+            0.875,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.0,
+        "true_negative": 0,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 0,
+        "false_positive": 4,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "roc_auc": 0.703125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.75,
+            0.75,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6120322996433079,
+            0.541147683683709,
+            0.5408727601358783,
+            0.5401524523475617,
+            0.5186743267956594,
+            0.5047668906291226
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            0.625,
+            0.875,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.0,
+        "true_negative": 0,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.359375,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+      "model_type": "hybrid_pennylane_torch",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 1.0454545454545454,
+        "sensitivity": 0.0,
+        "specificity": null
+      },
+      "timing_seconds": {
+        "baseline": 0.032204698999976245,
+        "perturbed": 0.030434155999955692
+      },
+      "undefined_metrics": {
+        "relative_specificity": "Relative change is undefined because the baseline metric is zero."
+      }
+    },
+    {
+      "baseline": {
+        "accuracy": 0.9166666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.9411764705882353,
+        "false_negative": 0,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8888888888888888,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.9965905997597604,
+            0.9310559584400142,
+            0.9258319484808355,
+            0.5144963257353439,
+            0.4262099421328219,
+            0.18565264289412142
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.9166666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.9411764705882353,
+        "false_negative": 0,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8888888888888888,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.9965905997597604,
+            0.9310559584400142,
+            0.9258319484808355,
+            0.5144963257353439,
+            0.4262099421328219,
+            0.18565264289412142
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "aca8bd30-ec00-42cd-a91c-18d8933b1647",
+      "model_type": "logistic_regression",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.015308740000023136,
+        "perturbed": 0.015656043000035424
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.9166666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.9411764705882353,
+        "false_negative": 0,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8888888888888888,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.9965905997597604,
+            0.9310559584400142,
+            0.9258319484808355,
+            0.5144963257353439,
+            0.4262099421328219,
+            0.18565264289412142
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.9166666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.9411764705882353,
+        "false_negative": 0,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8888888888888888,
+        "recall": 1.0,
+        "roc_auc": 0.953125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.9965905997597604,
+            0.9738328790415415,
+            0.9582248591215876,
+            0.7754211821941143,
+            0.7286626736811123,
+            0.5144963257353439,
+            0.4262099421328219,
+            0.18565264289412142
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.375,
+            0.625,
+            0.75,
+            0.875,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.046875,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "aca8bd30-ec00-42cd-a91c-18d8933b1647",
+      "model_type": "logistic_regression",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.05172413793103448,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.015308740000023136,
+        "perturbed": 0.015255527999897822
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.875,
+        "false_negative": 1,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.875,
+        "recall": 0.875,
+        "roc_auc": 0.78125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6383822158059047,
+            0.5977293869163987,
+            0.43801374404392845,
+            0.1958271839121153,
+            0.15422689486695162,
+            0.07450767640330014
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.25,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.875,
+        "false_negative": 1,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.875,
+        "recall": 0.875,
+        "roc_auc": 0.78125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6383822158059047,
+            0.5977293869163987,
+            0.43801374404392845,
+            0.1958271839121153,
+            0.15422689486695162,
+            0.07450767640330014
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.25,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "522fcc97-ec2b-4615-aac2-b2a7dd5e23bb",
+      "model_type": "qnn",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.07982475500000419,
+        "perturbed": 0.06465282699991803
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.875,
+        "false_negative": 1,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.875,
+        "recall": 0.875,
+        "roc_auc": 0.78125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6383822158059047,
+            0.5977293869163987,
+            0.43801374404392845,
+            0.1958271839121153,
+            0.15422689486695162,
+            0.07450767640330014
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.25,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            2,
+            6
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 2,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8571428571428571,
+        "recall": 0.75,
+        "roc_auc": 0.796875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.6383822158059047,
+            0.5977293869163987,
+            0.45372995528123283,
+            0.43801374404392845,
+            0.21530380276999495,
+            0.15422689486695162,
+            0.07450767640330014
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.75,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.75,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 6,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": -0.08333333333333337,
+        "f1": -0.07499999999999996,
+        "precision": -0.017857142857142905,
+        "recall": -0.125,
+        "roc_auc": 0.015625,
+        "sensitivity": -0.125,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "522fcc97-ec2b-4615-aac2-b2a7dd5e23bb",
+      "model_type": "qnn",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": -0.10000000000000003,
+        "f1": -0.08571428571428566,
+        "precision": -0.020408163265306176,
+        "recall": -0.14285714285714285,
+        "roc_auc": 0.02,
+        "sensitivity": -0.14285714285714285,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.07982475500000419,
+        "perturbed": 0.06379461999995328
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.8235294117647058,
+        "false_negative": 1,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.7777777777777778,
+        "recall": 0.875,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0003372918441125,
+            1.0001530698161263,
+            0.9439815993951267,
+            0.7553385205455817,
+            -0.16783220522007913,
+            -0.9999831220517391
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.8235294117647058,
+        "false_negative": 1,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.7777777777777778,
+        "recall": 0.875,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0003372918441125,
+            1.0001530698161263,
+            0.9439815993951267,
+            0.7553385205455817,
+            -0.16783220522007913,
+            -0.9999831220517391
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "b20376c4-20c0-42c4-9006-7bd291599c0e",
+      "model_type": "qsvc",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 2.9937395980000474,
+        "perturbed": 3.9963645850000376
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.8235294117647058,
+        "false_negative": 1,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.7777777777777778,
+        "recall": 0.875,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0003372918441125,
+            1.0001530698161263,
+            0.9439815993951267,
+            0.7553385205455817,
+            -0.16783220522007913,
+            -0.9999831220517391
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            1,
+            7
+          ]
+        ],
+        "f1": 0.875,
+        "false_negative": 1,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.875,
+        "recall": 0.875,
+        "roc_auc": 0.953125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0003372918441125,
+            1.0001530698161263,
+            0.8451536052761628,
+            0.7553385205455817,
+            -0.16783220522007913,
+            -0.9999831220517391
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.5,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.875,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 7,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.08333333333333337,
+        "f1": 0.05147058823529416,
+        "precision": 0.09722222222222221,
+        "recall": 0.0,
+        "roc_auc": 0.078125,
+        "sensitivity": 0.0,
+        "specificity": 0.25
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "b20376c4-20c0-42c4-9006-7bd291599c0e",
+      "model_type": "qsvc",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": 0.11111111111111116,
+        "f1": 0.06250000000000006,
+        "precision": 0.12499999999999999,
+        "recall": 0.0,
+        "roc_auc": 0.08928571428571429,
+        "sensitivity": 0.0,
+        "specificity": 0.5
+      },
+      "timing_seconds": {
+        "baseline": 2.9937395980000474,
+        "perturbed": 2.744945879999932
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            6
+          ]
+        ],
+        "f1": 0.75,
+        "false_negative": 2,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.75,
+        "recall": 0.75,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0,
+            0.9541666666666668,
+            0.6979166666666666,
+            0.4125,
+            0.0
+          ],
+          "tpr": [
+            0.0,
+            0.5,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.75,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 6,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            6
+          ]
+        ],
+        "f1": 0.75,
+        "false_negative": 2,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.75,
+        "recall": 0.75,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0,
+            0.9541666666666668,
+            0.6979166666666666,
+            0.4125,
+            0.0
+          ],
+          "tpr": [
+            0.0,
+            0.5,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.75,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 6,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "495e35b3-87b8-4d3d-bf50-8936227c3fbb",
+      "model_type": "random_forest",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.029067783999948915,
+        "perturbed": 0.02782882700000755
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            6
+          ]
+        ],
+        "f1": 0.75,
+        "false_negative": 2,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.75,
+        "recall": 0.75,
+        "roc_auc": 0.875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0,
+            0.9541666666666668,
+            0.6979166666666666,
+            0.4125,
+            0.0
+          ],
+          "tpr": [
+            0.0,
+            0.5,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.75,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 6,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            2,
+            6
+          ]
+        ],
+        "f1": 0.8,
+        "false_negative": 2,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8571428571428571,
+        "recall": 0.75,
+        "roc_auc": 0.921875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0,
+            0.7147916666666666,
+            0.6979166666666666,
+            0.5047916666666666,
+            0.4125,
+            0.0
+          ],
+          "tpr": [
+            0.0,
+            0.5,
+            0.75,
+            0.75,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.75,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 6,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.08333333333333337,
+        "f1": 0.050000000000000044,
+        "precision": 0.1071428571428571,
+        "recall": 0.0,
+        "roc_auc": 0.046875,
+        "sensitivity": 0.0,
+        "specificity": 0.25
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "495e35b3-87b8-4d3d-bf50-8936227c3fbb",
+      "model_type": "random_forest",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": 0.12500000000000006,
+        "f1": 0.06666666666666672,
+        "precision": 0.1428571428571428,
+        "recall": 0.0,
+        "roc_auc": 0.05357142857142857,
+        "sensitivity": 0.0,
+        "specificity": 0.5
+      },
+      "timing_seconds": {
+        "baseline": 0.029067783999948915,
+        "perturbed": 0.0272088450000183
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8888888888888888,
+        "false_negative": 0,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0483961968641418,
+            1.0163546798275094,
+            1.000243362014222,
+            0.8219381847816615,
+            0.32510853209651797,
+            0.146156939125743,
+            0.1027038464376211,
+            -1.000260910553791
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8888888888888888,
+        "false_negative": 0,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0483961968641418,
+            1.0163546798275094,
+            1.000243362014222,
+            0.8219381847816615,
+            0.32510853209651797,
+            0.146156939125743,
+            0.1027038464376211,
+            -1.000260910553791
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "da169e05-91c7-4d46-b970-3e15a6c2dd42",
+      "model_type": "svm",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.01599190299998554,
+        "perturbed": 0.015945387999977356
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8888888888888888,
+        "false_negative": 0,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8,
+        "recall": 1.0,
+        "roc_auc": 0.90625,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0483961968641418,
+            1.0163546798275094,
+            1.000243362014222,
+            0.8219381847816615,
+            0.32510853209651797,
+            0.146156939125743,
+            0.1027038464376211,
+            -1.000260910553791
+          ],
+          "tpr": [
+            0.0,
+            0.125,
+            0.375,
+            0.75,
+            0.75,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.8333333333333334,
+        "confusion_matrix": [
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            8
+          ]
+        ],
+        "f1": 0.8888888888888888,
+        "false_negative": 0,
+        "false_positive": 2,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8,
+        "recall": 1.0,
+        "roc_auc": 0.921875,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            1.0163546798275094,
+            1.0104658367657973,
+            1.0002998126416265,
+            0.6045966888289733,
+            0.32510853209651797,
+            0.146156939125743,
+            0.1027038464376211,
+            -1.000260910553791
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.375,
+            0.625,
+            0.75,
+            0.875,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 1.0,
+        "specificity": 0.5,
+        "true_negative": 2,
+        "true_positive": 8,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.015625,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "da169e05-91c7-4d46-b970-3e15a6c2dd42",
+      "model_type": "svm",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.017241379310344827,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.01599190299998554,
+        "perturbed": 0.01577081800007818
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "f1": 0.7142857142857143,
+        "false_negative": 3,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8333333333333334,
+        "recall": 0.625,
+        "roc_auc": 0.84375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.7688897556199663,
+            0.5103742899336794,
+            0.4143825411047146,
+            0.3740466646340792,
+            0.30521642419807904,
+            0.26232426283240784,
+            0.25563146432068606
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.625,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 5,
+        "undefined_metrics": []
+      },
+      "condition": "missingness",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "missingness"
+      },
+      "degraded": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "f1": 0.7142857142857143,
+        "false_negative": 3,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8333333333333334,
+        "recall": 0.625,
+        "roc_auc": 0.84375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.7688897556199663,
+            0.5103742899336794,
+            0.4143825411047146,
+            0.3740466646340792,
+            0.30521642419807904,
+            0.26232426283240784,
+            0.25563146432068606
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.625,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 5,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "7f50f3c6-15af-469c-9115-d0ac26111835",
+      "model_type": "vqc",
+      "perturbation": {
+        "changed_cells": 10,
+        "eligible_cells": 192,
+        "realized_fraction": 0.052083333333333336
+      },
+      "relative_delta": {
+        "accuracy": 0.0,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "roc_auc": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.0659838099999206,
+        "perturbed": 0.06798802800005888
+      },
+      "undefined_metrics": {}
+    },
+    {
+      "baseline": {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "f1": 0.7142857142857143,
+        "false_negative": 3,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.8333333333333334,
+        "recall": 0.625,
+        "roc_auc": 0.84375,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.7688897556199663,
+            0.5103742899336794,
+            0.4143825411047146,
+            0.3740466646340792,
+            0.30521642419807904,
+            0.26232426283240784,
+            0.25563146432068606
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.625,
+            0.625,
+            0.75,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.625,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 5,
+        "undefined_metrics": []
+      },
+      "condition": "categorical",
+      "configuration": {
+        "level": 0.05,
+        "perturbation_type": "categorical"
+      },
+      "degraded": {
+        "accuracy": 0.5,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            5,
+            3
+          ]
+        ],
+        "f1": 0.5,
+        "false_negative": 5,
+        "false_positive": 1,
+        "matrix_axis_order": [
+          "negative",
+          "positive"
+        ],
+        "matrix_columns": "predicted",
+        "matrix_rows": "observed",
+        "precision": 0.75,
+        "recall": 0.375,
+        "roc_auc": 0.828125,
+        "roc_curve": {
+          "fpr": [
+            0.0,
+            0.0,
+            0.0,
+            0.25,
+            0.25,
+            0.25,
+            0.5,
+            1.0
+          ],
+          "thresholds": [
+            null,
+            0.7688897556199663,
+            0.6870128326354461,
+            0.4143825411047146,
+            0.3740466646340792,
+            0.27363644252181984,
+            0.26232426283240784,
+            0.25563146432068606
+          ],
+          "tpr": [
+            0.0,
+            0.25,
+            0.375,
+            0.375,
+            0.625,
+            0.875,
+            1.0,
+            1.0
+          ]
+        },
+        "sample_count": 12,
+        "sensitivity": 0.375,
+        "specificity": 0.75,
+        "true_negative": 3,
+        "true_positive": 3,
+        "undefined_metrics": []
+      },
+      "delta": {
+        "accuracy": -0.16666666666666663,
+        "f1": -0.2142857142857143,
+        "precision": -0.08333333333333337,
+        "recall": -0.25,
+        "roc_auc": -0.015625,
+        "sensitivity": -0.25,
+        "specificity": 0.0
+      },
+      "evaluation_indices": [
+        502,
+        108,
+        210,
+        34,
+        7,
+        76,
+        196,
+        507,
+        233,
+        139,
+        61,
+        49
+      ],
+      "model_id": "7f50f3c6-15af-469c-9115-d0ac26111835",
+      "model_type": "vqc",
+      "perturbation": {
+        "changed_cells": 9,
+        "eligible_cells": 180,
+        "realized_fraction": 0.05
+      },
+      "relative_delta": {
+        "accuracy": -0.24999999999999994,
+        "f1": -0.3,
+        "precision": -0.10000000000000003,
+        "recall": -0.4,
+        "roc_auc": -0.018518518518518517,
+        "sensitivity": -0.4,
+        "specificity": 0.0
+      },
+      "timing_seconds": {
+        "baseline": 0.0659838099999206,
+        "perturbed": 0.06476784599999519
+      },
+      "undefined_metrics": {}
+    }
+  ],
+  "scientific_scope": "Research benchmark demonstration; not clinical validation or medical advice."
+}
