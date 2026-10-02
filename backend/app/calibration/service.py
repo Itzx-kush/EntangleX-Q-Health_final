@@ -1,0 +1,156 @@
+from uuid import uuid4
+from sqlalchemy import select
+from datetime import datetime
+import numpy as np
+
+from ..database import session_scope
+from ..storage.entities import CalibrationStudy, ModelRecord, Run, Dataset, Artifact
+from ..data.splitting import prepare_data
+from ..api.schemas import TrainingConfig
+from .schemas import CalibrationRequest, CalibrationPreflightResponse
+from ..utils.errors import AppError
+from ..utils.serialization import fingerprint
+from ..storage.files import load_model
+from ..evaluation.calibration import base_pipeline
+from .methods import fit_calibrator
+from .metrics import calculate_calibration_metrics
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
+
+def _get_evaluation_data(req: CalibrationRequest, base_config: TrainingConfig):
+    # Determine the test evaluation subset
+    config = base_config.model_copy(update={
+        "dataset_id": req.dataset_id,
+        "dataset_version_id": req.dataset_version_id,
+        "sampling_unit": req.sampling_unit,
+        "group_column": req.group_column,
+        "test_size": req.test_size,
+        "seed": req.split_seed,
+    })
+    return prepare_data(config)
+
+def preflight(req: CalibrationRequest) -> CalibrationPreflightResponse:
+    with session_scope() as session:
+        model = session.get(ModelRecord, str(req.model_id))
+        if not model or model.status != "ready":
+            raise AppError("model_unavailable", "The requested model is not available.")
+        
+        run = session.get(Run, model.run_id)
+        if not run:
+            raise AppError("run_missing", "Source run missing.")
+            
+        dataset = session.get(Dataset, str(req.dataset_id))
+        if not dataset:
+            raise AppError("dataset_missing", "Evaluation dataset missing.")
+            
+        base_config = TrainingConfig.model_validate(run.config)
+    
+    limitations = []
+    feasible = True
+    method_support = {
+        "sigmoid": True,
+        "isotonic": True,
+        "temperature_scaling": True,
+        "none": True
+    }
+    
+    try:
+        data = _get_evaluation_data(req, base_config)
+    except Exception as exc:
+        limitations.append(f"Data preparation failed: {exc}")
+        return CalibrationPreflightResponse(feasible=False, limitations=limitations, method_support=method_support, configuration_fingerprint="")
+
+    if len(data.test) < 10:
+        limitations.append("Insufficient evaluation samples.")
+        feasible = False
+
+    if req.calibration_method == "isotonic" and len(data.test) < 50:
+        limitations.append("Isotonic calibration requires at least 50 calibration samples.")
+        method_support["isotonic"] = False
+        if req.calibration_method == "isotonic":
+            feasible = False
+            
+    if req.calibration_protocol == "out_of_fold" and req.dataset_id != model.dataset_id:
+        limitations.append("Out-of-fold calibration is only valid on the internal training dataset.")
+        feasible = False
+
+    return CalibrationPreflightResponse(
+        feasible=feasible,
+        limitations=limitations,
+        method_support=method_support,
+        configuration_fingerprint=fingerprint(req.model_dump(mode="json"))
+    )
+
+def execute_calibration_study(study_id: str):
+    with session_scope() as session:
+        study = session.get(CalibrationStudy, study_id)
+        if not study: return
+        study.status = "running"
+        req = CalibrationRequest.model_validate(study.configuration)
+        
+        model = session.get(ModelRecord, study.model_id)
+        run = session.get(Run, model.run_id)
+        base_config = TrainingConfig.model_validate(run.config)
+        
+        data = _get_evaluation_data(req, base_config)
+        
+    try:
+        bundle = load_model(study.model_id, model.artifact_sha256)
+        estimator = base_pipeline(bundle["estimator"]) # get base model
+        
+        X_test = data.X.iloc[data.test]
+        y_test = data.y[data.test]
+        
+        if req.calibration_method == "none":
+            # No fitting needed
+            X_calib, y_calib = None, None
+            X_eval, y_eval = X_test, y_test
+        else:
+            if req.calibration_protocol == "dedicated_split":
+                # Split the test set into calibration and final evaluation
+                if req.sampling_unit == "grouped_samples":
+                    splitter = GroupShuffleSplit(n_splits=1, test_size=1.0 - req.calibration_size, random_state=req.split_seed)
+                    groups = data.frame.iloc[data.test][req.group_column]
+                    calib_idx, eval_idx = next(splitter.split(X_test, y_test, groups=groups))
+                else:
+                    calib_idx, eval_idx = train_test_split(
+                        np.arange(len(y_test)), 
+                        test_size=1.0 - req.calibration_size, 
+                        random_state=req.split_seed, 
+                        stratify=y_test
+                    )
+                X_calib, y_calib = X_test.iloc[calib_idx], y_test[calib_idx]
+                X_eval, y_eval = X_test.iloc[eval_idx], y_test[eval_idx]
+            elif req.calibration_protocol == "out_of_fold":
+                raise NotImplementedError("out_of_fold requires retraining the base estimator, use dedicated_split.")
+            else:
+                raise ValueError("Unsupported protocol.")
+                
+        calibrator = fit_calibrator(estimator, X_calib, y_calib, req.calibration_method)
+        
+        if hasattr(calibrator, "predict_proba"):
+            y_prob = calibrator.predict_proba(X_eval)[:, 1]
+        else:
+            scores = calibrator.decision_function(X_eval)
+            y_prob = 1 / (1 + np.exp(-np.clip(scores, -700, 700)))
+            
+        metrics, curve = calculate_calibration_metrics(y_eval, y_prob, n_bins=req.bins)
+        
+        with session_scope() as session:
+            study = session.get(CalibrationStudy, study_id)
+            study.status = "completed"
+            study.metrics = metrics
+            study.curves = {"reliability_curve": curve}
+            study.completed_at = datetime.utcnow()
+            study.summary = {
+                "evaluated_samples": len(y_eval),
+                "calibration_samples": len(y_calib) if y_calib is not None else 0,
+                "positive_events": int(np.sum(y_eval)),
+                "negative_events": int(len(y_eval) - np.sum(y_eval))
+            }
+            
+    except Exception as exc:
+        with session_scope() as session:
+            study = session.get(CalibrationStudy, study_id)
+            study.status = "failed"
+            study.failure = {"code": "calibration_failed", "message": str(exc)}
+            study.completed_at = datetime.utcnow()

@@ -19,7 +19,8 @@ DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
 MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
 EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
 DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
-TRAINING_EXECUTION_MIGRATION_ID = "20261003_04_training_execution_tracking"
+CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
+TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
 
 
 
@@ -307,5 +308,40 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": DISTRIBUTION_SHIFT_MIGRATION_ID, "applied_at": utcnow()},
+            )
+        calibration_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": CALIBRATION_STUDIES_MIGRATION_ID},
+        ).scalar()
+        if not calibration_applied:
+            connection.execute(text('''
+                CREATE TABLE IF NOT EXISTS calibration_studies (
+                    id VARCHAR(36) PRIMARY KEY,
+                    model_id VARCHAR(36) NOT NULL REFERENCES models(id),
+                    dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    status VARCHAR(24) NOT NULL DEFAULT 'created',
+                    operation_key VARCHAR(128) NOT NULL UNIQUE,
+                    configuration JSON NOT NULL DEFAULT '{}',
+                    summary JSON NOT NULL DEFAULT '{}',
+                    metrics JSON NOT NULL DEFAULT '{}',
+                    curves JSON NOT NULL DEFAULT '{}',
+                    comparisons JSON NOT NULL DEFAULT '{}',
+                    limitations JSON NOT NULL DEFAULT '[]',
+                    provenance JSON NOT NULL DEFAULT '{}',
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    failure JSON,
+                    execution_time_seconds FLOAT NOT NULL DEFAULT 0.0,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME
+                )
+            '''))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_calib_model_id ON calibration_studies(model_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_calib_dataset_id ON calibration_studies(dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_calib_status ON calibration_studies(status)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_calib_created_at ON calibration_studies(created_at)"))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": CALIBRATION_STUDIES_MIGRATION_ID, "applied_at": utcnow()},
             )
 
