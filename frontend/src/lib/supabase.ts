@@ -14,7 +14,7 @@ function isValidHttpUrl(value:string|undefined){
 }
 
 export const supabaseConfigurationError=!supabaseUrl||!supabaseAnonKey
-  ? 'Google sign-in is not configured for this deployment. You can still continue without signing in.'
+  ? 'Account sign-in is not configured for this deployment. You can still continue without signing in.'
   : !isValidHttpUrl(supabaseUrl)
     ? 'The Supabase URL for this deployment is invalid. You can still continue without signing in.'
     : null;

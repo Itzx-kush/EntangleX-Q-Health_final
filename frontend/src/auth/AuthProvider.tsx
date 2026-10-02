@@ -16,6 +16,7 @@ type AuthContextValue={
   isConfigured:boolean;
   error:string|null;
   signInWithGoogle:()=>Promise<void>;
+  signInWithGitHub:()=>Promise<void>;
   signOut:()=>Promise<void>;
   continueAsGuest:()=>void;
   leaveGuestMode:()=>void;
@@ -33,6 +34,7 @@ const FALLBACK_AUTH:AuthContextValue={
   isConfigured:false,
   error:null,
   signInWithGoogle:async()=>{},
+  signInWithGitHub:async()=>{},
   signOut:async()=>{},
   continueAsGuest:()=>{},
   leaveGuestMode:()=>{},
@@ -49,7 +51,7 @@ function oauthErrorFromUrl(){
   const description=query.get('error_description')||hash.get('error_description');
   const code=query.get('error')||hash.get('error');
   if(!description&&!code)return null;
-  return decodeURIComponent((description||code||'Google sign-in was not completed.').replace(/\+/g,' '));
+  return decodeURIComponent((description||code||'Account sign-in was not completed.').replace(/\+/g,' '));
 }
 
 function cleanOAuthUrl(includeCode=true){
@@ -120,7 +122,7 @@ export function AuthProvider({children}:{children:ReactNode}){
     return()=>{active=false;subscription.unsubscribe()};
   },[]);
 
-  const signInWithGoogle=useCallback(async()=>{
+  const signInWithOAuth=useCallback(async(provider:'google'|'github')=>{
     setError(null);
     if(!supabase){
       setError(supabaseConfigurationError);
@@ -131,17 +133,19 @@ export function AuthProvider({children}:{children:ReactNode}){
       AUTH_QUERY_KEYS.forEach(key=>redirectUrl.searchParams.delete(key));
       redirectUrl.hash='';
       const {error:signInError}=await supabase.auth.signInWithOAuth({
-        provider:'google',
+        provider,
         options:{
           redirectTo:redirectUrl.toString(),
-          queryParams:{prompt:'select_account'},
+          ...(provider==='google'?{queryParams:{prompt:'select_account'}}:{}),
         },
       });
-      if(signInError)setError(authMessage(signInError,'Google sign-in could not be started.'));
+      if(signInError)setError(authMessage(signInError,`${provider==='google'?'Google':'GitHub'} sign-in could not be started.`));
     }catch(signInError){
-      setError(authMessage(signInError,'Google sign-in could not be started. Check your connection and try again.'));
+      setError(authMessage(signInError,`${provider==='google'?'Google':'GitHub'} sign-in could not be started. Check your connection and try again.`));
     }
   },[]);
+  const signInWithGoogle=useCallback(()=>signInWithOAuth('google'),[signInWithOAuth]);
+  const signInWithGitHub=useCallback(()=>signInWithOAuth('github'),[signInWithOAuth]);
 
   const signOut=useCallback(async()=>{
     setError(null);
@@ -185,11 +189,12 @@ export function AuthProvider({children}:{children:ReactNode}){
     isConfigured:!supabaseConfigurationError,
     error,
     signInWithGoogle,
+    signInWithGitHub,
     signOut,
     continueAsGuest,
     leaveGuestMode,
     clearError,
-  }),[session,isGuest,loading,signingOut,error,signInWithGoogle,signOut,continueAsGuest,leaveGuestMode,clearError]);
+  }),[session,isGuest,loading,signingOut,error,signInWithGoogle,signInWithGitHub,signOut,continueAsGuest,leaveGuestMode,clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
