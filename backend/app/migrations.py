@@ -18,6 +18,7 @@ MANIFEST_MIGRATION_ID = "20261002_02_immutable_run_manifest"
 DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
 MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
 EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
+DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
 
 
 
@@ -237,5 +238,55 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": EXTERNAL_VALIDATION_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        shift_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DISTRIBUTION_SHIFT_MIGRATION_ID},
+        ).scalar()
+        if not shift_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS distribution_shift_analyses (
+                    id VARCHAR(36) PRIMARY KEY,
+                    reference_dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    reference_dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    reference_content_sha256 VARCHAR(64) NOT NULL,
+                    comparison_dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    comparison_dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    comparison_content_sha256 VARCHAR(64) NOT NULL,
+                    model_id VARCHAR(36) REFERENCES models(id),
+                    external_validation_id VARCHAR(36) REFERENCES external_validations(id),
+                    parent_study_id VARCHAR(36) REFERENCES multi_seed_studies(id),
+                    model_seed INTEGER,
+                    status VARCHAR(24) NOT NULL DEFAULT 'created',
+                    operation_key VARCHAR(128) NOT NULL UNIQUE,
+                    policy_version VARCHAR(32) NOT NULL,
+                    configuration JSON NOT NULL DEFAULT '{}',
+                    schema_analysis JSON NOT NULL DEFAULT '{}',
+                    target_analysis JSON NOT NULL DEFAULT '{}',
+                    missingness_analysis JSON NOT NULL DEFAULT '{}',
+                    feature_shifts JSON NOT NULL DEFAULT '[]',
+                    summary JSON NOT NULL DEFAULT '{}',
+                    flagged_features JSON NOT NULL DEFAULT '[]',
+                    warnings JSON NOT NULL DEFAULT '[]',
+                    limitations JSON NOT NULL DEFAULT '[]',
+                    provenance JSON NOT NULL DEFAULT '{}',
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    failure JSON,
+                    execution_time_seconds FLOAT NOT NULL DEFAULT 0.0,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME
+                )
+            """))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_ref_dataset_id ON distribution_shift_analyses(reference_dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_comp_dataset_id ON distribution_shift_analyses(comparison_dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_model_id ON distribution_shift_analyses(model_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_ext_val_id ON distribution_shift_analyses(external_validation_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_status ON distribution_shift_analyses(status)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_operation_key ON distribution_shift_analyses(operation_key)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_dist_shift_created_at ON distribution_shift_analyses(created_at)"))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DISTRIBUTION_SHIFT_MIGRATION_ID, "applied_at": utcnow()},
             )
 

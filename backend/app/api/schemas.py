@@ -867,3 +867,202 @@ class ExternalValidationOut(Schema):
     created_at: datetime
     completed_at: datetime | None = None
 
+
+# ---------------------------------------------------------------------------
+# Master Prompt 3: Distribution Shift Analysis Schemas
+# ---------------------------------------------------------------------------
+
+class DistributionShiftConfig(Schema):
+    missingness_delta_threshold: float = Field(default=0.05, ge=0.001, le=0.50)
+    numeric_distance_threshold: float = Field(default=0.15, ge=0.01, le=1.0)
+    categorical_distance_threshold: float = Field(default=0.15, ge=0.01, le=1.0)
+    statistical_significance_threshold: float = Field(default=0.05, ge=0.0001, le=0.20)
+    multiple_testing_correction: Literal["benjamini_hochberg"] = "benjamini_hochberg"
+    numeric_test: Literal["kolmogorov_smirnov"] = "kolmogorov_smirnov"
+    categorical_test: Literal["total_variation_distance"] = "total_variation_distance"
+
+
+class DistributionShiftRequest(Schema):
+    reference_dataset_id: UUID
+    comparison_dataset_id: UUID
+    reference_dataset_version_id: UUID | None = None
+    comparison_dataset_version_id: UUID | None = None
+    model_id: UUID | None = None
+    external_validation_id: UUID | None = None
+    config: DistributionShiftConfig | None = None
+
+
+class SchemaShiftOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    reference_columns: list[str] = Field(default_factory=list)
+    comparison_columns: list[str] = Field(default_factory=list)
+    shared_columns: list[str] = Field(default_factory=list)
+    missing_in_comparison: list[str] = Field(default_factory=list)
+    extra_in_comparison: list[str] = Field(default_factory=list)
+    type_mismatches: list[dict[str, str]] = Field(default_factory=list)
+    reference_feature_count: int
+    comparison_feature_count: int
+
+
+class TargetShiftOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    target_evaluated: bool
+    target_column: str | None = None
+    reference_classes: list[str] = Field(default_factory=list)
+    comparison_classes: list[str] = Field(default_factory=list)
+    compatible: bool = False
+    reference_counts: dict[str, int] = Field(default_factory=dict)
+    comparison_counts: dict[str, int] = Field(default_factory=dict)
+    reference_positive_prevalence: float | None = None
+    comparison_positive_prevalence: float | None = None
+    prevalence_delta: float | None = None
+    interpretation: str | None = None
+
+
+class MissingnessShiftDetailOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    reference_missing_count: int
+    reference_missing_fraction: float
+    comparison_missing_count: int
+    comparison_missing_fraction: float
+    delta: float
+    flagged: bool
+
+
+class NumericShiftDetailOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    reference_count: int
+    comparison_count: int
+    reference_mean: float | None = None
+    comparison_mean: float | None = None
+    mean_difference: float | None = None
+    reference_std: float | None = None
+    comparison_std: float | None = None
+    std_difference: float | None = None
+    reference_median: float | None = None
+    comparison_median: float | None = None
+    median_difference: float | None = None
+    reference_min: float | None = None
+    reference_max: float | None = None
+    comparison_min: float | None = None
+    comparison_max: float | None = None
+    standardized_mean_difference: float | None = None
+    effect_size_label: str | None = None
+    test_method: str = "kolmogorov_smirnov"
+    statistic: float | None = None
+    raw_p_value: float | None = None
+    distance_metric: str = "wasserstein_distance"
+    distance_value: float | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class CategoricalShiftDetailOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    reference_count: int
+    comparison_count: int
+    category_count: int
+    reference_proportions: dict[str, float] = Field(default_factory=dict)
+    comparison_proportions: dict[str, float] = Field(default_factory=dict)
+    proportion_deltas: dict[str, float] = Field(default_factory=dict)
+    distance_metric: str = "total_variation_distance"
+    distance_value: float | None = None
+    test_method: str = "chi_square_contingency"
+    statistic: float | None = None
+    raw_p_value: float | None = None
+    sparse_categories: bool = False
+    warnings: list[str] = Field(default_factory=list)
+
+
+class FeatureShiftRecordOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    feature: str
+    feature_type: str
+    is_model_input: bool = False
+    missingness: MissingnessShiftDetailOut
+    numeric: NumericShiftDetailOut | None = None
+    categorical: CategoricalShiftDetailOut | None = None
+    raw_p_value: float | None = None
+    adjusted_p_value: float | None = None
+    p_value_interpretation: str | None = None
+    flagged: bool = False
+    flag_reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ShiftSummaryOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    total_features_reference: int
+    total_features_comparison: int
+    shared_features_count: int
+    model_features_count: int = 0
+    model_features_missing_count: int = 0
+    shifted_features_count: int
+    missingness_shifted_count: int
+    numeric_features_tested_count: int
+    numeric_features_shifted_count: int
+    categorical_features_tested_count: int
+    categorical_features_shifted_count: int
+    target_shift_detected: bool = False
+    target_prevalence_delta: float | None = None
+    schema_mismatch_count: int
+    type_mismatch_count: int
+    multiple_testing_correction: str
+    tested_hypotheses_count: int
+
+
+class DistributionShiftPreflightOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    ready: bool
+    reference_dataset: dict[str, Any]
+    comparison_dataset: dict[str, Any]
+    model: dict[str, Any] | None = None
+    external_validation: dict[str, Any] | None = None
+    schema_preview: SchemaShiftOut
+    target_preview: TargetShiftOut
+    model_features: list[str] | None = None
+    missing_model_features: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    block_reasons: list[str] = Field(default_factory=list)
+
+
+class DistributionShiftOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: str
+    reference_dataset_id: str
+    reference_dataset_version_id: str | None = None
+    reference_content_sha256: str
+    comparison_dataset_id: str
+    comparison_dataset_version_id: str | None = None
+    comparison_content_sha256: str
+    model_id: str | None = None
+    external_validation_id: str | None = None
+    parent_study_id: str | None = None
+    model_seed: int | None = None
+    status: str
+    operation_key: str
+    policy_version: str
+    configuration: dict[str, Any]
+    schema_analysis: SchemaShiftOut
+    target_analysis: TargetShiftOut
+    missingness_analysis: dict[str, Any]
+    feature_shifts: list[FeatureShiftRecordOut]
+    summary: ShiftSummaryOut
+    flagged_features: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    provenance: dict[str, Any]
+    artifact_id: str | None = None
+    failure: dict[str, Any] | None = None
+    execution_time_seconds: float = 0.0
+    created_at: datetime
+    completed_at: datetime | None = None
+
