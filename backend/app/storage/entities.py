@@ -1,6 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from ..database import Base
 from ..utils.serialization import utcnow
@@ -238,6 +238,42 @@ class ExternalValidation(Base):
     limitations: Mapped[list] = mapped_column(JSON, default=list)
     warnings: Mapped[list] = mapped_column(JSON, default=list)
     failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DistributionShiftAnalysis(Base):
+    """First-class record of distribution / dataset shift analysis between two datasets or versions."""
+
+    __tablename__ = "distribution_shift_analyses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    reference_dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    reference_dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    reference_content_sha256: Mapped[str] = mapped_column(String(64))
+    comparison_dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    comparison_dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    comparison_content_sha256: Mapped[str] = mapped_column(String(64))
+    model_id: Mapped[str | None] = mapped_column(ForeignKey("models.id"), nullable=True, index=True)
+    external_validation_id: Mapped[str | None] = mapped_column(ForeignKey("external_validations.id"), nullable=True, index=True)
+    parent_study_id: Mapped[str | None] = mapped_column(ForeignKey("multi_seed_studies.id"), nullable=True, index=True)
+    model_seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    policy_version: Mapped[str] = mapped_column(String(32))
+    configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    schema_analysis: Mapped[dict] = mapped_column(JSON, default=dict)
+    target_analysis: Mapped[dict] = mapped_column(JSON, default=dict)
+    missingness_analysis: Mapped[dict] = mapped_column(JSON, default=dict)
+    feature_shifts: Mapped[list] = mapped_column(JSON, default=list)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    flagged_features: Mapped[list] = mapped_column(JSON, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    execution_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

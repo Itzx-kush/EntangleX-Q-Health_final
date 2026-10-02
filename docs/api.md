@@ -66,6 +66,13 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/validation/external/{id}` | Detailed `ExternalValidationOut` record with metrics, comparisons, and audit |
 | GET | `/validation/external/{id}/metrics` | Focused metrics and internal vs external comparison summary with generalization gap |
 | GET | `/validation/external/{id}/provenance` | Cryptographic provenance chain, dataset hashes, and model artifact digests |
+| POST | `/shift-analysis` | Execute distribution shift analysis between two datasets (`DistributionShiftRequest`) |
+| POST | `/shift-analysis/preflight` | Non-mutating preflight inspection and schema compatibility audit |
+| GET | `/shift-analysis` | Paginated shift analyses, optional dataset, model, or validation filter |
+| GET | `/shift-analysis/{id}` | Detailed `DistributionShiftOut` record with feature shifts, summary, and limitations |
+| GET | `/shift-analysis/{id}/features` | Detailed feature-by-feature shift analysis table with p-values and effect sizes |
+| GET | `/shift-analysis/{id}/provenance` | Cryptographic provenance chain, dataset hashes, and software versions |
+| GET | `/datasets/{id}/shift-analysis` | Paginated shift analyses associated with a specific dataset |
 
 `POST /api/training/jobs` and `POST /api/experiments/{id}/runs` optionally
 accept an `Idempotency-Key` header containing 8–200 visible non-space
