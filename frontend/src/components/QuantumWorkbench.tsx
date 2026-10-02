@@ -14,6 +14,8 @@ import {useDraft} from '../hooks/useDraft';
 import {modelLabels,shortId} from '../utils/format';
 import {PipelineFlow,StatusStrip,WorkbenchRail} from './TremorWorkbench';
 import type {ModelRecord} from '../types/qhealth';
+import {useResearchRecorder} from '../research/useResearchHistory';
+import {quantumActivity} from '../research/historyRecords';
 
 type QuantumKind='vqc'|'qsvc'|'qnn';
 
@@ -97,6 +99,7 @@ function JobTable({jobs}:{jobs:any[]}){
 
 export function QuantumWorkbench(){
   const {draft,update,pipeline,quantum}=useDraft();
+  const history=useResearchRecorder();
   const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities});
   const models=useQuery({queryKey:['models'],queryFn:qh.models});
   const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:5000});
@@ -104,8 +107,8 @@ export function QuantumWorkbench(){
   const [circuit,setCircuit]=useState<any>();
   const [modelId,setModelId]=useState('');
   const [inspector,setInspector]=useState<'circuit'|'resources'>('circuit');
-  const preview=useMutation({mutationFn:()=>qh.circuit({quantum:draft.quantum,model_type:kind,seed:draft.seed}),onSuccess:setCircuit});
-  const fitted=useMutation({mutationFn:()=>qh.fittedCircuit(modelId),onSuccess:setCircuit});
+  const preview=useMutation({mutationFn:()=>qh.circuit({quantum:draft.quantum,model_type:kind,seed:draft.seed}),onSuccess:result=>{setCircuit(result);void history.record(quantumActivity({circuit:result,configuration:draft.quantum,datasetId:draft.dataset_id||null}))}});
+  const fitted=useMutation({mutationFn:()=>qh.fittedCircuit(modelId),onSuccess:result=>{setCircuit(result);void history.record(quantumActivity({circuit:result,datasetId:draft.dataset_id||null,model:(models.data||[]).find(model=>model.id===modelId)}))}});
   const advisor=useMutation({mutationFn:()=>qh.resourceAdvisor({
     model_type:kind,
     quantum:draft.quantum,

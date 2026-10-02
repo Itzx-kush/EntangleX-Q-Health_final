@@ -24,7 +24,7 @@ export function VerifiedDemoProvider({children}:{children:ReactNode}){
       return {active:Boolean(saved.active),experimentId:saved.experimentId||null,datasetId:saved.datasetId||null};
     }catch{return {active:false,experimentId:null,datasetId:null}}
   });
-  useEffect(()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch{}},[state]);
+  useEffect(()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));window.dispatchEvent(new Event('qhealth-guest-state-changed'))}catch{}},[state]);
   return <DemoContext.Provider value={{
     ...state,
     activate:(experimentId,datasetId)=>setState({active:true,experimentId,datasetId}),

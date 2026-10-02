@@ -13,7 +13,7 @@ type Ctx={draft:TrainingConfig;update:(patch:Partial<TrainingConfig>)=>void;pipe
 const DraftContext=createContext<Ctx|null>(null);
 export function DraftProvider({children}:{children:ReactNode}){
   const [draft,setDraft]=useState<TrainingConfig>(()=>{try{const raw=localStorage.getItem('qhealth-tictac-draft');if(raw){const v=JSON.parse(raw) as Partial<TrainingConfig>;return {...defaultDraft,...v,pipeline:{...defaultDraft.pipeline,...v.pipeline},quantum:{...defaultDraft.quantum,...v.quantum},hybrid:{...defaultDraft.hybrid!,...(v.hybrid??{})},parameters:{...defaultDraft.parameters,...v.parameters}}}}catch{}return defaultDraft});
-  useEffect(()=>{try{localStorage.setItem('qhealth-tictac-draft',JSON.stringify(draft))}catch{}},[draft]);
+  useEffect(()=>{try{localStorage.setItem('qhealth-tictac-draft',JSON.stringify(draft));window.dispatchEvent(new Event('qhealth-guest-state-changed'))}catch{}},[draft]);
   return <DraftContext.Provider value={{draft,update:p=>setDraft(v=>({...v,...p})),pipeline:p=>setDraft(v=>({...v,pipeline:{...v.pipeline,...p}})),quantum:p=>setDraft(v=>({...v,quantum:{...v.quantum,...p}})),selectDataset:(id,recommendedDuplicatePolicy)=>setDraft(v=>({...v,dataset_id:id,features:null,duplicate_policy:recommendedDuplicatePolicy||defaultDraft.duplicate_policy,pipeline:{...v.pipeline,log_features:[],ratios:[]}})),clearDataset:id=>setDraft(v=>v.dataset_id===id?({...v,dataset_id:'',features:null,duplicate_policy:defaultDraft.duplicate_policy,pipeline:{...v.pipeline,log_features:[],ratios:[]}}):v),reset:()=>setDraft(defaultDraft)}}>{children}</DraftContext.Provider>;
 }
 export function useDraft(){const v=useContext(DraftContext);if(!v)throw new Error('DraftProvider missing');return v;}

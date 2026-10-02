@@ -6,7 +6,9 @@ import {Toaster} from 'sonner';
 import {DraftProvider} from './hooks/useDraft';
 import {VerifiedDemoProvider} from './hooks/useVerifiedDemo';
 import App from './App';
-import {LogoIntro} from './components/LogoIntro';
+import {AuthProvider} from './auth/AuthProvider';
+import {AuthGate} from './auth/AuthGate';
+import {GuestMigrationProvider} from './auth/GuestMigrationProvider';
 import './index.css';
 import './tokens.css';
 import './styles/reference-theme.css';
@@ -16,6 +18,9 @@ import './responsive-adaptation.css';
 import './styles/tremor.css';
 import './styles/tremor-v2.css';
 import './styles/product-polish.css';
+import './styles/account-workspace.css';
+import './styles/research-history.css';
+import './styles/guest-migration.css';
 
 const queryClient=new QueryClient({defaultOptions:{queries:{staleTime:3000,retry:1}}});
 
@@ -23,13 +28,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <DraftProvider>
-          <VerifiedDemoProvider>
-            <LogoIntro/>
-            <App/>
-            <Toaster position="bottom-right" richColors/>
-          </VerifiedDemoProvider>
-        </DraftProvider>
+        <AuthProvider>
+          <GuestMigrationProvider>
+            <AuthGate>
+              <DraftProvider>
+                <VerifiedDemoProvider>
+                  <App/>
+                  <Toaster position="bottom-right" richColors/>
+                </VerifiedDemoProvider>
+              </DraftProvider>
+            </AuthGate>
+          </GuestMigrationProvider>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>
