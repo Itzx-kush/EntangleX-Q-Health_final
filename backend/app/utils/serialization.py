@@ -23,11 +23,21 @@ def clean_json(value: Any) -> Any:
     return value
 
 def fingerprint(value: Any) -> str:
-    return hashlib.sha256(json.dumps(clean_json(value), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return hashlib.sha256(canonical_json_bytes(value)).hexdigest()
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    """Stable UTF-8 JSON for hashes and immutable provenance contracts."""
+    return json.dumps(
+        clean_json(value),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
 
 def software_versions() -> dict[str, str | None]:
     import platform
-    names = ["fastapi", "pydantic", "SQLAlchemy", "numpy", "pandas", "scipy", "scikit-learn", "shap", "qiskit", "qiskit-machine-learning", "qiskit-aer", "dill"]
+    names = ["fastapi", "pydantic", "SQLAlchemy", "numpy", "pandas", "scipy", "scikit-learn", "shap", "qiskit", "qiskit-machine-learning", "qiskit-aer", "pennylane", "torch", "dill"]
     result: dict[str, str | None] = {"python": platform.python_version(), "platform": platform.platform()}
     for name in names:
         try:

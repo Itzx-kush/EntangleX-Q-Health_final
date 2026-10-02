@@ -5,6 +5,8 @@ from sqlalchemy import select
 
 from ..database import session_scope
 from ..jobs.manager import manager
+from ..manifests.schemas import ManifestIntegrityResult, RunManifest
+from ..manifests.service import get_manifest, provenance_graph, verify_manifest_integrity
 from ..runs.service import list_runs
 from ..storage.entities import Artifact, Experiment, Job, ModelRecord, Run
 from ..storage.repository import require
@@ -16,6 +18,22 @@ class RunDetailOut(Schema):
     job: JobOut | None
     models: list[ModelOut]
     artifacts: list[ArtifactOut]
+
+
+class RunManifestOut(Schema):
+    artifact_id: str
+    manifest: RunManifest
+    integrity: ManifestIntegrityResult
+
+
+class ReproducibilityOut(Schema):
+    run_id: str
+    status: str
+    bitwise_reproducible: bool
+    configuration_fingerprint: str | None
+    manifest_available: bool
+    integrity: ManifestIntegrityResult
+    limitations: list[str]
 
 
 router = APIRouter(tags=["research runs and artifacts"])
@@ -70,6 +88,46 @@ def run_artifacts(identity: UUID):
         return list(session.scalars(
             select(Artifact).where(Artifact.run_id == str(identity)).order_by(Artifact.created_at.desc())
         ))
+
+
+@router.get("/runs/{identity}/manifest", response_model=RunManifestOut)
+def run_manifest(identity: UUID):
+    run, artifact, manifest = get_manifest(str(identity))
+    return {
+        "artifact_id": artifact.id,
+        "manifest": manifest,
+        "integrity": verify_manifest_integrity(run.id),
+    }
+
+
+@router.get("/runs/{identity}/manifest/integrity", response_model=ManifestIntegrityResult)
+def manifest_integrity(identity: UUID):
+    return verify_manifest_integrity(str(identity))
+
+
+@router.get("/runs/{identity}/provenance", response_model=dict)
+def run_provenance(identity: UUID):
+    return provenance_graph(str(identity))
+
+
+@router.get("/runs/{identity}/reproducibility", response_model=ReproducibilityOut)
+def run_reproducibility(identity: UUID):
+    with session_scope() as session:
+        run = require(session, Run, str(identity))
+    integrity = verify_manifest_integrity(run.id)
+    status = run.reproducibility_status or "INCOMPLETE_PROVENANCE"
+    return {
+        "run_id": run.id,
+        "status": status,
+        "bitwise_reproducible": False,
+        "configuration_fingerprint": run.configuration_fingerprint,
+        "manifest_available": bool(run.manifest_artifact_id),
+        "integrity": integrity,
+        "limitations": [
+            "Configurational reproducibility does not guarantee bit-for-bit cross-platform identity.",
+            "Legacy Runs without a manifest remain readable but have incomplete provenance.",
+        ],
+    }
 
 
 @router.get("/experiments/{identity}/artifacts", response_model=list[ArtifactOut])

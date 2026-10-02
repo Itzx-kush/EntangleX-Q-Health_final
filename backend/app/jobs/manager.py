@@ -11,6 +11,7 @@ from ..data.splitting import prepare_data
 from ..database import session_scope
 from ..models.training import train_model
 from ..models.hybrid import require_hybrid_dependencies
+from ..manifests.service import create_locked_manifest
 from ..quantum.backends import require_quantum
 from ..runs.service import create_run, transition
 from ..storage.entities import Experiment, Job, ModelRecord, Run
@@ -129,6 +130,7 @@ class TrainingManager:
                         "limitations": data.quality["warnings"]})
                     session.add(experiment)
                     session.flush()
+                job_id = str(uuid4())
                 run = create_run(
                     session,
                     experiment=experiment,
@@ -141,7 +143,11 @@ class TrainingManager:
                         "software": software_versions(),
                     },
                 )
-                job = Job(id=str(uuid4()), experiment_id=experiment.id, run_id=run.id)
+                create_locked_manifest(
+                    session, run=run, experiment=experiment, data=data,
+                    config=config, job_id=job_id,
+                )
+                job = Job(id=job_id, experiment_id=experiment.id, run_id=run.id)
                 session.add(job)
                 session.flush()
                 transition(session, run, "queued")
