@@ -43,7 +43,7 @@ export function VerifiedContextBar(){
   </div>;
 }
 
-export function VerifiedDemoLanding(){
+export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
   const data=useFlagshipData();
   useEffect(()=>{
     if(data.available&&data.experimentId&&data.payload?.dataset.id)data.context.activate(data.experimentId,data.payload.dataset.id);
@@ -76,7 +76,7 @@ export function VerifiedDemoLanding(){
         <div className="mt-4 space-y-2 text-xs muted"><p>Quantum execution: local simulation.</p><p>Quantum advantage claimed: No.</p><p>Dataset hash and every artifact hash are validated before readiness.</p></div>
       </Card>
     </div>
-    <StageNav current="/demo"/>
+    <StageNav current={current}/>
   </div>;
 }
 
