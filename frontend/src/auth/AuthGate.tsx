@@ -5,6 +5,7 @@ import {useAuth} from './AuthProvider';
 import {useGuestMigration} from './GuestMigrationProvider';
 import {LogoIntro} from '../components/LogoIntro';
 import {PublicExperience} from '../components/PublicExperience';
+import {QuantumNetworkBackground} from '../components/QuantumNetworkBackground';
 import './auth.css';
 
 function applyStoredTheme(){
@@ -77,17 +78,12 @@ function Welcome({onBack,onGoogleStart}:{onBack:()=>void;onGoogleStart:()=>void}
   };
 
   return <main className="auth-entry">
+    <QuantumNetworkBackground/>
     <div className="auth-atmosphere" aria-hidden="true">
       <div className="auth-grid"/>
-      <span className="auth-line auth-line-a"/>
-      <span className="auth-line auth-line-b"/>
-      <span className="auth-line auth-line-c"/>
-      <i className="auth-node auth-node-a"/>
-      <i className="auth-node auth-node-b"/>
-      <i className="auth-node auth-node-c"/>
-      <i className="auth-node auth-node-d"/>
-      <div className="auth-orbit auth-orbit-one"/>
-      <div className="auth-orbit auth-orbit-two"/>
+      <span className="auth-depth-glow auth-depth-glow-a"/>
+      <span className="auth-depth-glow auth-depth-glow-b"/>
+      <span className="auth-depth-vignette"/>
     </div>
 
     <section className="auth-brand" aria-labelledby="auth-title">
