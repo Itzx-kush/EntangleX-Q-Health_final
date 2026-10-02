@@ -75,7 +75,9 @@ class TrainingConfig(Schema):
     dataset_id: UUID
     dataset_version_id: UUID | None = None
     features: list[str] | None = Field(default=None, max_length=200)
-    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=7)
+    models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(
+        default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=7
+    )
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     quantum: QuantumConfig = Field(default_factory=QuantumConfig)
     hybrid: HybridModelConfig = Field(default_factory=HybridModelConfig)
@@ -90,12 +92,17 @@ class TrainingConfig(Schema):
     target_sensitivity: float = Field(default=0.95, gt=0, le=1)
     calibration: Literal["none", "sigmoid", "isotonic"] = "none"
     calibration_folds: int = Field(default=3, ge=2, le=5)
+    sampling_unit: Literal["independent_samples", "grouped_samples"] = "independent_samples"
+    group_column: str | None = Field(default=None, max_length=200)
+
     @model_validator(mode="after")
     def coherent(self):
         if len(self.models) != len(set(self.models)):
             raise ValueError("Choose each model only once.")
         if self.features is not None and (not self.features or len(set(self.features)) != len(self.features)):
             raise ValueError("Features must be a nonempty unique list.")
+        if self.sampling_unit == "grouped_samples" and not self.group_column:
+            raise ValueError("group_column is required when sampling_unit is 'grouped_samples'.")
         qiskit_models = {"vqc", "qsvc", "qnn"}
         qiskit_selected = bool(qiskit_models.intersection(self.models))
         hybrid_selected = "hybrid_pennylane_torch" in self.models
