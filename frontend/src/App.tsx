@@ -6,6 +6,8 @@ import {Loading} from './components/Shared';
 import {QuantumWorkbench} from './components/QuantumWorkbench';
 import {VerifiedDemoLanding,VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
+import {AiProvider} from './contexts/AiContext';
+import {AiPopup} from './components/AiPopup';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -23,12 +25,14 @@ const DemoCenter=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({defaul
 const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.SettingsPage})));
 const AccountPage=lazy(()=>import('./pages/AccountPage').then(m=>({default:m.AccountPage})));
 const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then(m=>({default:m.ResearchHistoryPage})));
+const AiAssistantPage=lazy(()=>import('./pages/AiAssistantPage').then(m=>({default:m.AiAssistantPage})));
 
 export default function App(){
-  return <ResearchShell>
+  return <AiProvider><ResearchShell>
     <ThemeToggle/>
+    <AiPopup/>
     <WorkspaceRoutes/>
-  </ResearchShell>;
+  </ResearchShell></AiProvider>;
 }
 
 function WorkspaceRoutes(){
@@ -52,6 +56,7 @@ function WorkspaceRoutes(){
       <Route path="/demo" element={<DemoCenter/>}/>
       <Route path="/account" element={<AccountPage/>}/>
       <Route path="/my-research" element={<ResearchHistoryPage/>}/>
+      <Route path="/ai" element={<AiAssistantPage/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
