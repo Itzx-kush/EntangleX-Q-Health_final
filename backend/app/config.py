@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     max_queued_jobs: int = Field(default=3, ge=1, le=10)
     log_level: str = "INFO"
     groq_api_key: str = ""
-    groq_model: str = "qwen/qwen3.5-27b"
+    groq_model: str = "qwen/qwen3.8-27b"
 
     @model_validator(mode="after")
     def production_network_boundaries(self):
