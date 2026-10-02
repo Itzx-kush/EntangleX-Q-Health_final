@@ -1,0 +1,72 @@
+{
+  "artifact_version": "sih-verified-diabetes-v3",
+  "cases": [
+    {
+      "case_id": "heldout-row-108",
+      "case_label": "flagged",
+      "input": {
+        "age": 25,
+        "alopecia": "Yes",
+        "delayed_healing": "Yes",
+        "gender": "Male",
+        "genital_thrush": "Yes",
+        "irritability": "No",
+        "itching": "Yes",
+        "muscle_stiffness": "No",
+        "obesity": "No",
+        "partial_paresis": "No",
+        "polydipsia": "Yes",
+        "polyphagia": "Yes",
+        "polyuria": "Yes",
+        "sudden_weight_loss": "No",
+        "visual_blurring": "Yes",
+        "weakness": "No"
+      },
+      "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+      "model_type": "hybrid_pennylane_torch",
+      "predicted_class": "positive",
+      "probability_positive": 0.6120322996433079,
+      "row_index": 108,
+      "threshold": 0.47550620592004483,
+      "threshold_source": "out_of_fold_validation"
+    },
+    {
+      "case_id": "heldout-row-26",
+      "case_label": "not_flagged",
+      "input": {
+        "age": 42,
+        "alopecia": "No",
+        "delayed_healing": "No",
+        "gender": "Male",
+        "genital_thrush": "No",
+        "irritability": "Yes",
+        "itching": "No",
+        "muscle_stiffness": "Yes",
+        "obesity": "No",
+        "partial_paresis": "No",
+        "polydipsia": "No",
+        "polyphagia": "Yes",
+        "polyuria": "No",
+        "sudden_weight_loss": "No",
+        "visual_blurring": "No",
+        "weakness": "Yes"
+      },
+      "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+      "model_type": "hybrid_pennylane_torch",
+      "predicted_class": "negative",
+      "probability_positive": 0.4663632297297149,
+      "row_index": 26,
+      "threshold": 0.47550620592004483,
+      "threshold_source": "out_of_fold_validation"
+    }
+  ],
+  "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+  "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+  "evidence_type": "predictions",
+  "experiment_id": "3b0c615b-ccce-429e-b353-7c40ebd9d626",
+  "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+  "model_ids": [
+    "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c"
+  ],
+  "scientific_scope": "Research benchmark demonstration; not clinical validation or medical advice."
+}

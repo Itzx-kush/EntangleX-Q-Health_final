@@ -29,7 +29,11 @@ from app.storage.entities import Dataset, Experiment, Job, ModelRecord
 from app.storage.files import safe_path
 from app.utils.errors import AppError
 
-PROCESSING = {"cleveland-heart-disease", "chronic-kidney-disease", "ilpd-liver"}
+PROCESSING = {"wdbc", "cleveland-heart-disease", "chronic-kidney-disease", "ilpd-liver"}
+REQUIRED_MODELS = {
+    "logistic_regression", "svm", "random_forest",
+    "vqc", "qsvc", "qnn", "hybrid_pennylane_torch",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -42,12 +46,12 @@ def reset_verified_cache():
 def test_readiness_configuration_is_exact_and_invalid_selection_fails():
     library = list_builtin_datasets()
     assert len(library) == 5
-    assert set(READY_DEMO_DATASETS) == {"wdbc", "early-stage-diabetes"}
+    assert set(READY_DEMO_DATASETS) == {"early-stage-diabetes"}
     assert {item["slug"] for item in library if item["demo_readiness"]["status"] == "ready"} == set(READY_DEMO_DATASETS)
     assert {item["slug"] for item in library if item["demo_readiness"]["status"] == "requires_processing"} == PROCESSING
-    with pytest.raises(AppError, match="exactly two"):
-        validate_readiness_configuration({"wdbc"})
-    with pytest.raises(AppError, match="exactly two"):
+    with pytest.raises(AppError, match="exactly one"):
+        validate_readiness_configuration({"wdbc", "early-stage-diabetes"})
+    with pytest.raises(AppError, match="exactly one"):
         validate_readiness_configuration({"wdbc", "unknown"})
 
 
@@ -72,24 +76,66 @@ def test_manifest_and_every_packaged_artifact_have_real_matching_hashes():
             assert bundle["dataset_hash"] == checked["catalog"]["sha256"]
 
 
+def test_diabetes_package_has_one_controlled_seven_model_experiment_and_all_evidence():
+    checked = validate_packaged_dataset("early-stage-diabetes", refresh=True)
+    assert len(checked["models"]) == 7
+    assert {model["model_type"] for model in checked["models"]} == REQUIRED_MODELS
+    assert {model["experiment_id"] for model in checked["models"]} == {checked["experiment"]["id"]}
+    assert {model["dataset_id"] for model in checked["models"]} == {checked["dataset"]["id"]}
+    assert set(checked["experiment"]["config"]["models"]) == REQUIRED_MODELS
+    for model in checked["models"]:
+        test_metrics = model["metrics"]["test"]
+        assert {"accuracy", "precision", "recall", "f1", "roc_auc", "confusion_matrix"} <= set(test_metrics)
+        assert model["metrics"]["operating_point"]["selection_strategy"] == "target_sensitivity"
+        assert model["artifact_sha256"] == model["artifact"]["sha256"]
+
+    hybrid = next(model for model in checked["models"] if model["model_type"] == "hybrid_pennylane_torch")
+    quantum = hybrid["details"]["quantum"]
+    assert quantum["framework"] == "PennyLane"
+    assert quantum["classical_framework"] == "PyTorch"
+    assert quantum["real_hardware"] is False
+    assert quantum["quantum_parameters_changed"] is True
+
+    evidence = checked["evidence"]
+    assert set(evidence) == {
+        "benchmark", "robustness", "explainability", "predictions",
+        "preprocessing", "provenance",
+    }
+    model_ids = {model["id"] for model in checked["models"]}
+    assert set(evidence["benchmark"]["model_ids"]) == model_ids
+    assert {result["model_id"] for result in evidence["robustness"]["results"]} == model_ids
+    assert evidence["explainability"]["model_id"] == hybrid["id"]
+    assert evidence["explainability"]["local"]["contributions"]
+    assert evidence["explainability"]["global_summary"]
+    cases = evidence["predictions"]["cases"]
+    assert {case["case_label"] for case in cases} == {"flagged", "not_flagged"}
+    assert all(case["model_id"] == hybrid["id"] for case in cases)
+    by_label = {case["case_label"]: case for case in cases}
+    assert by_label["flagged"]["predicted_class"] == "positive"
+    assert by_label["flagged"]["probability_positive"] >= by_label["flagged"]["threshold"]
+    assert by_label["not_flagged"]["predicted_class"] == "negative"
+    assert by_label["not_flagged"]["probability_positive"] < by_label["not_flagged"]["threshold"]
+    assert evidence["preprocessing"]["split"]["split_hash"]
+    assert evidence["provenance"]["dataset"]["source_url"]
+
+
 def test_corrupted_artifact_and_cross_dataset_relationships_are_rejected(tmp_path):
     corrupted = tmp_path / "corrupted.dill.b64"
     corrupted.write_bytes(base64.b64encode(b"corrupted raw dill payload"))
     with pytest.raises(AppError, match="SHA-256 integrity"):
         _read_bundle(corrupted, "0" * 64)
     manifest = _load_manifest()
-    slug = "wdbc"
+    slug = "early-stage-diabetes"
     entry = copy.deepcopy(manifest["datasets"][slug])
-    other = manifest["datasets"]["early-stage-diabetes"]
-    entry["models"][0]["dataset_id"] = other["dataset"]["id"]
+    entry["models"][0]["dataset_id"] = "00000000-0000-0000-0000-000000000000"
     with pytest.raises(AppError, match="relationship"):
         _validate_entry(slug, entry, manifest)
     entry = copy.deepcopy(manifest["datasets"][slug])
-    entry["experiment"]["dataset_id"] = other["dataset"]["id"]
+    entry["experiment"]["dataset_id"] = "00000000-0000-0000-0000-000000000000"
     with pytest.raises(AppError, match="experiment identity"):
         _validate_entry(slug, entry, manifest)
     entry = copy.deepcopy(manifest["datasets"][slug])
-    entry["models"][0]["experiment_id"] = other["experiment"]["id"]
+    entry["models"][0]["experiment_id"] = "00000000-0000-0000-0000-000000000000"
     with pytest.raises(AppError, match="relationship"):
         _validate_entry(slug, entry, manifest)
 
@@ -98,7 +144,7 @@ def test_readiness_endpoint_and_seeded_records_are_genuine_and_dataset_specific(
     response = client.get("/api/datasets/readiness")
     assert response.status_code == 200
     body = response.json()
-    assert (body["total"], body["verified_demo_ready"], body["requires_processing"]) == (5, 2, 3)
+    assert (body["total"], body["verified_demo_ready"], body["requires_processing"]) == (5, 1, 4)
     for item in body["datasets"]:
         ready = item["demo_readiness"]
         if item["slug"] in READY_DEMO_DATASETS:
@@ -153,7 +199,7 @@ def test_repeated_readiness_calls_use_verified_cache_without_reopening_bundles(c
     second = client.get("/api/datasets/readiness")
     library = client.get("/api/datasets/library")
     assert first.status_code == second.status_code == library.status_code == 200
-    assert calls == 4  # two genuine models for each of the two ready datasets, verified once
+    assert calls == 7  # all seven genuine diabetes models, verified once
 
 
 def test_uploaded_dataset_is_excluded_at_registered_readiness_boundary(client, registered, config):

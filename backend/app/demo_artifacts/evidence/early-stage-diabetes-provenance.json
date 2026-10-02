@@ -1,0 +1,398 @@
+{
+  "artifact_version": "sih-verified-diabetes-v3",
+  "dataset": {
+    "attribution": "Islam, M. M. F., Ferdousi, R., Rahman, S., & Bushra, H. Y. Early Stage Diabetes Risk Prediction Dataset.",
+    "categorical_features": [
+      "gender",
+      "polyuria",
+      "polydipsia",
+      "sudden_weight_loss",
+      "weakness",
+      "polyphagia",
+      "genital_thrush",
+      "visual_blurring",
+      "itching",
+      "irritability",
+      "delayed_healing",
+      "partial_paresis",
+      "muscle_stiffness",
+      "alopecia",
+      "obesity"
+    ],
+    "class_distribution": {
+      "negative": 200,
+      "positive": 320
+    },
+    "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+    "dataset_status": "registered",
+    "deidentification_asserted_by_uploader": false,
+    "domain": "endocrinology",
+    "feature_count": 16,
+    "features": [
+      "age",
+      "gender",
+      "polyuria",
+      "polydipsia",
+      "sudden_weight_loss",
+      "weakness",
+      "polyphagia",
+      "genital_thrush",
+      "visual_blurring",
+      "itching",
+      "irritability",
+      "delayed_healing",
+      "partial_paresis",
+      "muscle_stiffness",
+      "alopecia",
+      "obesity"
+    ],
+    "hash_algorithm": "sha256",
+    "hash_scope": "exact stored CSV bytes",
+    "is_demo": false,
+    "library_slug": "early-stage-diabetes",
+    "license": "CC BY 4.0; Islam, M. M. F., Ferdousi, R., Rahman, S., & Bushra, H. Y. Early Stage Diabetes Risk Prediction Dataset.",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "name": "Early Stage Diabetes Risk Prediction",
+    "negative_label": "negative",
+    "normalization": [
+      "Normalized column names to lowercase snake_case.",
+      "Mapped target labels to lowercase without changing source rows."
+    ],
+    "numeric_features": [
+      "age"
+    ],
+    "origin": "built_in",
+    "packaged_resource_sha256": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+    "positive_label": "positive",
+    "preprocessing_configuration": "Stored per experiment; source dataset is immutable.",
+    "recommended_duplicate_policy": "drop_exact",
+    "row_count": 520,
+    "sampling_unit": "independent_samples",
+    "source": "UCI Machine Learning Repository",
+    "source_url": "https://doi.org/10.24432/C5VG8H",
+    "target": "diabetes_status",
+    "target_classes": [
+      "negative",
+      "positive"
+    ],
+    "target_detection": {
+      "candidates": [
+        {
+          "class_distribution": {
+            "negative": 200,
+            "positive": 320
+          },
+          "class_labels": [
+            "negative",
+            "positive"
+          ],
+          "column": "diabetes_status",
+          "confidence": "high",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 16,
+          "reasons": [
+            "target-like token in column name",
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.94,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 262,
+            "Yes": 258
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "polyuria",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 2,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 287,
+            "Yes": 233
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "polydipsia",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 3,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 303,
+            "Yes": 217
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "sudden_weight_loss",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 4,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 215,
+            "Yes": 305
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "weakness",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 5,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 283,
+            "Yes": 237
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "polyphagia",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 6,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 404,
+            "Yes": 116
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "genital_thrush",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 7,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 287,
+            "Yes": 233
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "visual_blurring",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 8,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 267,
+            "Yes": 253
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "itching",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 9,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        },
+        {
+          "class_distribution": {
+            "No": 394,
+            "Yes": 126
+          },
+          "class_labels": [
+            "No",
+            "Yes"
+          ],
+          "column": "irritability",
+          "confidence": "medium",
+          "eligible_for_current_pipeline": true,
+          "missing_fraction": 0.0,
+          "penalties": [],
+          "position": 10,
+          "reasons": [
+            "exactly two observed classes",
+            "categorical low-cardinality values",
+            "semantically opposed binary labels",
+            "both classes have meaningful support"
+          ],
+          "score": 0.6,
+          "target_type": "binary_classification",
+          "unique_values": 2
+        }
+      ],
+      "class_distribution": {
+        "negative": 200,
+        "positive": 320
+      },
+      "class_labels": [
+        "negative",
+        "positive"
+      ],
+      "confidence": "high",
+      "confidence_score": 1.0,
+      "detected_target": "diabetes_status",
+      "heuristic_candidate": {
+        "class_distribution": {
+          "negative": 200,
+          "positive": 320
+        },
+        "class_labels": [
+          "negative",
+          "positive"
+        ],
+        "column": "diabetes_status",
+        "confidence": "high",
+        "eligible_for_current_pipeline": true,
+        "missing_fraction": 0.0,
+        "penalties": [],
+        "position": 16,
+        "reasons": [
+          "target-like token in column name",
+          "exactly two observed classes",
+          "categorical low-cardinality values",
+          "semantically opposed binary labels",
+          "both classes have meaningful support"
+        ],
+        "score": 0.94,
+        "target_type": "binary_classification",
+        "unique_values": 2
+      },
+      "heuristic_notice": "Scores are deterministic heuristic rankings, not calibrated probabilities.",
+      "positive_label": "positive",
+      "positive_label_confidence": 0.95,
+      "positive_label_reason": "Semantic positive/negative label pair.",
+      "requires_manual_target": false,
+      "requires_positive_label": false,
+      "selection_method": "verified_manifest",
+      "target_type": "binary_classification",
+      "verified_target": "diabetes_status"
+    },
+    "target_type": "binary_classification",
+    "task": "binary_classification",
+    "uploaded_at": "2026-10-02T06:04:37.003924+00:00",
+    "version": "UCI dataset 529 snapshot"
+  },
+  "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+  "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+  "evidence_type": "provenance",
+  "experiment_id": "3b0c615b-ccce-429e-b353-7c40ebd9d626",
+  "model_ids": [
+    "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+    "aca8bd30-ec00-42cd-a91c-18d8933b1647",
+    "522fcc97-ec2b-4615-aac2-b2a7dd5e23bb",
+    "b20376c4-20c0-42c4-9006-7bd291599c0e",
+    "495e35b3-87b8-4d3d-bf50-8936227c3fbb",
+    "da169e05-91c7-4d46-b970-3e15a6c2dd42",
+    "7f50f3c6-15af-469c-9115-d0ac26111835"
+  ],
+  "scientific_scope": "Research benchmark demonstration; not clinical validation or medical advice."
+}

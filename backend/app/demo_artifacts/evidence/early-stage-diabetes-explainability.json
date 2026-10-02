@@ -1,0 +1,285 @@
+{
+  "artifact_version": "sih-verified-diabetes-v3",
+  "dataset_hash": "bce6d4baa8d237623d45560f866ca9f40ba1315ba5ee0d26959a874d50d41e27",
+  "dataset_id": "b3251a5d-e7a1-494c-9343-8c454344db45",
+  "evidence_type": "explainability",
+  "experiment_id": "3b0c615b-ccce-429e-b353-7c40ebd9d626",
+  "global_summary": [
+    {
+      "feature": "polyuria",
+      "mean_absolute_shap": 0.01887277330287998,
+      "mean_signed_shap": 0.008434910275080948
+    },
+    {
+      "feature": "irritability",
+      "mean_absolute_shap": 0.01848295677768476,
+      "mean_signed_shap": -0.01503882841440786
+    },
+    {
+      "feature": "polyphagia",
+      "mean_absolute_shap": 0.018163980303112545,
+      "mean_signed_shap": 0.0006682244825737121
+    },
+    {
+      "feature": "gender",
+      "mean_absolute_shap": 0.00839922384247807,
+      "mean_signed_shap": 0.002933686366861671
+    },
+    {
+      "feature": "polydipsia",
+      "mean_absolute_shap": 0.005457858254450443,
+      "mean_signed_shap": -0.005457858254450443
+    },
+    {
+      "feature": "partial_paresis",
+      "mean_absolute_shap": 0.004297649320507607,
+      "mean_signed_shap": 0.004297649320507607
+    },
+    {
+      "feature": "age",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "sudden_weight_loss",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "weakness",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "genital_thrush",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "visual_blurring",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "itching",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "delayed_healing",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "muscle_stiffness",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "alopecia",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    },
+    {
+      "feature": "obesity",
+      "mean_absolute_shap": 0.0,
+      "mean_signed_shap": 0.0
+    }
+  ],
+  "local": {
+    "background_sample_count": 20,
+    "background_source": "training partition only",
+    "case_id": "heldout-row-108",
+    "contributions": [
+      {
+        "absolute_contribution": 0.02730768357796093,
+        "contribution": 0.02730768357796093,
+        "direction": "toward_positive",
+        "feature": "polyuria",
+        "interpretation": "Increased the model's final positive-class probability.",
+        "magnitude": 0.02730768357796093,
+        "original_value": "Yes",
+        "signed_mean": 0.02730768357796093
+      },
+      {
+        "absolute_contribution": 0.018832204785686257,
+        "contribution": 0.018832204785686257,
+        "direction": "toward_positive",
+        "feature": "polyphagia",
+        "interpretation": "Increased the model's final positive-class probability.",
+        "magnitude": 0.018832204785686257,
+        "original_value": "Yes",
+        "signed_mean": 0.018832204785686257
+      },
+      {
+        "absolute_contribution": 0.011332910209339742,
+        "contribution": 0.011332910209339742,
+        "direction": "toward_positive",
+        "feature": "gender",
+        "interpretation": "Increased the model's final positive-class probability.",
+        "magnitude": 0.011332910209339742,
+        "original_value": "Male",
+        "signed_mean": 0.011332910209339742
+      },
+      {
+        "absolute_contribution": 0.008226692384183887,
+        "contribution": 0.008226692384183887,
+        "direction": "toward_positive",
+        "feature": "partial_paresis",
+        "interpretation": "Increased the model's final positive-class probability.",
+        "magnitude": 0.008226692384183887,
+        "original_value": "No",
+        "signed_mean": 0.008226692384183887
+      },
+      {
+        "absolute_contribution": 0.0034441283632768993,
+        "contribution": 0.0034441283632768993,
+        "direction": "toward_positive",
+        "feature": "irritability",
+        "interpretation": "Increased the model's final positive-class probability.",
+        "magnitude": 0.0034441283632768993,
+        "original_value": "No",
+        "signed_mean": 0.0034441283632768993
+      },
+      {
+        "absolute_contribution": 0.0004713005874855125,
+        "contribution": -0.0004713005874855125,
+        "direction": "toward_negative",
+        "feature": "polydipsia",
+        "interpretation": "Decreased the model's final positive-class probability.",
+        "magnitude": 0.0004713005874855125,
+        "original_value": "Yes",
+        "signed_mean": -0.0004713005874855125
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "age",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": 25,
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "sudden_weight_loss",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "No",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "weakness",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "No",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "genital_thrush",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "Yes",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "visual_blurring",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "Yes",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "itching",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "Yes",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "delayed_healing",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "Yes",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "muscle_stiffness",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "No",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "alopecia",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "Yes",
+        "signed_mean": 0.0
+      },
+      {
+        "absolute_contribution": 0.0,
+        "contribution": 0.0,
+        "direction": "neutral",
+        "feature": "obesity",
+        "interpretation": "Had negligible contribution to the model's final positive-class probability.",
+        "magnitude": 0.0,
+        "original_value": "No",
+        "signed_mean": 0.0
+      }
+    ],
+    "explained_case_count": 1,
+    "limitations": [
+      "SHAP describes how input features influenced this model's final prediction; it does not establish biological or clinical causation.",
+      "SHAP does not expose a complete causal interpretation of the quantum circuit.",
+      "Categorical encoding is used only by the bounded SHAP perturbation interface and has no biological meaning."
+    ],
+    "method": "shap",
+    "method_display": "SHAP \u2014 Final Hybrid Output",
+    "model_display_name": "PennyLane + PyTorch Hybrid",
+    "model_type": "hybrid_pennylane_torch",
+    "output_semantics": "final positive-class probability",
+    "prediction_context": {
+      "base_value": 0.5433599809103458,
+      "negative_label": "negative",
+      "operating_threshold": 0.47550620592004483,
+      "positive_label": "positive",
+      "predicted_class": "positive",
+      "probability_positive": 0.6120322996433079,
+      "research_risk_category": "research_flagged",
+      "threshold_source": "out_of_fold_validation"
+    },
+    "scope": "local_case"
+  },
+  "method": "SHAP permutation explainer",
+  "model_id": "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c",
+  "model_ids": [
+    "0c71e63b-6b7f-4b49-a163-b2ad3fadab7c"
+  ],
+  "output_path": "raw input \u2192 shared preprocessing \u2192 PennyLane expectation values \u2192 PyTorch output head \u2192 positive-class probability",
+  "scientific_scope": "Research benchmark demonstration; not clinical validation or medical advice."
+}

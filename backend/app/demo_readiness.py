@@ -20,14 +20,22 @@ from .storage.entities import Dataset, Experiment, Job, ModelRecord
 from .storage.files import RestrictedUnpickler, atomic_bytes, safe_path
 from .utils.errors import AppError
 
-ARTIFACT_SCHEMA_VERSION = 2
-ARTIFACT_VERSION = "sih-verified-demo-v2"
+ARTIFACT_SCHEMA_VERSION = 3
+ARTIFACT_VERSION = "sih-verified-diabetes-v3"
 PACKAGED_ARTIFACT_HASH_ALGORITHM = "sha256"
 PACKAGED_ARTIFACT_HASH_SCOPE = "raw_dill_payload"
 # Deliberately explicit and centralized. Availability does not imply scientific superiority.
-READY_DEMO_DATASETS = frozenset({"wdbc", "early-stage-diabetes"})
+READY_DEMO_DATASETS = frozenset({"early-stage-diabetes"})
 EXPECTED_BUILTIN_COUNT = 5
-EXPECTED_READY_COUNT = 2
+EXPECTED_READY_COUNT = 1
+EXPECTED_MODEL_TYPES = frozenset({
+    "logistic_regression", "svm", "random_forest",
+    "vqc", "qsvc", "qnn", "hybrid_pennylane_torch",
+})
+REQUIRED_EVIDENCE = frozenset({
+    "benchmark", "robustness", "explainability", "predictions",
+    "preprocessing", "provenance",
+})
 
 _lock = RLock()
 _manifest_cache: dict | None = None
@@ -40,8 +48,8 @@ def validate_readiness_configuration(ready_slugs: set[str] | frozenset[str] = RE
     if len(slugs) != EXPECTED_BUILTIN_COUNT:
         raise AppError("demo_readiness_config_invalid", "Exactly five built-in datasets are required.", 500)
     unknown = set(ready_slugs) - slugs
-    if len(ready_slugs) != EXPECTED_READY_COUNT or unknown or len(slugs - set(ready_slugs)) != 3:
-        raise AppError("demo_readiness_config_invalid", "Verified demo readiness must select exactly two of the five built-in dataset slugs.", 500)
+    if len(ready_slugs) != EXPECTED_READY_COUNT or unknown or len(slugs - set(ready_slugs)) != 4:
+        raise AppError("demo_readiness_config_invalid", "Verified demo readiness must select exactly one of the five built-in dataset slugs.", 500)
 
 
 def _root():
@@ -84,6 +92,29 @@ def _artifact_path(filename: str, root=None) -> Path:
     if not filename or Path(filename).name != filename or not filename.endswith(".dill.b64"):
         raise AppError("demo_manifest_invalid", "A packaged model artifact reference is invalid.", 409)
     return Path(str((root or _root()).joinpath("models", filename)))
+
+
+def _evidence_path(filename: str, root=None) -> Path:
+    if not filename or Path(filename).name != filename or not filename.endswith(".json"):
+        raise AppError("demo_manifest_invalid", "A packaged evidence reference is invalid.", 409)
+    return Path(str((root or _root()).joinpath("evidence", filename)))
+
+
+def _read_evidence(reference: dict, root=None) -> dict:
+    if reference.get("hash_algorithm") != "sha256" or reference.get("hash_scope") != "exact_json_bytes":
+        raise AppError("demo_evidence_invalid", "A verified evidence integrity contract is invalid.", 409)
+    path = _evidence_path(reference.get("filename", ""), root)
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise AppError("demo_evidence_missing", "A verified demo evidence artifact is missing.", 409) from exc
+    if hashlib.sha256(payload).hexdigest() != reference.get("sha256"):
+        raise AppError("demo_evidence_integrity", "A verified demo evidence artifact failed its SHA-256 integrity check.", 409)
+    try:
+        value = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise AppError("demo_evidence_invalid", "A verified demo evidence artifact is invalid JSON.", 409) from exc
+    return value
 
 
 def _artifact_payload(path: Path) -> bytes:
@@ -146,8 +177,8 @@ def _validate_entry(slug: str, entry: dict, manifest: dict, artifact_root=None) 
         raise AppError("demo_job_mismatch", "The verified demo completed-job record is invalid.", 409)
     _validate_timestamp(job.get("created_at"), "job created_at")
     _validate_timestamp(job.get("updated_at"), "job updated_at")
-    if not models:
-        raise AppError("demo_manifest_invalid", "A verified demo experiment must contain at least one real model.", 409)
+    if len(models) != len(EXPECTED_MODEL_TYPES) or {model.get("model_type") for model in models} != set(EXPECTED_MODEL_TYPES):
+        raise AppError("demo_manifest_invalid", "The flagship verified demo must contain exactly the seven required model types.", 409)
     seen = set()
     for model in models:
         if model.get("id") in seen or model.get("experiment_id") != experiment_id or model.get("dataset_id") != dataset_id or model.get("status") != "ready":
@@ -165,8 +196,38 @@ def _validate_entry(slug: str, entry: dict, manifest: dict, artifact_root=None) 
                 or model_provenance.get("dataset_hash") != catalog["sha256"]
                 or model.get("details", {}).get("configuration") != experiment.get("config")):
             raise AppError("demo_model_mismatch", "A verified demo model is incompatible with its dataset or experiment.", 409)
+        if model.get("model_type") == "hybrid_pennylane_torch":
+            quantum = model.get("details", {}).get("quantum") or {}
+            if (quantum.get("framework") != "PennyLane"
+                    or quantum.get("classical_framework") != "PyTorch"
+                    or quantum.get("execution_kind") != "local PennyLane quantum simulation"
+                    or quantum.get("real_hardware") is not False):
+                raise AppError("demo_model_mismatch", "The flagship hybrid artifact is not the genuine PennyLane + PyTorch model.", 409)
+    evidence_refs = entry.get("evidence") or {}
+    if set(evidence_refs) != set(REQUIRED_EVIDENCE):
+        raise AppError("demo_evidence_invalid", "The flagship verified evidence set is incomplete.", 409)
+    evidence = {}
+    model_ids = {model["id"] for model in models}
+    for kind, reference in evidence_refs.items():
+        value = _read_evidence(reference, artifact_root)
+        if (value.get("evidence_type") != kind
+                or value.get("dataset_id") != dataset_id
+                or value.get("dataset_hash") != catalog["sha256"]
+                or value.get("experiment_id") != experiment_id):
+            raise AppError("demo_evidence_mismatch", "A verified evidence artifact has incompatible dataset or experiment identity.", 409)
+        referenced = set(value.get("model_ids", []))
+        if referenced and not referenced.issubset(model_ids):
+            raise AppError("demo_evidence_mismatch", "A verified evidence artifact references an unrelated model.", 409)
+        evidence[kind] = value
+    if set(evidence["benchmark"].get("model_ids", [])) != model_ids:
+        raise AppError("demo_evidence_mismatch", "Benchmark evidence must cover all seven flagship models.", 409)
+    if evidence["explainability"].get("model_id") != next(
+        model["id"] for model in models if model["model_type"] == "hybrid_pennylane_torch"
+    ):
+        raise AppError("demo_evidence_mismatch", "Explainability evidence must match the flagship hybrid model.", 409)
     return {"catalog": catalog, "dataset_bytes": dataset_bytes, "dataset": dataset, "experiment": experiment,
-            "job": job, "models": models, "manifest_sha256": manifest["manifest_sha256"]}
+            "job": job, "models": models, "evidence": evidence,
+            "manifest_sha256": manifest["manifest_sha256"]}
 
 
 def validate_package_tree(root: Path) -> dict[str, dict]:

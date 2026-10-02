@@ -68,8 +68,8 @@ def test_health_startup_and_verified_demo_counts_are_deployment_safe(client):
     readiness = client.get("/api/datasets/readiness")
     assert readiness.status_code == 200
     assert readiness.json()["total"] == 5
-    assert readiness.json()["verified_demo_ready"] == 2
-    assert readiness.json()["requires_processing"] == 3
+    assert readiness.json()["verified_demo_ready"] == 1
+    assert readiness.json()["requires_processing"] == 4
     assert client.get("/api/experiments").status_code == 200
 
 
