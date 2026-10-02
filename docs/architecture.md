@@ -46,6 +46,6 @@ The executor has one worker and a bounded queue. A process-global quantum random
 
 ## Boundaries and alternatives
 
-CSV-only upload, SQLite, lightweight executor, Vite, HTML/JSON export, four-qubit defaults and bounded explanations are explicit MVP choices. QNN or real quantum hardware is not a supplied mandatory concrete requirement; the implemented quantum estimators are VQC and QSVC. PDF export, authentication accounts, RBAC, external validation cohorts and model serving across independent workers are not silently simulated; their absence is documented in `limitations.md`.
+CSV-only upload, SQLite, lightweight executor, Vite, HTML/JSON export, four-qubit defaults and bounded explanations are explicit MVP choices. QNN or real quantum hardware is not a supplied mandatory concrete requirement; the implemented quantum estimators are VQC and QSVC. Optional Supabase authentication adds identity and a private metadata-only activity stream without changing the research backend. PDF export, RBAC, external validation cohorts and model serving across independent workers are not silently simulated; their absence is documented in `limitations.md`.
 
 No migration engine is bundled. Initial schema creation is idempotent, but future schema changes need explicit migrations/backups. Generated implementation is not proof of runtime compatibility.

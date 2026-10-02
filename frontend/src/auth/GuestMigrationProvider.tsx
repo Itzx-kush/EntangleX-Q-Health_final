@@ -40,7 +40,17 @@ export function GuestMigrationProvider({children}:{children:ReactNode}){
   const [migration,setMigration]=useState<GuestMigrationSnapshot|null>(readGuestMigration);
   const [hasMigratableState,setHasMigratableState]=useState(false);
   const activeImport=useRef<string|null>(null);
+  const previousUserId=useRef<string|null>(null);
   const destination=`${location.pathname}${location.search}`;
+
+  useEffect(()=>{
+    const previous=previousUserId.current;
+    const current=user?.id||null;
+    if(previous&&previous!==current){
+      queryClient.removeQueries({queryKey:['research-history',previous]});
+    }
+    previousUserId.current=current;
+  },[user?.id,queryClient]);
 
   const refreshGuestState=useCallback(()=>{
     setMigration(readGuestMigration());

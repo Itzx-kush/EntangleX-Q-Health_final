@@ -40,7 +40,7 @@ Shared split -> fold-local sklearn Pipeline -> classical OR quantum estimator
 Measured evaluation / explanations / research predictions / HTML and JSON reports
 ```
 
-The backend uses Python, FastAPI, Pydantic 2, SQLAlchemy 2, pandas, NumPy, scikit-learn, SHAP, Qiskit, Qiskit Machine Learning and Qiskit Aer. The frontend uses React 19, TypeScript 5.9 and Vite 7. There is no external analytics, hosted inference API, cloud account, or real-quantum-hardware requirement.
+The backend uses Python, FastAPI, Pydantic 2, SQLAlchemy 2, pandas, NumPy, scikit-learn, SHAP, Qiskit, Qiskit Machine Learning and Qiskit Aer. The frontend uses React 19, TypeScript 5.9 and Vite 7. Optional Google authentication and private metadata-only research history use Supabase; the existing research backend remains independent and anonymous guest use remains available. There is no external analytics, hosted inference API, or real-quantum-hardware requirement.
 
 ## 3. Prerequisites and version assumptions
 
@@ -115,7 +115,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Vite proxies `/api` to `http://127.0.0.1:8000`; no frontend environment file is required. The connection indicator reports HTTP reachability, not scientific validity or quantum execution. `npm run build` performs a TypeScript check and production build when you execute it.
+Open `http://127.0.0.1:5173`. Vite proxies `/api` to `http://127.0.0.1:8000`. Guest mode requires no frontend environment file. Google sign-in and personal research history require the public Supabase URL/anon variables and migrations documented in [authentication and personal research workspace](docs/authentication.md). The connection indicator reports HTTP reachability, not scientific validity or quantum execution. `npm run build` performs a TypeScript check and production build when you execute it.
 
 The frontend type-check, Vitest suite, production build, development server, production preview, direct route rendering, and live backend boundary were verified in the pinned Node environment. See [frontend verification](docs/frontend_verification.md). Cross-browser coverage and Docker runtime remain separate checks.
 
@@ -223,7 +223,7 @@ See [testing](docs/testing.md). Synthetic arrays in test fixtures are assertions
 
 Uploads are size/extension/header constrained and stored with generated IDs. Paths are validated, local artifact hashes are checked, raw biomedical payloads are not logged, and application errors omit request values. Uploaded code/models are never executed. Model persistence uses trusted local dill artifacts and is unsafe if an attacker can replace both artifacts and registry hashes. Protect the entire runtime directory.
 
-This MVP has no multi-tenant accounts, RBAC, encryption-at-rest service, clinical audit certification, public-internet hardening or regulated deployment approval. Identifier-name heuristics are not complete de-identification. Use a controlled workstation and appropriate institutional policies. See [security](docs/security.md) before private-data work.
+Optional Supabase accounts isolate the metadata-only My Research activity stream with Row Level Security; they do not add RBAC, encrypt or move the existing backend research store, establish clinical audit certification, provide complete public-internet hardening, or confer regulated deployment approval. Identifier-name heuristics are not complete de-identification. Use a controlled environment and appropriate institutional policies. See [authentication](docs/authentication.md) and [security](docs/security.md) before private-data work.
 
 Upload validation, path safety, artifact integrity, deletion consistency, privacy boundaries, and robustness checks were verified in [security and storage verification](docs/security_storage_verification.md). This verification does not claim public-internet security, automatic de-identification, encryption, or regulatory compliance.
 
