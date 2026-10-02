@@ -44,6 +44,14 @@ class TrainingManager:
                             "code": "process_interrupted",
                             "message": "The previous process ended before scientific execution completed.",
                         })
+            from ..storage.entities import MultiSeedStudy
+            for study in session.scalars(select(MultiSeedStudy).where(MultiSeedStudy.status.in_(ACTIVE))):
+                study.status = "interrupted"
+                study.completed_at = utcnow()
+                study.failure = {
+                    "code": "process_interrupted",
+                    "message": "The previous process ended before study execution completed.",
+                }
 
     def stop(self):
         if self.executor is None:
@@ -52,6 +60,9 @@ class TrainingManager:
             for job in session.scalars(select(Job).where(Job.status.in_(ACTIVE))):
                 job.status = "cancel_requested"
                 job.state = "Server shutdown: waiting for a safe training boundary."
+            from ..storage.entities import MultiSeedStudy
+            for study in session.scalars(select(MultiSeedStudy).where(MultiSeedStudy.status.in_(ACTIVE))):
+                study.status = "cancel_requested"
         self.executor.shutdown(wait=True, cancel_futures=True)
         self.executor = None
         with session_scope() as session:
@@ -63,6 +74,14 @@ class TrainingManager:
                     run = require(session, Run, job.run_id)
                     if run.status not in {"completed", "failed", "cancelled"}:
                         transition(session, run, "cancelled")
+            from ..storage.entities import MultiSeedStudy
+            for study in session.scalars(select(MultiSeedStudy).where(MultiSeedStudy.status == "cancel_requested")):
+                study.status = "cancelled"
+                study.completed_at = utcnow()
+                study.failure = {
+                    "code": "cancelled",
+                    "message": "Server shutdown cancelled the queued or running study.",
+                }
 
     def enqueue(self, config: TrainingConfig, parent_id: str | None = None, idempotency_key: str | None = None):
         job, experiment, _run = self._enqueue(config, parent_id=parent_id, idempotency_key=idempotency_key)
@@ -73,6 +92,19 @@ class TrainingManager:
             experiment = require(session, Experiment, experiment_id)
             config = TrainingConfig.model_validate(experiment.config)
         return self._enqueue(config, experiment_id=experiment_id, idempotency_key=idempotency_key)
+
+    def enqueue_study(self, study_id: str):
+        if self.executor is None:
+            raise AppError("worker_unavailable", "Training worker is not started.", 503)
+        self.executor.submit(self._run_study, study_id)
+
+    def _run_study(self, study_id: str):
+        from ..studies.service import execute_study
+        try:
+            execute_study(study_id)
+        except Exception as exc:
+            logger.warning("study_execution_failure study_id=%s exception=%s", study_id, type(exc).__name__)
+
 
     def _enqueue(
         self,

@@ -605,3 +605,149 @@ class ChatRequest(Schema):
 
 class ChatResponse(Schema):
     reply: str
+
+
+class MultiSeedStudyRequest(Schema):
+    base_experiment_id: UUID | None = None
+    config: TrainingConfig | None = None
+    seeds: list[int] = Field(min_length=2, max_length=20)
+
+    @field_validator("seeds")
+    @classmethod
+    def validate_seeds(cls, v: list[int]) -> list[int]:
+        if len(v) != len(set(v)):
+            raise ValueError("Requested seeds must not contain duplicates.")
+        for s in v:
+            if not (0 <= s <= 2147483647):
+                raise ValueError("Each seed must be an integer between 0 and 2147483647.")
+        return v
+
+    @model_validator(mode="after")
+    def validate_experiment_or_config(self):
+        if self.base_experiment_id is None and self.config is None:
+            raise ValueError("Either base_experiment_id or config must be provided.")
+        return self
+
+
+class Interval95Out(Schema):
+    lower: float | None = None
+    upper: float | None = None
+    method: str = "bootstrap_percentile"
+    interpretation: str = "descriptive seed-variability interval; not population-level clinical or statistical significance"
+    bootstrap_samples: int | None = None
+    bootstrap_seed: int | None = None
+    limitations: list[str] = Field(default_factory=list)
+
+
+class MetricAggregateOut(Schema):
+    metric_name: str
+    n: int
+    valid_count: int
+    missing_count: int
+    missing_seeds: list[int] = Field(default_factory=list)
+    mean: float | None = None
+    median: float | None = None
+    std: float | None = None
+    min: float | None = None
+    max: float | None = None
+    interval_95: Interval95Out | None = None
+
+
+class ModelAggregateOut(Schema):
+    model_type: str
+    metrics: dict[str, MetricAggregateOut]
+    evaluated_seeds: list[int]
+    successful_seeds: list[int]
+    failed_seeds: list[int]
+
+
+class PairedSeedObservationOut(Schema):
+    seed: int
+    value_a: float | None = None
+    value_b: float | None = None
+    delta: float | None = None
+
+
+class PairedMetricComparisonOut(Schema):
+    metric_name: str
+    model_a: str
+    model_b: str
+    available: bool = True
+    reason: str | None = None
+    valid_pairs_count: int = 0
+    mean_delta: float | None = None
+    median_delta: float | None = None
+    std_delta: float | None = None
+    min_delta: float | None = None
+    max_delta: float | None = None
+    interval_95: Interval95Out | None = None
+    observations: list[PairedSeedObservationOut] = Field(default_factory=list)
+
+
+class StudyRunOut(Schema):
+    id: str
+    study_id: str
+    run_id: str | None = None
+    job_id: str | None = None
+    seed: int
+    seed_order: int
+    status: str
+    failure: dict[str, Any] | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
+
+class MultiSeedStudySummaryOut(Schema):
+    study_id: str
+    protocol_version: str
+    base_experiment_id: str
+    dataset_id: str
+    dataset_version_id: str | None = None
+    configuration_fingerprint: str
+    requested_seeds: list[int]
+    completed_seeds: list[int]
+    failed_seeds: list[int]
+    cancelled_seeds: list[int]
+    models: list[str]
+    aggregates: dict[str, ModelAggregateOut]
+    paired_differences: list[PairedMetricComparisonOut]
+    artifact_id: str | None = None
+    bootstrap_protocol: dict[str, Any] = Field(default_factory=dict)
+    software: dict[str, Any] = Field(default_factory=dict)
+    limitations: list[str]
+
+
+class MultiSeedStudyOut(Schema):
+    id: str
+    base_experiment_id: str
+    dataset_id: str
+    dataset_version_id: str | None = None
+    status: str
+    operation_key: str
+    protocol_version: str
+    requested_seeds: list[int]
+    completed_seeds: list[int] = Field(default_factory=list)
+    failed_seeds: list[int] = Field(default_factory=list)
+    cancelled_seeds: list[int] = Field(default_factory=list)
+    model_identities: list[str]
+    locked_config: dict[str, Any]
+    configuration_fingerprint: str
+    study_artifact_id: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    limitations: list[str]
+
+
+class MultiSeedStudyDetailOut(Schema):
+    study: MultiSeedStudyOut
+    runs: list[StudyRunOut]
+    summary: MultiSeedStudySummaryOut | None = None
+    reproducibility: dict[str, Any] = Field(default_factory=dict)
+    failure: dict[str, Any] | None = None
+
+
+class MultiSeedStudyResponse(Schema):
+    study: MultiSeedStudyOut
+    runs: list[StudyRunOut]
+

@@ -20,3 +20,4 @@ models/*.json
 experiments/*.json
 experiments/*.html
 *.zip
+.artifact_key
