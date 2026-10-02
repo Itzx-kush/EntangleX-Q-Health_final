@@ -289,4 +289,4 @@ def apply_migrations() -> None:
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": DISTRIBUTION_SHIFT_MIGRATION_ID, "applied_at": utcnow()},
             )
-
+

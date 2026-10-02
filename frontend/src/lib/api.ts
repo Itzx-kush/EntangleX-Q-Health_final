@@ -42,6 +42,10 @@ export const api={
 };
 
 export const qh={
+    threshold_preflight:(body:any)=>api.post<any>('/threshold-analysis/preflight',body),
+    create_threshold_study:(body:any)=>api.post<any>('/threshold-analysis',body),
+    threshold_study:(id:string)=>api.get<any>(`/threshold-analysis/${id}`),
+
   health:()=>api.get<Health>('/health'),
   alignment:()=>api.get<AlignmentContract>('/alignment'),
   systemStatus:()=>api.get<SystemStatus>('/system/status'),

@@ -277,3 +277,21 @@ class DistributionShiftAnalysis(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+
+
+class ThresholdAnalysisStudy(Base):
+    __tablename__ = 'threshold_analysis_studies'
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    model_id: Mapped[str] = mapped_column(String, index=True)
+    dataset_id: Mapped[str] = mapped_column(String, index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    operation_key: Mapped[str] = mapped_column(String, index=True)
+    configuration: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String, default='created')
+    results: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    curves: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    limitations: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
