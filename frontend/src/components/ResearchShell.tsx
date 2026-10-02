@@ -88,6 +88,7 @@ function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken
 function CommandPalette({onClose}:{onClose:()=>void}){
   const navigate=useNavigate(); const [query,setQuery]=useState(''); const [activeIndex,setActiveIndex]=useState(0);
   const applyLocal=(key:string,value:string)=>{localStorage.setItem(key,value);window.dispatchEvent(new Event('qhealth-settings-changed'));onClose()};
+  const toggleLocal=(key:string,on:string,off:string)=>applyLocal(key,localStorage.getItem(key)===on?off:on);
   const commands=[
     {label:'Open Overview',hint:'Navigation',run:()=>navigate('/')},
     {label:'Open Datasets',hint:'Navigation',run:()=>navigate('/datasets')},
@@ -97,12 +98,12 @@ function CommandPalette({onClose}:{onClose:()=>void}){
     {label:'Open Explainability',hint:'Navigation',run:()=>navigate('/explainability')},
     {label:'Open Research Prediction',hint:'Navigation',run:()=>navigate('/prediction')},
     {label:'Open Experiments',hint:'Navigation',run:()=>navigate('/experiments')},
-    {label:'Launch SIH Demo',hint:'Presentation',run:()=>navigate('/demo')},
+    {label:'Launch SIH Demo',hint:'Navigation',run:()=>navigate('/demo')},
     {label:'Open Settings',hint:'Workspace',run:()=>navigate('/settings')},
-    {label:'Use research light theme',hint:'Appearance',run:()=>applyLocal('qhealth-theme','research')},
-    {label:'Use deep research theme',hint:'Appearance',run:()=>applyLocal('qhealth-theme','dark')},
-    {label:'Use compact density',hint:'Layout',run:()=>applyLocal('qhealth-density','compact')},
-    {label:'Use comfortable density',hint:'Layout',run:()=>applyLocal('qhealth-density','comfortable')},
+    {label:'Toggle sidebar',hint:'Workspace',run:()=>toggleLocal('qhealth-layout','icon','default')},
+    {label:'Toggle compact density',hint:'Workspace',run:()=>toggleLocal('qhealth-density','compact','comfortable')},
+    {label:'Toggle reduced motion',hint:'Workspace',run:()=>toggleLocal('qhealth-motion','reduced','full')},
+    {label:'Toggle light / dark theme',hint:'Workspace',run:()=>toggleLocal('qhealth-theme','dark','research')},
     {label:'Show context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','visible')},
     {label:'Hide context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','hidden')},
   ];
@@ -112,7 +113,7 @@ function CommandPalette({onClose}:{onClose:()=>void}){
   return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
     <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
       <div className="command-search"><Search size={17}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands"/><kbd>ESC</kbd></div>
-      <div className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><button key={command.label} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
+      <div className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><div className="command-entry" role="presentation" key={command.label}>{(index===0||filtered[index-1]?.hint!==command.hint)&&<p className="command-group-label">{command.hint}</p>}<button role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button></div>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
       <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
     </div>
   </div>;

@@ -17,7 +17,8 @@ import type {ModelRecord} from '../types/qhealth';
 
 type QuantumKind='vqc'|'qsvc'|'qnn';
 
-function CircuitGrid({circuit}:{circuit?:{qubits:number;gates:{name:string;qubits:number[];parameters:string[]}[]}}){
+function CircuitGrid({circuit}:{circuit?:{qubits:number;logical_depth?:number|null;parameter_count?:number;gates:{name:string;qubits:number[];parameters:string[]}[]}}){
+  const [selectedGate,setSelectedGate]=useState<{name:string;qubits:number[];parameters:string[];lane:number;index:number}|null>(null);
   if(!circuit)return <div className="qb-empty-state"><TerminalSquare size={18}/><div><strong>No circuit loaded</strong><span>Generate the backend-returned logical representation to inspect gates.</span></div></div>;
   const rows=Array.from({length:circuit.qubits},(_,q)=>({q,gates:circuit.gates.filter(g=>g.qubits.includes(q))}));
   return <div className="qb-circuit-shell" aria-label="Logical circuit visualization">
@@ -30,15 +31,20 @@ function CircuitGrid({circuit}:{circuit?:{qubits:number;gates:{name:string;qubit
         <strong>q[{row.q}]</strong>
         <div className="qb-circuit-wire">
           <span className="qb-wire-line" aria-hidden="true"/>
-          {row.gates.length?row.gates.map((gate,index)=><span className="qb-gate" key={index} title={gate.parameters.join(', ')}>
+          {row.gates.length?row.gates.map((gate,index)=><button type="button" aria-pressed={selectedGate?.lane===row.q&&selectedGate?.index===index} className={'qb-gate '+(selectedGate?.lane===row.q&&selectedGate?.index===index?'is-selected':'')} key={index} title={gate.parameters.join(', ')||`${gate.name} gate`} onClick={()=>setSelectedGate({...gate,lane:row.q,index})}>
             <b>{gate.name}</b>{gate.parameters.length>0&&<small>{gate.parameters.join(', ')}</small>}
-          </span>):<span className="qb-idle-gate">idle</span>}
+          </button>):<span className="qb-idle-gate">idle</span>}
+          <span className="qb-measurement" aria-label={`Output for qubit ${row.q}`}>OUT</span>
         </div>
       </div>)}
     </div>
+    <div className="qb-gate-inspector" aria-live="polite">
+      <span>SELECTED OPERATION</span>
+      {selectedGate?<><strong>{selectedGate.name}</strong><code>q[{selectedGate.qubits.join(', ')}]</code><small>{selectedGate.parameters.length?selectedGate.parameters.join(' · '):'No parameter metadata'}</small></>:<small>Select a gate to inspect its backend-returned metadata.</small>}
+    </div>
     <div className="qb-circuit-footer">
       <span>Measured from backend circuit contract</span>
-      <span className="mono">depth {circuit.gates.length?Math.max(...rows.map(r=>r.gates.length)):0}</span>
+      <span className="mono">depth {circuit.logical_depth??'not reported'} · parameters {circuit.parameter_count??'not reported'}</span>
     </div>
   </div>;
 }
