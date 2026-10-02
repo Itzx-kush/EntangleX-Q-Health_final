@@ -1,6 +1,7 @@
 import {useEffect,useState,type CSSProperties} from 'react';
 import {ArrowDown,ArrowRight,ArrowUpRight,Atom,BrainCircuit,Database,Menu,ShieldCheck,X} from 'lucide-react';
 import {InteractiveQuantumField} from './InteractiveQuantumField';
+import {ParticleText} from './ParticleText';
 
 type PublicExperienceProps={
   onRequestAccess:(destination?:string)=>void;
@@ -113,7 +114,7 @@ export function PublicExperience({onRequestAccess}:PublicExperienceProps){
         <InteractiveQuantumField/>
         <div className="public-hero-copy" data-public-reveal>
           <p className="public-eyebrow"><span>ENTANGLEX</span> Biomedical research platform</p>
-          <h1 id="public-hero-title">Hybrid quantum–classical intelligence for biomedical research.</h1>
+          <ParticleText id="public-hero-title" text="Hybrid quantum–classical intelligence for biomedical research."/>
           <p className="public-hero-intro">A research prototype for moving from traceable biomedical data to measured model evidence, interpretation and reproducible experimentation.</p>
           <div className="public-hero-actions">
             <button className="public-button is-primary" type="button" onClick={()=>requestAccess('/')}>
