@@ -42,6 +42,10 @@ export const api={
 };
 
 export const qh={
+  calibration_preflight:(body:any)=>api.post<any>('/calibration/preflight',body),
+  create_calibration_study:(body:any)=>api.post<any>('/calibration',body),
+  calibration_study:(id:string)=>api.get<any>(`/calibration/${id}`),
+
   health:()=>api.get<Health>('/health'),
   alignment:()=>api.get<AlignmentContract>('/alignment'),
   systemStatus:()=>api.get<SystemStatus>('/system/status'),
