@@ -89,7 +89,7 @@ export function Overview(){
 
   <div className="tremor-grid-main">
    <Card title="Recent experiments" description="Live registry entries returned by the existing experiment API.">
-    {summary.isLoading?<Loading/>:summary.data?.recent_experiments?.length?<div>{summary.data.recent_experiments.slice(0,6).map(e=><Link key={e.id} to={'/experiments/'+e.id} className="tremor-list-row"><div><strong className="text-xs">{shortId(e.id)}</strong><p className="mt-1 text-[10px] muted">{dateTime(e.created_at)}</p></div><span className="ml-auto"><StatusBadge value={e.status}/></span></Link>)}</div>:<EmptyState title="No experiments yet">Create the first run from Model Lab.</EmptyState>}
+    {summary.isLoading?<Loading/>:summary.data?.recent_experiments?.length?<div>{summary.data.recent_experiments.slice(0,6).map(e=><Link key={e.id} to={'/experiments/'+e.id} className="tremor-list-row"><div><strong className="text-xs">{e.name||shortId(e.id)}</strong><p className="mt-1 text-[10px] muted">{dateTime(e.created_at)}</p></div><span className="ml-auto"><StatusBadge value={e.status}/></span></Link>)}</div>:<EmptyState title="No experiments yet">Create the first run from Model Lab.</EmptyState>}
    </Card>
    <Card title="Research guardrails" description="The UI surfaces evidence without turning research output into clinical claims.">
     <Notice tone="amber">Predictions support research and decision support only. They are not clinical diagnoses, treatment decisions, or validation.</Notice>

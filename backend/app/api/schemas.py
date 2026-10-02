@@ -277,6 +277,7 @@ class DatasetVersionComparisonOut(Schema):
 
 class ExperimentOut(Schema):
     id: str
+    name: str | None = None
     dataset_id: str
     parent_id: str | None
     status: str
@@ -291,6 +292,7 @@ class ModelOut(Schema):
     dataset_id: str
     model_type: str
     status: str
+    progress: int | None = None
     details: dict[str, Any]
     metrics: dict[str, Any]
     created_at: datetime
@@ -305,6 +307,8 @@ class JobOut(Schema):
     errors: list[dict[str, Any]]
     created_at: datetime
     updated_at: datetime
+    experiment_name: str | None = None
+    models: list[ModelOut] = Field(default_factory=list)
 
 class TrainingResponse(Schema):
     job: JobOut
