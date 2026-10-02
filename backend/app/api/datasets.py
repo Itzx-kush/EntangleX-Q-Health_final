@@ -5,6 +5,7 @@ from starlette.concurrency import run_in_threadpool
 from ..config import get_settings
 from ..database import session_scope
 from ..data import service
+from ..dataset_versions import service as version_service
 from ..data.quality import quality_report
 from ..storage.entities import Dataset
 from ..storage.repository import recent, require
@@ -15,6 +16,10 @@ from .schemas import (
     DatasetInspectionOut,
     DatasetLibraryItem,
     DatasetOut,
+    DatasetCardOut,
+    DatasetVersionComparisonOut,
+    DatasetVersionIntegrityOut,
+    DatasetVersionOut,
     DatasetUploadMetadata,
     ValidateRequest,
 )
@@ -78,6 +83,60 @@ async def upload_dataset(metadata_json: str = Form(...), file: UploadFile = File
 @router.post("/demo", response_model=DatasetOut, status_code=201)
 def load_demo():
     return service.register_demo()
+
+@router.get("/{identity}/versions", response_model=list[DatasetVersionOut])
+def list_dataset_versions(identity: UUID):
+    return version_service.list_versions(str(identity))
+
+
+@router.post("/{identity}/versions", response_model=DatasetVersionOut, status_code=201)
+async def create_dataset_version(identity: UUID, metadata_json: str = Form(...), file: UploadFile = File(...)):
+    try:
+        try:
+            metadata = DatasetUploadMetadata.model_validate_json(metadata_json)
+        except ValidationError as exc:
+            raise AppError("metadata_invalid", "Dataset Version metadata is invalid.") from exc
+        if not file.filename:
+            raise AppError("filename_required", "Choose a CSV file to register.")
+        content = await _read_upload(file)
+        version, _created = await run_in_threadpool(
+            version_service.create_version, str(identity), content, file.filename, metadata
+        )
+        return version
+    finally:
+        await file.close()
+
+
+@router.get("/{identity}/versions/compare", response_model=DatasetVersionComparisonOut)
+def compare_dataset_versions(identity: UUID, left: UUID = Query(...), right: UUID = Query(...)):
+    return version_service.compare_versions(str(identity), str(left), str(right))
+
+
+@router.get("/{identity}/versions/{version_id}", response_model=DatasetVersionOut)
+def get_dataset_version(identity: UUID, version_id: UUID):
+    return version_service.get_version(str(identity), str(version_id))
+
+
+@router.get("/{identity}/versions/{version_id}/provenance", response_model=dict)
+def get_dataset_version_provenance(identity: UUID, version_id: UUID):
+    version = version_service.get_version(str(identity), str(version_id))
+    return {
+        "dataset_id": version.dataset_id, "dataset_version_id": version.id,
+        "version": version.version_label, "content_sha256": version.content_sha256,
+        "schema_fingerprint": version.schema_fingerprint, "source": version.source_metadata,
+        "provenance": version.provenance, "created_at": version.created_at.isoformat(),
+    }
+
+
+@router.get("/{identity}/versions/{version_id}/card", response_model=DatasetCardOut)
+def get_dataset_version_card(identity: UUID, version_id: UUID):
+    return version_service.dataset_card(str(identity), str(version_id))
+
+
+@router.get("/{identity}/versions/{version_id}/verify", response_model=DatasetVersionIntegrityOut)
+def verify_dataset_version(identity: UUID, version_id: UUID):
+    return version_service.verify_version(str(identity), str(version_id))
+
 
 @router.get("/{identity}/readiness", response_model=dict)
 def registered_dataset_readiness(identity: UUID):

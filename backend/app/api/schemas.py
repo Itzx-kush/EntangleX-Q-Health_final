@@ -73,6 +73,7 @@ class ModelParameters(Schema):
 
 class TrainingConfig(Schema):
     dataset_id: UUID
+    dataset_version_id: UUID | None = None
     features: list[str] | None = Field(default=None, max_length=200)
     models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=7)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
@@ -224,6 +225,48 @@ class DatasetOut(Schema):
     provenance: dict[str, Any]
     quality: dict[str, Any]
     created_at: datetime
+    current_version_id: str | None = None
+
+class DatasetVersionOut(Schema):
+    id: str
+    dataset_id: str
+    version_number: int
+    version_label: str
+    content_sha256: str
+    schema_fingerprint: str
+    row_count: int
+    feature_count: int
+    target: str
+    positive_label: str
+    negative_label: str
+    target_type: str
+    class_distribution: dict[str, int]
+    source_metadata: dict[str, Any]
+    status: str
+    immutable: bool
+    created_at: datetime
+
+class DatasetVersionIntegrityOut(Schema):
+    valid: bool
+    dataset_id: str
+    dataset_version_id: str
+    expected_sha256: str
+    actual_sha256: str | None
+    errors: list[str]
+
+class DatasetCardOut(Schema):
+    identity: dict[str, Any]
+    data: dict[str, Any]
+    quality: dict[str, Any]
+    provenance: dict[str, Any]
+    limitations: list[str]
+    usage: dict[str, Any]
+
+class DatasetVersionComparisonOut(Schema):
+    classification: Literal["IDENTICAL_CONTENT", "SAME_SCHEMA_DIFFERENT_DATA", "SCHEMA_CHANGED"]
+    left: dict[str, Any]
+    right: dict[str, Any]
+    differences: dict[str, Any]
 
 class ExperimentOut(Schema):
     id: str
@@ -403,6 +446,7 @@ class RunOut(Schema):
     id: str
     experiment_id: str
     dataset_id: str
+    dataset_version_id: str | None = None
     status: Literal["created", "queued", "running", "completed", "failed", "cancelled"]
     config: dict[str, Any]
     execution_metadata: dict[str, Any]

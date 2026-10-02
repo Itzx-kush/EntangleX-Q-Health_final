@@ -13,7 +13,7 @@ from ..api.schemas import TrainingConfig
 from ..data.splitting import PreparedData
 from ..database import session_scope
 from ..evaluation.metrics import METRIC_NAMES
-from ..storage.entities import Artifact, Dataset, Experiment, Job, ModelRecord, Run
+from ..storage.entities import Artifact, Dataset, DatasetVersion, Experiment, Job, ModelRecord, Run
 from ..storage.repository import require
 from ..utils.errors import AppError
 from ..utils.serialization import canonical_json_bytes, fingerprint, software_versions, utcnow
@@ -118,7 +118,7 @@ def build_manifest(
     manifest_id: str,
 ) -> dict:
     split = data.split_metadata()
-    provenance = data.dataset.provenance
+    provenance = data.dataset_version.provenance if data.dataset_version else data.dataset.provenance
     pipeline = config.pipeline
     packages = software_versions()
     schema_fingerprint = fingerprint({
@@ -147,11 +147,14 @@ def build_manifest(
             "parent_experiment_id": experiment.parent_id,
         },
         "dataset": {
-            "dataset_id": data.dataset.id, "name": data.dataset.name,
+            "dataset_id": data.dataset.id,
+            "dataset_version_id": data.dataset_version.id if data.dataset_version else None,
+            "dataset_version": data.dataset_version.version_label if data.dataset_version else None,
+            "name": data.dataset.name,
             "source": provenance.get("source", "unspecified"),
             "source_reference": provenance.get("source_url"),
             "source_version": provenance.get("version", "unspecified"),
-            "sha256": data.dataset.sha256,
+            "sha256": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256,
             "hash_scope": provenance.get("hash_scope", "exact stored CSV bytes"),
             "row_count": int(provenance.get("row_count", len(data.frame))),
             "feature_count": len(data.features),
@@ -159,9 +162,9 @@ def build_manifest(
             "positive_class": provenance["positive_label"],
             "negative_class": provenance["negative_label"],
             "class_distribution": {str(k): int(v) for k, v in provenance["class_distribution"].items()},
-            "input_filename": data.dataset.filename,
-            "storage_identity": f"data/datasets/{data.dataset.id}.csv",
-            "schema_fingerprint": schema_fingerprint,
+            "input_filename": provenance.get("original_filename", data.dataset.filename),
+            "storage_identity": data.dataset_version.storage_reference if data.dataset_version else f"data/datasets/{data.dataset.id}.csv",
+            "schema_fingerprint": data.dataset_version.schema_fingerprint if data.dataset_version else schema_fingerprint,
             "feature_names": list(data.features),
         },
         "sampling": {
@@ -299,6 +302,15 @@ def create_locked_manifest(session, *, run: Run, experiment: Experiment, data: P
         return existing
     if run.status != "created" or run.manifest_locked_at is not None:
         raise AppError("manifest_lock_invalid", "A manifest can be created only before scientific execution begins.", 409)
+    resolved_version_id = data.dataset_version.id if data.dataset_version else None
+    if run.dataset_version_id is None:
+        run.dataset_version_id = resolved_version_id
+    elif run.dataset_version_id != resolved_version_id:
+        raise AppError(
+            "dataset_version_mismatch",
+            "The Run and resolved training data must use the same Dataset Version.",
+            409,
+        )
     locked_at = utcnow()
     manifest_id = str(uuid4())
     payload = build_manifest(
@@ -344,8 +356,14 @@ def validate_manifest_consistency(run: Run, artifact: Artifact, payload: dict) -
         errors.append("configuration_fingerprint_mismatch")
     with session_scope() as session:
         dataset = require(session, Dataset, run.dataset_id)
-    if dataset.sha256 != manifest.dataset.sha256:
+        version = session.get(DatasetVersion, run.dataset_version_id) if run.dataset_version_id else None
+    if manifest.dataset.dataset_version_id != run.dataset_version_id:
+        errors.append("dataset_version_id_mismatch")
+    expected_hash = version.content_sha256 if version else dataset.sha256
+    if expected_hash != manifest.dataset.sha256:
         errors.append("dataset_hash_mismatch")
+    if version and version.schema_fingerprint != manifest.dataset.schema_fingerprint:
+        errors.append("dataset_schema_fingerprint_mismatch")
     qiskit_models = {"vqc", "qsvc", "qnn"}
     for model in manifest.models:
         if model.model_identifier in qiskit_models and (model.quantum is None or model.quantum.framework != "Qiskit"):
@@ -397,6 +415,7 @@ def provenance_graph(run_id: str) -> dict:
         job = session.scalar(select(Job).where(Job.run_id == run.id))
     return {
         "run_id": run.id, "experiment_id": run.experiment_id, "dataset_id": run.dataset_id,
+        "dataset_version_id": run.dataset_version_id,
         "manifest_artifact_id": run.manifest_artifact_id,
         "configuration_fingerprint": run.configuration_fingerprint,
         "reproducibility_status": run.reproducibility_status or INCOMPLETE,

@@ -46,8 +46,8 @@ def prediction_frame(samples, features, numeric):
     return frame
 
 def background_for(bundle):
-    dataset, frame = load_frame(bundle["dataset_id"])
-    if dataset.sha256 != bundle["dataset_hash"]:
+    dataset, frame = load_frame(bundle["dataset_id"], bundle.get("dataset_version_id"), bundle.get("dataset_hash"))
+    if bundle.get("dataset_version_id") is None and dataset.sha256 != bundle["dataset_hash"]:
         raise AppError("dataset_mismatch", "The model and source dataset hashes do not match.", 409)
     return frame[bundle["features"]].iloc[bundle["train_indices"]], frame
 

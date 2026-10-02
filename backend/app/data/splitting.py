@@ -6,12 +6,14 @@ from ..api.schemas import TrainingConfig
 from ..config import get_settings
 from ..utils.errors import AppError
 from ..utils.serialization import fingerprint
-from .service import load_frame
+from .service import load_versioned_frame
 from .quality import quality_report
 
 @dataclass
 class PreparedData:
     dataset: object
+    dataset_version: object | None
+    provenance: dict
     frame: pd.DataFrame
     X: pd.DataFrame
     y: np.ndarray
@@ -29,7 +31,7 @@ class PreparedData:
         sampled = sorted([*self.train.tolist(), *self.test.tolist()])
         return {
             "split_hash": self.split_hash,
-            "sample_pool_hash": fingerprint({"dataset_hash": self.dataset.sha256, "sampled_row_indices": sampled}),
+            "sample_pool_hash": fingerprint({"dataset_hash": self.dataset_version.content_sha256 if self.dataset_version else self.dataset.sha256, "sampled_row_indices": sampled}),
             "sampled_row_indices": sampled,
             "train_indices": self.train.tolist(),
             "test_indices": self.test.tolist(),
@@ -45,9 +47,10 @@ class PreparedData:
         }
 
 def prepare_data(config: TrainingConfig) -> PreparedData:
-    dataset, frame = load_frame(str(config.dataset_id))
-    target, positive = dataset.provenance["target"], dataset.provenance["positive_label"]
-    features = config.features if config.features is not None else dataset.provenance["features"]
+    dataset, dataset_version, frame = load_versioned_frame(str(config.dataset_id), str(config.dataset_version_id) if config.dataset_version_id else None)
+    provenance = dataset_version.provenance if dataset_version else dataset.provenance
+    target, positive = provenance["target"], provenance["positive_label"]
+    features = config.features if config.features is not None else provenance["features"]
     quality = quality_report(frame, target, positive, features)
     if quality["blockers"]:
         raise AppError("quality_blocked", " ".join(quality["blockers"]))
@@ -83,6 +86,6 @@ def prepare_data(config: TrainingConfig) -> PreparedData:
                     raise ValueError("insufficient inner calibration support")
     except ValueError as exc:
         raise AppError("split_not_feasible", "Not enough class support for the requested holdout, CV, and optional calibration folds.") from exc
-    split_hash = fingerprint({"dataset_hash": dataset.sha256, "train_indices": train.tolist(), "test_indices": test.tolist(), "cv": [(a.tolist(), b.tolist()) for a, b in folds]})
+    split_hash = fingerprint({"dataset_hash": dataset_version.content_sha256 if dataset_version else dataset.sha256, "train_indices": train.tolist(), "test_indices": test.tolist(), "cv": [(a.tolist(), b.tolist()) for a, b in folds]})
     numeric = [c for c in features if pd.api.types.is_numeric_dtype(full_X[c])]
-    return PreparedData(dataset, frame, full_X, y, train, test, folds, features, numeric, quality, split_hash, drop_count, excluded)
+    return PreparedData(dataset, dataset_version, provenance, frame, full_X, y, train, test, folds, features, numeric, quality, split_hash, drop_count, excluded)

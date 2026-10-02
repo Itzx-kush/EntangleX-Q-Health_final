@@ -30,6 +30,7 @@ def create_run(
     operation_key: str,
     execution_metadata: dict,
     reproducibility_metadata: dict,
+    dataset_version_id: str | None = None,
 ) -> Run:
     existing = session.scalar(select(Run).where(Run.operation_key == operation_key))
     if existing is not None:
@@ -40,6 +41,7 @@ def create_run(
         id=str(uuid4()),
         experiment_id=experiment.id,
         dataset_id=experiment.dataset_id,
+        dataset_version_id=dataset_version_id,
         status="created",
         operation_key=operation_key,
         config=config,

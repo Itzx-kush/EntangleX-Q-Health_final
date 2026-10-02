@@ -17,6 +17,37 @@ class Dataset(Base):
     provenance: Mapped[dict] = mapped_column(JSON)
     quality: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    current_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+
+class DatasetVersion(Base):
+    """Immutable concrete snapshot belonging to a logical Dataset."""
+
+    __tablename__ = "dataset_versions"
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "version_number", name="uq_dataset_versions_number"),
+        UniqueConstraint("dataset_id", "version_signature", name="uq_dataset_versions_signature"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    version_label: Mapped[str] = mapped_column(String(24))
+    content_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    schema_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    version_signature: Mapped[str] = mapped_column(String(64))
+    row_count: Mapped[int] = mapped_column(Integer)
+    feature_count: Mapped[int] = mapped_column(Integer)
+    target: Mapped[str] = mapped_column(String(100))
+    positive_label: Mapped[str] = mapped_column(String(64))
+    negative_label: Mapped[str] = mapped_column(String(64))
+    target_type: Mapped[str] = mapped_column(String(40), default="binary_classification")
+    class_distribution: Mapped[dict] = mapped_column(JSON)
+    source_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    quality_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    storage_reference: Mapped[str] = mapped_column(String(320))
+    status: Mapped[str] = mapped_column(String(24), default="ready", index=True)
+    immutable: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 class Experiment(Base):
     __tablename__ = "experiments"
@@ -85,6 +116,7 @@ class Run(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="created", index=True)
     operation_key: Mapped[str] = mapped_column(String(128), unique=True)
     config: Mapped[dict] = mapped_column(JSON)

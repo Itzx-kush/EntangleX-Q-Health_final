@@ -22,6 +22,8 @@ class ManifestIdentity(Schema):
 
 class DatasetProvenance(Schema):
     dataset_id: str
+    dataset_version_id: str | None
+    dataset_version: str | None
     name: str
     source: str
     source_reference: str | None
