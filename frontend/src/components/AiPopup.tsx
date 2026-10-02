@@ -50,9 +50,9 @@ export function AiPopup(){
   const hideTrigger=location.pathname==='/ai';
 
   return <>
-    {!isPopupOpen&&!hideTrigger&&<button ref={triggerRef} onClick={()=>setPopupOpen(true)} className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 hover:shadow-xl hover:shadow-primary/40 transition-all z-50 animate-in zoom-in duration-300" aria-label="Open EntangleX AI Assistant (Ctrl + /)" title="Open EntangleX AI Assistant (Ctrl + /)"><Bot size={28}/></button>}
+    {!isPopupOpen&&!hideTrigger&&<button ref={triggerRef} onClick={()=>setPopupOpen(true)} style={{position:'fixed',right:24,bottom:24,zIndex:2147483647}} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 hover:shadow-xl hover:shadow-primary/40 transition-all animate-in zoom-in duration-300" aria-label="Open EntangleX AI Assistant (Ctrl + /)" title="Open EntangleX AI Assistant (Ctrl + /)"><Bot size={28}/></button>}
 
-    {isPopupOpen&&<div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none sm:p-6 md:p-8">
+    {isPopupOpen&&<div style={{position:'fixed',inset:0,zIndex:2147483647}} className="flex items-end justify-end pointer-events-none sm:p-6 md:p-8">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm sm:hidden pointer-events-auto" onClick={()=>setPopupOpen(false)}/>
       <div className="relative w-full sm:w-[400px] md:w-[440px] h-[90vh] sm:h-[650px] max-h-screen sm:max-h-[85vh] bg-background border-t sm:border border-border sm:rounded-2xl shadow-2xl flex flex-col pointer-events-auto animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 fade-in duration-300" role="dialog" aria-label="AI Assistant" aria-modal="true">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50 sm:rounded-t-2xl">
