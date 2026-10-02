@@ -44,3 +44,7 @@ services:
         value: https://entanglex-q-health.onrender.com
       - key: QHEALTH_TRUSTED_HOSTS
         value: entanglex-q-health-api.onrender.com,localhost,127.0.0.1
+      - key: QHEALTH_GROQ_API_KEY
+        sync: false
+      - key: QHEALTH_GROQ_MODEL
+        value: qwen/qwen3.8-27b
