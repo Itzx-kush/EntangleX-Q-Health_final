@@ -20,6 +20,7 @@ MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
 EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
 DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
 CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
+TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
 
 
 
@@ -55,6 +56,24 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        execution_tracking_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": TRAINING_EXECUTION_MIGRATION_ID},
+        ).scalar()
+        if not execution_tracking_applied:
+            if "name" not in _columns(connection, "experiments"):
+                connection.execute(text("ALTER TABLE experiments ADD COLUMN name VARCHAR(240)"))
+            if "progress" not in _columns(connection, "models"):
+                connection.execute(text("ALTER TABLE models ADD COLUMN progress INTEGER"))
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_experiments_dataset_name "
+                "ON experiments(dataset_id, name) WHERE name IS NOT NULL"
+            ))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": TRAINING_EXECUTION_MIGRATION_ID, "applied_at": utcnow()},
             )
 
         manifest_applied = connection.execute(

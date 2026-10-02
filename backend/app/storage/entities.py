@@ -52,6 +52,7 @@ class DatasetVersion(Base):
 class Experiment(Base):
     __tablename__ = "experiments"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str | None] = mapped_column(String(240), nullable=True)
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     parent_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(24), default="queued")
@@ -67,6 +68,7 @@ class ModelRecord(Base):
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"))
     model_type: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(24))
+    progress: Mapped[int | None] = mapped_column(Integer, nullable=True)
     artifact_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)

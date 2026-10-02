@@ -163,3 +163,92 @@ def test_create_job_mock_enqueue(client, config, registered):
         data = response.json()
         assert data["job"]["id"] == mock_job.id
         assert data["experiment"]["id"] == mock_exp.id
+
+
+def test_experiment_names_increment_and_child_executions_are_persisted(client, config, registered):
+    from sqlalchemy import func, select
+    from app.database import session_scope
+    from app.storage.entities import Experiment
+
+    with session_scope() as session:
+        starting_count = session.scalar(
+            select(func.count()).select_from(Experiment).where(Experiment.dataset_id == registered.id)
+        ) or 0
+
+    payload = config.model_copy(update={
+        "models": ["logistic_regression", "svm", "random_forest"],
+    }).model_dump(mode="json")
+    response = client.post("/api/training/jobs", json=payload)
+    assert response.status_code == 202, response.text
+    created = response.json()
+    assert created["experiment"]["name"] == f"{registered.name} · Training {starting_count + 1:02d}"
+
+    detail = client.get(f"/api/training/jobs/{created['job']['id']}").json()
+    assert detail["experiment_name"] == created["experiment"]["name"]
+    assert {model["model_type"] for model in detail["models"]} == set(payload["models"])
+    assert {model["status"] for model in detail["models"]} <= {"queued", "running", "ready", "failed"}
+
+    finished = poll_job(client, created["job"]["id"])
+    assert finished["status"] == "succeeded"
+    assert finished["progress"] == 100
+    assert all(model["status"] == "ready" and model["progress"] == 100 for model in finished["models"])
+
+    subsequent = []
+    for offset in (2, 3):
+        response = client.post("/api/training/jobs", json=config.model_dump(mode="json"))
+        assert response.status_code == 202, response.text
+        value = response.json()
+        assert value["experiment"]["name"] == f"{registered.name} · Training {starting_count + offset:02d}"
+        subsequent.append(value["job"]["id"])
+    for job_id in subsequent:
+        client.post(f"/api/training/jobs/{job_id}/cancel")
+        assert poll_job(client, job_id)["status"] in {"cancelled", "succeeded"}
+
+
+def test_one_model_failure_does_not_hide_other_executions(client, config, monkeypatch):
+    import app.jobs.manager as jobs_module
+
+    original = jobs_module.train_model
+    def fail_svm(kind, training_config, data, checkpoint):
+        if kind == "svm":
+            raise RuntimeError("synthetic test failure")
+        return original(kind, training_config, data, checkpoint)
+
+    monkeypatch.setattr(jobs_module, "train_model", fail_svm)
+    payload = config.model_copy(update={
+        "models": ["logistic_regression", "svm"],
+    }).model_dump(mode="json")
+    created = client.post("/api/training/jobs", json=payload).json()
+    finished = poll_job(client, created["job"]["id"])
+    assert finished["status"] == "partial"
+    states = {model["model_type"]: model["status"] for model in finished["models"]}
+    assert states == {"logistic_regression": "ready", "svm": "failed"}
+    assert finished["progress"] == 100
+
+
+def test_running_cancellation_reaches_backend_terminal_state(client, config, monkeypatch):
+    import threading
+    import app.jobs.manager as jobs_module
+
+    started = threading.Event()
+    def cancellable_training(_kind, _training_config, _data, checkpoint):
+        started.set()
+        while True:
+            checkpoint("test safe cancellation boundary")
+
+    monkeypatch.setattr(jobs_module, "train_model", cancellable_training)
+    created = client.post("/api/training/jobs", json=config.model_dump(mode="json")).json()
+    assert started.wait(timeout=5)
+
+    queued = client.post("/api/training/jobs", json=config.model_dump(mode="json")).json()
+    queued_cancel = client.post(f"/api/training/jobs/{queued['job']['id']}/cancel")
+    assert queued_cancel.status_code == 200
+    assert queued_cancel.json()["status"] == "cancelled"
+    assert all(model["status"] == "cancelled" for model in queued_cancel.json()["models"])
+
+    cancelled = client.post(f"/api/training/jobs/{created['job']['id']}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] in {"cancel_requested", "cancelled"}
+    finished = poll_job(client, created["job"]["id"])
+    assert finished["status"] == "cancelled"
+    assert all(model["status"] == "cancelled" for model in finished["models"])
