@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig} from '../types/qhealth';
+import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -61,6 +61,7 @@ export const qh={
   experiments:()=>api.get<Experiment[]>('/experiments'),
   experiment:(id:string)=>api.get<ExperimentDetail>(`/experiments/${id}`),
   comparison:(id:string)=>api.get<Comparison>(`/experiments/${id}/comparison`),
+  verifiedEvidence:(id:string)=>api.get<VerifiedEvidencePackage>(`/experiments/${id}/verified-evidence`),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),
   rerun:(id:string)=>api.post<{job:Job;experiment:Experiment}>(`/experiments/${id}/rerun`),

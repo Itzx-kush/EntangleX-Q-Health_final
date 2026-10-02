@@ -93,7 +93,7 @@ def alignment_contract() -> dict:
             "id": "sih-diabetes-demonstration",
             "display_name": "SIH Diabetes Demonstration",
             "dataset_slug": FEATURED_CONTEXT_ID,
-            "models": ["random_forest", HYBRID_MODEL_ID],
+            "models": ["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", HYBRID_MODEL_ID],
             "auto_start_training": False,
             "threshold_strategy": "target_sensitivity",
             "configuration": {

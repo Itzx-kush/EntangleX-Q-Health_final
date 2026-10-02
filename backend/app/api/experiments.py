@@ -3,12 +3,14 @@ from typing import Literal
 from fastapi import APIRouter, Query, Response
 from sqlalchemy import select
 from ..database import session_scope
+from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
 from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
 from ..storage.entities import Experiment, ModelRecord, Job
 from ..storage.repository import recent, require
+from ..utils.errors import AppError
 from .schemas import ExperimentOut, ModelOut, JobOut, RobustnessRecordOut, RobustnessRequest, TrainingConfig, TrainingResponse, Schema
 
 class ExperimentDetailOut(Schema):
@@ -33,6 +35,26 @@ def get_experiment(identity: UUID):
 @router.get("/{identity}/comparison", response_model=dict)
 def compare_models(identity: UUID):
     return comparison(str(identity))
+
+@router.get("/{identity}/verified-evidence", response_model=dict)
+def verified_evidence(identity: UUID):
+    """Read-only access to the already validated flagship package; never computes evidence."""
+    requested = str(identity)
+    for slug in READY_DEMO_DATASETS:
+        checked = validate_packaged_dataset(slug)
+        if checked["experiment"]["id"] == requested:
+            return {
+                "verified": True,
+                "precomputed": True,
+                "slug": slug,
+                "artifact_version": ARTIFACT_VERSION,
+                "manifest_sha256": checked["manifest_sha256"],
+                "dataset": checked["dataset"],
+                "experiment": checked["experiment"],
+                "models": checked["models"],
+                "evidence": checked["evidence"],
+            }
+    raise AppError("verified_evidence_not_found", "This experiment is not a packaged verified demonstration.", 404)
 
 @router.post("/{identity}/robustness", response_model=dict)
 def run_robustness(identity: UUID, request: RobustnessRequest):

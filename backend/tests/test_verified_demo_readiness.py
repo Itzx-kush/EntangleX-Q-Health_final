@@ -162,6 +162,13 @@ def test_readiness_endpoint_and_seeded_records_are_genuine_and_dataset_specific(
             assert completed_job["errors"] == []
             model = detail.json()["models"][0]
             assert model["id"] in ready["model_ids"]
+            evidence = client.get(f"/api/experiments/{experiment['id']}/verified-evidence")
+            assert evidence.status_code == 200
+            assert evidence.json()["precomputed"] is True
+            assert set(evidence.json()["evidence"]) == {
+                "benchmark", "robustness", "explainability", "predictions",
+                "preprocessing", "provenance",
+            }
             assert client.get(f"/api/models/{model['id']}/demo-sample").status_code == 200
             assert client.get(f"/api/experiments/{experiment['id']}/report?format=json").json()["experiment_kind"] == "precomputed_verified_demo"
         else:

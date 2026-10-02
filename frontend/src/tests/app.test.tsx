@@ -7,7 +7,7 @@ import {ResearchShell} from '../components/ResearchShell';
 import {ThemeToggle} from '../components/ThemeToggle';
 import {DraftProvider} from '../hooks/useDraft';
 import {Datasets} from '../pages/ResearchPagesCore';
-import {DemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
+import {DemoCenter,LegacyDemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
 import {Comparison,PredictionPage,Quantum,Robustness,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
 
@@ -34,6 +34,7 @@ vi.mock('../lib/api',()=>({
     resourceAdvisor:vi.fn(()=>Promise.resolve({})),
     createJob:vi.fn(()=>Promise.resolve({})),
     comparison:vi.fn(()=>Promise.resolve({})),
+    verifiedEvidence:vi.fn(()=>Promise.resolve({})),
     robustness:vi.fn(()=>Promise.resolve({experiment_id:'',dataset_id:'',sample_count:0,model_count:0,condition_count:0,results:[],limitations:[]})),
     robustnessHistory:vi.fn(()=>Promise.resolve([])),
     explanations:vi.fn(()=>Promise.resolve([])),
@@ -245,7 +246,7 @@ describe('settings and Demo Center readiness',()=>{
   } as Awaited<ReturnType<typeof qh.models>>[number]);
 
   it('loads with a truthful no-dataset state and verified route actions',async()=>{
-    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    renderWithProviders(<ResearchShell><LegacyDemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>expect(screen.getByText(/No dataset is selected/)).toBeInTheDocument());
     expect(document.querySelector('[data-stage="dataset"]')?.textContent).toContain('NOT STARTED');
     expect(document.querySelector('[data-stage="quality"]')?.textContent).toContain('BLOCKED');
@@ -271,7 +272,7 @@ describe('settings and Demo Center readiness',()=>{
     vi.mocked(qh.datasetLibrary).mockResolvedValue([demoLibraryItem]);
     vi.mocked(qh.registerBuiltIn).mockResolvedValue(demoDataset);
     vi.mocked(qh.dataset).mockResolvedValue(demoDataset);
-    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    renderWithProviders(<ResearchShell><LegacyDemoCenter/></ResearchShell>,['/demo']);
     fireEvent.click(await screen.findByRole('button',{name:'Use Dataset'}));
     await waitFor(()=>expect(qh.registerBuiltIn).toHaveBeenCalledWith('wdbc'));
     await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(demoDataset.id));
@@ -289,7 +290,7 @@ describe('settings and Demo Center readiness',()=>{
     vi.mocked(qh.dataset).mockResolvedValue(demoDataset);
     vi.mocked(qh.experiments).mockResolvedValue([currentExperiment]);
     vi.mocked(qh.models).mockResolvedValue([readyModel('model-b','experiment-b','dataset-b')]);
-    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    renderWithProviders(<ResearchShell><LegacyDemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>{
       expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('BLOCKED');
       expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('BLOCKED');
@@ -308,7 +309,7 @@ describe('settings and Demo Center readiness',()=>{
       readyModel('model-a1',currentExperiment.id,demoDataset.id),
       readyModel('model-a2',currentExperiment.id,demoDataset.id,'svm'),
     ]);
-    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    renderWithProviders(<ResearchShell><LegacyDemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>{
       expect(document.querySelector('[data-stage="training"]')?.textContent).toContain('COMPLETED');
       expect(document.querySelector('[data-stage="comparison"]')?.textContent).toContain('READY');
@@ -324,8 +325,29 @@ describe('settings and Demo Center readiness',()=>{
 
   it('surfaces backend errors instead of failing silently',async()=>{
     vi.mocked(qh.health).mockRejectedValueOnce(new Error('Backend unavailable'));
-    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    renderWithProviders(<ResearchShell><LegacyDemoCenter/></ResearchShell>,['/demo']);
     await waitFor(()=>expect(screen.getAllByText('Backend unavailable').length).toBeGreaterThan(0));
+  });
+
+  it('opens the verified diabetes result immediately without creating a training job',async()=>{
+    const kinds=['logistic_regression','svm','random_forest','vqc','qsvc','qnn','hybrid_pennylane_torch'] as const;
+    const diabetesItem={...demoLibraryItem,slug:'early-stage-diabetes',name:'Early Stage Diabetes Risk Prediction',domain:'endocrinology',target:'diabetes_status',positive_label:'positive',negative_label:'negative',row_count:520,feature_count:16,class_labels:['negative','positive'],demo_readiness:{...demoLibraryItem.demo_readiness,model_ids:kinds.map((_,i)=>`model-${i}`)}};
+    const diabetesDataset={...demoDataset,name:diabetesItem.name,id:'dataset-diabetes',provenance:{...demoDataset.provenance,name:diabetesItem.name,domain:'endocrinology',target:'diabetes_status',positive_label:'positive',negative_label:'negative',row_count:520,feature_count:16,class_distribution:{negative:200,positive:320},library_slug:'early-stage-diabetes'}};
+    const models=kinds.map((model_type,index)=>({id:`model-${index}`,experiment_id:'experiment-a',dataset_id:diabetesDataset.id,model_type,status:'ready',details:{},metrics:{},created_at:'2026-10-02T00:00:00Z'}));
+    vi.mocked(qh.datasetLibrary).mockResolvedValue([diabetesItem]);
+    vi.mocked(qh.verifiedEvidence).mockResolvedValue({
+      verified:true,precomputed:true,slug:'early-stage-diabetes',artifact_version:'sih-verified-diabetes-v3',manifest_sha256:'b'.repeat(64),
+      dataset:diabetesDataset,experiment:{...currentExperiment,dataset_id:diabetesDataset.id,config:{...currentExperiment.config,models:[...kinds]}},models,
+      evidence:{benchmark:{},robustness:{},explainability:{},predictions:{},preprocessing:{},provenance:{}} as never,
+    } as never);
+    renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
+    expect(await screen.findByRole('heading',{name:'Early Stage Diabetes Risk Prediction'})).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('PennyLane + PyTorch Hybrid')).toBeInTheDocument();
+    expect(screen.getByRole('link',{name:/Explore model evidence/i})).toHaveAttribute('href','/comparison');
+    expect(qh.createJob).not.toHaveBeenCalled();
+    expect(qh.robustness).not.toHaveBeenCalled();
+    expect(qh.explain).not.toHaveBeenCalled();
   });
 });
 

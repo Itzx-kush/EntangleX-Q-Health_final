@@ -9,6 +9,7 @@ import {qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {modelLabels,shortId} from '../utils/format';
 import {PipelineFlow,StatusStrip,WorkbenchRail} from '../components/TremorWorkbench';
+import {VerifiedDemoLanding} from '../components/VerifiedDemoViews';
 
 const demoStages:{key:DemoStageKey;label:string;copy:string;path:string;action:string}[]=[
   {key:'dataset',label:'Dataset',copy:'Select a packaged public medical dataset or register an authorized deidentified CSV.',path:'/datasets',action:'Choose Dataset'},
@@ -31,6 +32,10 @@ const tone=(status:DemoStageStatus):'green'|'amber'|'red'|'blue'=>
   status==='IN PROGRESS'?'amber':'blue';
 
 export function DemoCenter(){
+  return <VerifiedDemoLanding/>;
+}
+
+export function LegacyDemoCenter(){
   const {draft,selectDataset}=useDraft();
   const qc=useQueryClient();
   const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
