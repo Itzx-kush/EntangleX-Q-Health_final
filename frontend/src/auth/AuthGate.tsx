@@ -1,5 +1,5 @@
-import {useEffect,useLayoutEffect,useState,type ReactNode} from 'react';
-import {ArrowRight,FlaskConical,ShieldCheck,TriangleAlert} from 'lucide-react';
+import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
+import {ArrowLeft,ArrowRight,Atom,FlaskConical,ShieldCheck,TriangleAlert} from 'lucide-react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from './AuthProvider';
 import {useGuestMigration} from './GuestMigrationProvider';
@@ -25,59 +25,110 @@ function GoogleMark(){
 
 function AuthLoading(){
   return <main className="auth-loading" aria-live="polite" aria-busy="true">
-    <img src="/entanglex-mark.svg" alt="" aria-hidden="true"/>
-    <div>
-      <strong>ENTANGLEX Q-HEALTH</strong>
-      <span>Restoring your research session…</span>
+    <div className="auth-loading-grid" aria-hidden="true"/>
+    <div className="auth-loading-lockup">
+      <img src="/entanglex-mark.svg" alt="" aria-hidden="true"/>
+      <div>
+        <strong>ENTANGLEX Q-HEALTH</strong>
+        <span>Restoring your research session…</span>
+      </div>
     </div>
   </main>;
 }
 
-function Welcome(){
+function AccessTransition({guest}:{guest:boolean}){
+  return <div className="auth-access-transition" role="status" aria-live="polite" aria-busy="true">
+    <div className="auth-transition-mark"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></div>
+    <span>{guest?'GUEST RESEARCH SESSION':'AUTHENTICATED WORKSPACE'}</span>
+    <h2>{guest?'Entering research workspace…':'Workspace ready'}</h2>
+    <p>{guest?'Preparing the existing research prototype.':'Restoring your research environment…'}</p>
+    <div className="auth-transition-line" aria-hidden="true"><i/></div>
+  </div>;
+}
+
+function Welcome({onBack,onGoogleStart}:{onBack:()=>void;onGoogleStart:()=>void}){
   const {continueAsGuest,error,clearError,isConfigured,signInWithGoogle}=useAuth();
   const {migration,continueGuestSession}=useGuestMigration();
   const preservingGuestWork=Boolean(migration&&migration.status!=='completed');
+  const [authenticating,setAuthenticating]=useState(false);
+  const [enteringGuest,setEnteringGuest]=useState(false);
+  const guestTimer=useRef<number|null>(null);
+
+  useEffect(()=>{
+    if(error)setAuthenticating(false);
+  },[error]);
+  useEffect(()=>()=>{if(guestTimer.current!==null)window.clearTimeout(guestTimer.current)},[]);
+
+  const beginGoogle=async()=>{
+    if(authenticating)return;
+    setAuthenticating(true);
+    onGoogleStart();
+    await signInWithGoogle();
+  };
+
+  const beginGuest=()=>{
+    if(enteringGuest)return;
+    setEnteringGuest(true);
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    guestTimer.current=window.setTimeout(()=>{
+      if(preservingGuestWork)continueGuestSession();
+      else continueAsGuest();
+    },reduced?80:520);
+  };
 
   return <main className="auth-entry">
-    <div className="auth-grid" aria-hidden="true"/>
-    <div className="auth-orbit auth-orbit-one" aria-hidden="true"/>
-    <div className="auth-orbit auth-orbit-two" aria-hidden="true"/>
+    <div className="auth-atmosphere" aria-hidden="true">
+      <div className="auth-grid"/>
+      <span className="auth-line auth-line-a"/>
+      <span className="auth-line auth-line-b"/>
+      <span className="auth-line auth-line-c"/>
+      <i className="auth-node auth-node-a"/>
+      <i className="auth-node auth-node-b"/>
+      <i className="auth-node auth-node-c"/>
+      <i className="auth-node auth-node-d"/>
+      <div className="auth-orbit auth-orbit-one"/>
+      <div className="auth-orbit auth-orbit-two"/>
+    </div>
 
     <section className="auth-brand" aria-labelledby="auth-title">
+      <button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={14}/> Back to public experience</button>
       <div className="auth-brand-lockup">
-        <img src="/entanglex-logo-light.svg" alt="EntangleX"/>
+        <img src="/entanglex-logo-dark.svg" alt="EntangleX"/>
         <span>Q-HEALTH</span>
       </div>
-      <p className="auth-eyebrow">Hybrid intelligence for biomedical research</p>
-      <h1 id="auth-title">A rigorous workspace for quantum–classical health research.</h1>
-      <p className="auth-intro">Move from verified datasets to reproducible model evidence in one focused research environment.</p>
+      <p className="auth-eyebrow">Research access</p>
+      <h1 id="auth-title">Enter your research workspace.</h1>
+      <p className="auth-intro">Continue with your account or enter as a guest. The existing datasets, experiments and verified research workflows remain ready.</p>
 
       <div className="auth-capabilities" aria-label="Platform capabilities">
         <div><FlaskConical size={17}/><span><strong>Evidence-led workflows</strong><small>Datasets, models and explainability remain connected.</small></span></div>
-        <div><ShieldCheck size={17}/><span><strong>Research-first safeguards</strong><small>Transparent methods without clinical overclaiming.</small></span></div>
+        <div><Atom size={17}/><span><strong>Classical + quantum research</strong><small>One controlled environment for existing model workflows.</small></span></div>
       </div>
+      <p className="auth-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
     </section>
 
     <section className="auth-panel" aria-label="Choose how to continue">
+      <div className="auth-panel-index" aria-hidden="true"><span>ACCESS</span><strong>03</strong></div>
       <div className="auth-panel-heading">
-        <span className="auth-step">RESEARCH ACCESS</span>
-        <h2>{preservingGuestWork?'Save this research to your workspace':'Enter your workspace'}</h2>
-        <p>{preservingGuestWork?'Your current guest session will remain available during sign-in.':'Choose the experience that fits this session.'}</p>
+        <span className="auth-step">ENTANGLEX Q-HEALTH</span>
+        <h2>{preservingGuestWork?'Save this research to your workspace':'Enter your research workspace'}</h2>
+        <p>{preservingGuestWork?'Your current guest session will remain available during sign-in.':'Choose how you would like to continue.'}</p>
       </div>
 
-      <button className="auth-google-button" type="button" onClick={signInWithGoogle}>
+      <button className="auth-google-button" type="button" disabled={authenticating||enteringGuest} aria-busy={authenticating} onClick={()=>void beginGoogle()}>
         <GoogleMark/>
-        <span>Continue with Google</span>
-        <ArrowRight size={17} aria-hidden="true"/>
+        <span>{authenticating?'Connecting to Google…':'Continue with Google'}</span>
+        {authenticating?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
       </button>
       <p className="auth-action-copy">{preservingGuestWork?'Continue with Google to add eligible research metadata to My Research.':'Sign in to keep research activity in your private workspace.'}</p>
 
       <div className="auth-divider"><span>or</span></div>
 
-      <button className="auth-guest-button" type="button" onClick={preservingGuestWork?continueGuestSession:continueAsGuest}>
-        {preservingGuestWork?'Return to guest research':'Continue without signing in'}
+      <button className="auth-guest-button" type="button" disabled={authenticating||enteringGuest} aria-busy={enteringGuest} onClick={beginGuest}>
+        <span>{enteringGuest?'Entering research workspace…':preservingGuestWork?'Return to guest research':'Continue as Guest'}</span>
+        {!enteringGuest&&<ArrowRight size={16} aria-hidden="true"/>}
       </button>
-      <p className="auth-action-copy">{preservingGuestWork?'Nothing will be removed from this guest session.':'Explore the current research prototype with the existing anonymous workflow.'}</p>
+      <p className="auth-action-copy">{preservingGuestWork?'Nothing will be removed from this guest session.':'Explore the research prototype without signing in.'}</p>
 
       {!isConfigured&&!error&&<div className="auth-notice" role="status">
         <TriangleAlert size={16} aria-hidden="true"/>
@@ -88,8 +139,9 @@ function Welcome(){
         <div><strong>Sign-in unavailable</strong><p>{error}</p><button type="button" onClick={clearError}>Dismiss</button></div>
       </div>}
 
-      <p className="auth-footnote">Research prototype · not for clinical diagnosis</p>
+      <p className="auth-footnote">Secure account access · guest exploration remains available</p>
     </section>
+    {enteringGuest&&<AccessTransition guest/>}
   </main>;
 }
 
@@ -97,6 +149,9 @@ export function AuthGate({children}:{children:ReactNode}){
   const {loading,isAuthenticated,isGuest,error}=useAuth();
   const navigate=useNavigate();
   const [showAccess,setShowAccess]=useState(false);
+  const [workspaceReady,setWorkspaceReady]=useState(false);
+  const [accessKind,setAccessKind]=useState<'google'|'guest'|null>(null);
+
   useLayoutEffect(()=>{
     applyStoredTheme();
     const sync=()=>applyStoredTheme();
@@ -106,14 +161,35 @@ export function AuthGate({children}:{children:ReactNode}){
   useEffect(()=>{
     if(error)setShowAccess(true);
   },[error]);
+  useEffect(()=>{
+    if(!isAuthenticated&&!isGuest){
+      setWorkspaceReady(false);
+      return;
+    }
+    if(isGuest)setAccessKind(current=>current||'guest');
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delay=reduced?140:accessKind==='guest'||isGuest?900:2450;
+    const timer=window.setTimeout(()=>setWorkspaceReady(true),delay);
+    return()=>window.clearTimeout(timer);
+  },[isAuthenticated,isGuest,accessKind]);
+
   if(loading)return <AuthLoading/>;
+  const intro=<LogoIntro/>;
+
   if(!isAuthenticated&&!isGuest){
     const requestAccess=(destination='/')=>{
       if(destination!==window.location.pathname)navigate(destination);
       setShowAccess(true);
       window.scrollTo({top:0,behavior:'auto'});
     };
-    return <><LogoIntro/>{showAccess?<Welcome/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
+    const backToPublic=()=>{
+      if(window.location.pathname!=='/')navigate('/');
+      setShowAccess(false);
+      setAccessKind(null);
+      window.scrollTo({top:0,behavior:'auto'});
+    };
+    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onGoogleStart={()=>setAccessKind('google')}/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
   }
-  return <><LogoIntro/>{children}</>;
+
+  return <>{intro}{workspaceReady?children:<AccessTransition guest={accessKind==='guest'||isGuest}/>}</>;
 }
