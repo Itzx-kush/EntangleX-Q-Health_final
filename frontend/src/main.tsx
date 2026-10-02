@@ -15,6 +15,7 @@ import './sidebar-layout-fix.css';
 import './responsive-adaptation.css';
 import './styles/tremor.css';
 import './styles/tremor-v2.css';
+import './styles/product-polish.css';
 
 const queryClient=new QueryClient({defaultOptions:{queries:{staleTime:3000,retry:1}}});
 

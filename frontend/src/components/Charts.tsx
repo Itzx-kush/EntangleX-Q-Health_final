@@ -22,7 +22,17 @@ export function MetricBars({metrics}:{metrics:Metrics}){
 }
 
 export function InfluenceBars({items}:{items:Influence[]}){
- return <ValueBars items={items.slice(0,24).map(item=>({name:item.feature,value:item.signed_mean??item.magnitude}))}/>;
+ const values=items.slice(0,12).map(item=>({name:item.feature,value:item.signed_mean??item.magnitude}));
+ if(!values.length)return <div className="text-xs muted">No measured contributions.</div>;
+ const height=Math.max(260,values.length*28);
+ return <div className="tremor-chart" style={{height}} role="img" aria-label="Signed feature contributions"><ResponsiveContainer width="100%" height="100%"><BarChart accessibilityLayer data={values} layout="vertical" margin={{top:8,right:14,left:8,bottom:8}}>
+  <CartesianGrid horizontal={false} stroke="var(--tremor-grid)"/>
+  <XAxis type="number" tick={{fontSize:9,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false} tickFormatter={value=>Number(value).toFixed(3)}/>
+  <YAxis type="category" dataKey="name" width={104} tick={{fontSize:9,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false}/>
+  <Tooltip cursor={{fill:'var(--tremor-hover)'}} content={<TremorChartTooltip valueFormatter={value=>value.toFixed(4)}/>}/>
+  <ReferenceLine x={0} stroke="var(--tremor-border)"/>
+  <Bar dataKey="value" radius={[0,4,4,0]} maxBarSize={16}>{values.map((item,index)=><Cell key={index} fill={item.value<0?'var(--tremor-warn)':'var(--tremor-accent)'}/>)}</Bar>
+ </BarChart></ResponsiveContainer></div>;
 }
 
 export function ScoreLandscape({data}:{data:{score:number,y:number,label:string,id:string,color?:string}[]}){

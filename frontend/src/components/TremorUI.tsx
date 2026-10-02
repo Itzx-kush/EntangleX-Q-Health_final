@@ -46,10 +46,11 @@ export function TremorChartTooltip({active,payload,label,valueFormatter}:{active
 
 export function TremorBarChart({data,category,value,height=260,showGrid=false}:{data:Record<string,any>[];category:string;value:string;height?:number;showGrid?:boolean}){
   const grad=useId().replace(/:/g,'');
-  return <div className="tremor-chart" style={{height}} role="img" aria-label={`${value} by ${category}`}><ResponsiveContainer width="100%" height="100%"><BarChart accessibilityLayer data={data} margin={{top:12,right:10,left:0,bottom:28}}>
+  const compactLabel=(raw:unknown)=>{const text=String(raw??'');return text.length>15?text.slice(0,14)+'…':text};
+  return <div className="tremor-chart" style={{height}} role="img" aria-label={`${value} by ${category}`}><ResponsiveContainer width="100%" height="100%"><BarChart accessibilityLayer data={data} margin={{top:12,right:10,left:0,bottom:48}}>
     <defs><linearGradient id={grad} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--tremor-accent)" stopOpacity=".95"/><stop offset="100%" stopColor="var(--tremor-accent-2)" stopOpacity=".68"/></linearGradient></defs>
     {showGrid&&<CartesianGrid vertical={false} stroke="var(--tremor-grid)"/>}
-    <XAxis dataKey={category} tickLine={false} axisLine={false} tick={{fontSize:10,fill:'var(--tremor-muted)'}} interval={0}/>
+    <XAxis dataKey={category} tickLine={false} axisLine={false} tick={{fontSize:9,fill:'var(--tremor-muted)'}} tickFormatter={compactLabel} interval={0} angle={-28} textAnchor="end" height={58}/>
     <YAxis tickLine={false} axisLine={false} tick={{fontSize:10,fill:'var(--tremor-muted)'}} width={40}/>
     <Tooltip cursor={{fill:'var(--tremor-hover)'}} content={<TremorChartTooltip/>}/>
     <Bar dataKey={value} radius={[6,6,2,2]} fill={'url(#'+grad+')'} maxBarSize={44}/>
