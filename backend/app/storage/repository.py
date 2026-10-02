@@ -5,6 +5,8 @@ def require(session, model, identity: str):
     row = session.get(model, str(identity))
     if row is None:
         raise AppError("not_found", "The requested resource does not exist.", 404)
+    if getattr(row, "deleted_at", None) is not None:
+        raise AppError("resource_archived", "The requested resource has been archived.", 410)
     return row
 
 def recent(session, model, limit=100, offset=0):

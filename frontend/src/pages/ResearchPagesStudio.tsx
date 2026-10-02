@@ -1,7 +1,7 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft,Copy,Download,ExternalLink,RotateCcw} from 'lucide-react';
+import {ArrowLeft,Copy,Download,ExternalLink,RotateCcw,Trash2} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
 import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
 import {StageNav} from './ResearchPagesCore';
@@ -24,7 +24,22 @@ export function Experiments(){
   const [query,setQuery]=useState('');
   const [status,setStatus]=useState('all');
   const [selected,setSelected]=useState<Experiment|null>(null);
+  const [pendingDelete,setPendingDelete]=useState<Experiment|null>(null);
+  const [deleteMessage,setDeleteMessage]=useState('');
   const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});void history.record(experimentActivity(r.experiment));navigate('/experiments/'+r.experiment.id)}});
+  const remove=useMutation({
+    mutationFn:(experiment:Experiment)=>qh.deleteExperiment(experiment.id),
+    onSuccess:(_result,experiment)=>{
+      qc.setQueryData<Experiment[]>(['experiments'],current=>(current||[]).filter(item=>item.id!==experiment.id));
+      if(selected?.id===experiment.id)setSelected(null);
+      setPendingDelete(null);
+      setDeleteMessage(`${experiment.name||`Experiment ${shortId(experiment.id)}`} was removed from the active registry. Scientific records were preserved.`);
+      void qc.invalidateQueries({queryKey:['experiments']});
+      void qc.invalidateQueries({queryKey:['summary']});
+    }
+  });
+  const deletableStatuses=new Set(['completed','succeeded','partial','failed','cancelled','interrupted']);
+  const activeStatuses=new Set(['queued','running','cancel_requested']);
   const statuses=Array.from(new Set((list.data||[]).map(e=>e.status)));
   const rows=(list.data||[]).filter(e=>{
     const hay=((e.name||'')+' '+e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
@@ -33,7 +48,8 @@ export function Experiments(){
   return <div>
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
     <StageNav current="/experiments"/>
-    <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message}/>
+    <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message||(remove.error as Error)?.message}/>
+    {deleteMessage&&<Notice tone="blue">{deleteMessage}</Notice>}
     <WorkbenchRail items={[{label:'Recorded',value:list.data?.length??'—',detail:'Backend experiment records',tone:'blue'},{label:'Visible',value:rows.length,detail:'Current registry filter',tone:'purple'},{label:'Active filter',value:status==='all'?'All states':status.replaceAll('_',' '),detail:'Status scope',tone:'amber'},{label:'Reproducibility',value:'Tracked',detail:'Seed + configuration retained',tone:'green'}]}/>
     <div className="mt-3"><DistributionStrip items={statuses.map((value,index)=>({label:value.replaceAll('_',' '),value:(list.data||[]).filter(item=>item.status===value).length,tone:(['green','blue','amber','purple'] as const)[index%4]}))}/></div>
     <Card title="Experiment registry" description="The main research landscape: searchable, filterable and drillable like a biomedical evidence dashboard.">
@@ -41,8 +57,13 @@ export function Experiments(){
         <label className="field min-w-[240px] flex-1"><span>Search</span><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Experiment, dataset, model…"/></label>
         <label className="field min-w-[180px]"><span>Status</span><Select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All states</option>{statuses.map(s=><option value={s} key={s}>{s.replaceAll('_',' ')}</option>)}</Select></label>
       </div>
-      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{rows.map((e,i)=><tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{e.name||`Experiment ${shortId(e.id)}`}</button><small className="block muted">{e.summary.experiment_kind==='precomputed_verified_demo'?'Precomputed verified demo experiment':e.parent_id?'Parent '+shortId(e.parent_id):'Live root experiment'} · {shortId(e.id)}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button></div></td></tr>)}</tbody></table>{!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
+      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{rows.map((e,i)=>{const canDelete=deletableStatuses.has(e.status);const active=activeStatuses.has(e.status);return <tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{e.name||`Experiment ${shortId(e.id)}`}</button><small className="block muted">{e.summary.experiment_kind==='precomputed_verified_demo'?'Precomputed verified demo experiment':e.parent_id?'Parent '+shortId(e.parent_id):'Live root experiment'} · {shortId(e.id)}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button><Button variant="ghost" disabled={!canDelete||remove.isPending} title={active?'Cancel this experiment and wait for a terminal state before deleting it.':canDelete?'Delete experiment':'This experiment is not in a deletable terminal state.'} onClick={()=>{setDeleteMessage('');setPendingDelete(e)}}><Trash2 size={12}/>Delete</Button></div>{active&&<small className="mt-1 block muted">Cancel and wait for completion before deleting.</small>}</td></tr>})}</tbody></table>{!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
     </Card>
+    {pendingDelete&&<Card className="mt-5" title="Delete experiment?" description={pendingDelete.name||`Experiment ${shortId(pendingDelete.id)}`}>
+      <p className="text-sm">This will remove the experiment from the active Experiment Registry.</p>
+      <Notice tone="amber">Immutable runs, models, manifests, artifacts, datasets and dataset versions will be preserved for research integrity.</Notice>
+      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={remove.isPending} onClick={()=>setPendingDelete(null)}>Cancel</Button><Button disabled={remove.isPending} onClick={()=>remove.mutate(pendingDelete)}><Trash2 size={13}/>{remove.isPending?'Deleting…':'Delete experiment'}</Button></div>
+    </Card>}
     {selected&&<div className="mt-5 two-grid"><Card title={selected.name||`Experiment ${shortId(selected.id)}`} description="Registry detail"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="muted">Status</span><StatusBadge value={selected.status}/></div><div className="flex justify-between"><span className="muted">Dataset</span><span className="mono text-xs">{selected.dataset_id}</span></div><div className="flex justify-between"><span className="muted">Created</span><span>{dateTime(selected.created_at)}</span></div><div><span className="muted">Models</span><div className="mt-2 flex flex-wrap gap-1">{selected.config.models.map(m=><Badge key={m}>{modelLabels[m]}</Badge>)}</div></div></div></Card><Card title="Exact configuration"><JsonDisclosure label="Open JSON configuration" value={selected.config}/><Link className="btn btn-outline mt-3" to={'/experiments/'+selected.id}>Open full evidence <ExternalLink size={13}/></Link></Card></div>}
   </div>
 }

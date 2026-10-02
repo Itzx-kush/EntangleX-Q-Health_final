@@ -22,7 +22,6 @@ from .dataset_versions.service import ensure_legacy_versions
 from .jobs.manager import manager
 from .quantum.backends import availability
 from .storage.entities import Dataset, Experiment, Job, ModelRecord
-from .storage.repository import recent
 from .utils.errors import AppError
 
 settings = get_settings()
@@ -107,10 +106,18 @@ for router in [ai.router, datasets.router, pipeline.router, training.router, mod
 def summary():
     with session_scope() as session:
         counts = {"datasets": session.scalar(select(func.count()).select_from(Dataset)),
-                  "experiments": session.scalar(select(func.count()).select_from(Experiment)),
+                  "experiments": session.scalar(select(func.count()).select_from(Experiment).where(Experiment.deleted_at.is_(None))),
                   "ready_models": session.scalar(select(func.count()).select_from(ModelRecord).where(ModelRecord.status == "ready")),
                   "active_jobs": session.scalar(select(func.count()).select_from(Job).where(Job.status.in_(["queued", "running", "cancel_requested"])))}
-        experiments_recent = [ExperimentOut.model_validate(e).model_dump(mode="json") for e in recent(session, Experiment, 5)]
+        experiments_recent = [
+            ExperimentOut.model_validate(e).model_dump(mode="json")
+            for e in session.scalars(
+                select(Experiment)
+                .where(Experiment.deleted_at.is_(None))
+                .order_by(Experiment.created_at.desc())
+                .limit(5)
+            )
+        ]
     return {"counts": counts, "recent_experiments": experiments_recent, "disclaimer": DISCLAIMER}
 
 @api.get("/system/status", tags=["dashboard"])
