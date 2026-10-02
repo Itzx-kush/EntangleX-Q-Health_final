@@ -2,13 +2,17 @@ import {createContext,useCallback,useContext,useEffect,useMemo,useState,type Rea
 import type {AuthError,Session,User} from '@supabase/supabase-js';
 import {supabase,supabaseConfigurationError} from '../lib/supabase';
 import {ensureActiveGuestSession} from './guestSession';
+import {buildAuthProfile,type AuthProfile,type OAuthProvider} from './authProfile';
 
 const GUEST_MODE_KEY='qhealth-access-mode';
+const OAUTH_PROVIDER_KEY='qhealth-oauth-provider';
+const ACTIVE_PROVIDER_KEY='qhealth-active-oauth-provider';
 const AUTH_QUERY_KEYS=['code','error','error_code','error_description'];
 
 type AuthContextValue={
   user:User|null;
   session:Session|null;
+  profile:AuthProfile|null;
   isAuthenticated:boolean;
   isGuest:boolean;
   loading:boolean;
@@ -27,6 +31,7 @@ const AuthContext=createContext<AuthContextValue|null>(null);
 const FALLBACK_AUTH:AuthContextValue={
   user:null,
   session:null,
+  profile:null,
   isAuthenticated:false,
   isGuest:true,
   loading:false,
@@ -43,6 +48,21 @@ const FALLBACK_AUTH:AuthContextValue={
 
 function readGuestMode(){
   try{return localStorage.getItem(GUEST_MODE_KEY)==='guest'}catch{return false}
+}
+
+function readProviderMarker(key:string):OAuthProvider|null{
+  try{
+    const value=sessionStorage.getItem(key);
+    return value==='google'||value==='github'?value:null;
+  }catch{return null}
+}
+
+function writeProviderMarker(key:string,provider:OAuthProvider){
+  try{sessionStorage.setItem(key,provider)}catch{}
+}
+
+function clearProviderMarker(key:string){
+  try{sessionStorage.removeItem(key)}catch{}
 }
 
 function oauthErrorFromUrl(){
@@ -76,6 +96,7 @@ function authMessage(error:unknown,fallback:string){
 
 export function AuthProvider({children}:{children:ReactNode}){
   const [session,setSession]=useState<Session|null>(null);
+  const [profile,setProfile]=useState<AuthProfile|null>(null);
   const [isGuest,setIsGuest]=useState(readGuestMode);
   const [loading,setLoading]=useState(true);
   const [signingOut,setSigningOut]=useState(false);
@@ -122,13 +143,45 @@ export function AuthProvider({children}:{children:ReactNode}){
     return()=>{active=false;subscription.unsubscribe()};
   },[]);
 
-  const signInWithOAuth=useCallback(async(provider:'google'|'github')=>{
+  useEffect(()=>{
+    if(!session?.user||!supabase){
+      setProfile(null);
+      return;
+    }
+    let active=true;
+    const user=session.user;
+    const requestedProvider=readProviderMarker(OAUTH_PROVIDER_KEY)||readProviderMarker(ACTIVE_PROVIDER_KEY);
+    const sessionIdentities=user.identities||[];
+    setProfile(buildAuthProfile(user,sessionIdentities,requestedProvider));
+
+    supabase.auth.getUserIdentities()
+      .then(({data,error:identityError})=>{
+        if(!active)return;
+        const identities=identityError||!data.identities.length?sessionIdentities:data.identities;
+        const nextProfile=buildAuthProfile(user,identities,requestedProvider);
+        setProfile(nextProfile);
+        clearProviderMarker(OAUTH_PROVIDER_KEY);
+        if(nextProfile.provider)writeProviderMarker(ACTIVE_PROVIDER_KEY,nextProfile.provider);
+      })
+      .catch(()=>{
+        if(!active)return;
+        const nextProfile=buildAuthProfile(user,sessionIdentities,requestedProvider);
+        setProfile(nextProfile);
+        clearProviderMarker(OAUTH_PROVIDER_KEY);
+        if(nextProfile.provider)writeProviderMarker(ACTIVE_PROVIDER_KEY,nextProfile.provider);
+      });
+
+    return()=>{active=false};
+  },[session?.user]);
+
+  const signInWithOAuth=useCallback(async(provider:OAuthProvider)=>{
     setError(null);
     if(!supabase){
       setError(supabaseConfigurationError);
       return;
     }
     try{
+      writeProviderMarker(OAUTH_PROVIDER_KEY,provider);
       const redirectUrl=new URL(window.location.href);
       AUTH_QUERY_KEYS.forEach(key=>redirectUrl.searchParams.delete(key));
       redirectUrl.hash='';
@@ -139,8 +192,12 @@ export function AuthProvider({children}:{children:ReactNode}){
           ...(provider==='google'?{queryParams:{prompt:'select_account'}}:{}),
         },
       });
-      if(signInError)setError(authMessage(signInError,`${provider==='google'?'Google':'GitHub'} sign-in could not be started.`));
+      if(signInError){
+        clearProviderMarker(OAUTH_PROVIDER_KEY);
+        setError(authMessage(signInError,`${provider==='google'?'Google':'GitHub'} sign-in could not be started.`));
+      }
     }catch(signInError){
+      clearProviderMarker(OAUTH_PROVIDER_KEY);
       setError(authMessage(signInError,`${provider==='google'?'Google':'GitHub'} sign-in could not be started. Check your connection and try again.`));
     }
   },[]);
@@ -158,7 +215,10 @@ export function AuthProvider({children}:{children:ReactNode}){
         return;
       }
       setSession(null);
+      setProfile(null);
       setIsGuest(false);
+      clearProviderMarker(OAUTH_PROVIDER_KEY);
+      clearProviderMarker(ACTIVE_PROVIDER_KEY);
       try{localStorage.removeItem(GUEST_MODE_KEY)}catch{}
     }catch(signOutError){
       setError(authMessage(signOutError,'Sign out could not be completed.'));
@@ -182,6 +242,7 @@ export function AuthProvider({children}:{children:ReactNode}){
   const value=useMemo<AuthContextValue>(()=>({
     user:session?.user??null,
     session,
+    profile,
     isAuthenticated:Boolean(session),
     isGuest,
     loading,
@@ -194,7 +255,7 @@ export function AuthProvider({children}:{children:ReactNode}){
     continueAsGuest,
     leaveGuestMode,
     clearError,
-  }),[session,isGuest,loading,signingOut,error,signInWithGoogle,signInWithGitHub,signOut,continueAsGuest,leaveGuestMode,clearError]);
+  }),[session,profile,isGuest,loading,signingOut,error,signInWithGoogle,signInWithGitHub,signOut,continueAsGuest,leaveGuestMode,clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
