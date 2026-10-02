@@ -237,6 +237,7 @@ class ExperimentOut(Schema):
 class ModelOut(Schema):
     id: str
     experiment_id: str
+    run_id: str | None = None
     dataset_id: str
     model_type: str
     status: str
@@ -247,6 +248,7 @@ class ModelOut(Schema):
 class JobOut(Schema):
     id: str
     experiment_id: str
+    run_id: str | None = None
     status: str
     progress: int
     state: str
@@ -391,9 +393,51 @@ class ExplanationRequest(Schema):
 class ExplanationOut(Schema):
     id: str
     model_id: str
+    run_id: str | None = None
     method: str
     result: dict[str, Any]
     created_at: datetime
+
+
+class RunOut(Schema):
+    id: str
+    experiment_id: str
+    dataset_id: str
+    status: Literal["created", "queued", "running", "completed", "failed", "cancelled"]
+    config: dict[str, Any]
+    execution_metadata: dict[str, Any]
+    reproducibility_metadata: dict[str, Any]
+    result_summary: dict[str, Any]
+    failure: dict[str, Any] | None
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    failed_at: datetime | None
+    cancelled_at: datetime | None
+
+
+class ArtifactOut(Schema):
+    id: str
+    experiment_id: str
+    run_id: str | None
+    model_id: str | None
+    artifact_type: str
+    name: str
+    description: str
+    storage_reference: str | None
+    integrity_hash: str
+    hash_algorithm: Literal["sha256"]
+    size_bytes: int | None
+    content_type: str | None
+    details: dict[str, Any]
+    immutable: bool
+    created_at: datetime
+
+
+class RunTrainingResponse(Schema):
+    job: JobOut
+    experiment: ExperimentOut
+    run: RunOut
 
 class PreviewOut(Schema):
     train_count: int

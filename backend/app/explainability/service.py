@@ -3,6 +3,7 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
+from ..artifacts.service import register_metadata
 from ..api.schemas import ExplanationRequest
 from ..database import session_scope
 from ..evaluation.metrics import auc_scorer, score_outputs
@@ -89,6 +90,18 @@ def explain(identity: str, request: ExplanationRequest):
     limitations = (HYBRID_LIMITATIONS + [extra_limitation, "Repeated test-set analysis requires an untouched external validation set for subsequent model selection."]) if record.model_type == "hybrid_pennylane_torch" else ["Influence does not establish biological or medical causation.", "Correlated features can redistribute importance; perturbations may be off-manifold.", "Quantum perturbation is model sensitivity, not a complete explanation of circuit internals.", "Repeated test-set analysis requires an untouched external validation set for subsequent model selection."]
     result = clean_json({"title": "Global Hybrid SHAP" if record.model_type == "hybrid_pennylane_torch" else "Model Feature Influence" if request.method != "perturbation" else "Feature Perturbation / Sensitivity Analysis", "scope": "Post-hoc explanation of a frozen model on a bounded held-out subset; never a tuning score.", "sample_count": len(X), "baseline": baseline, "request": request.model_dump(mode="json"), "background_source": "training partition only", "input_feature_count": len(bundle["features"]), "evaluated_feature_count": len(influence), "method": request.method, **hybrid_metadata, "units": units, "influence": influence, "elapsed_seconds": perf_counter() - start, "limitations": [item for item in limitations if item]})
     with session_scope() as session:
-        explanation = ExplanationRecord(id=str(uuid4()), model_id=identity, method=request.method, result=result)
+        explanation = ExplanationRecord(id=str(uuid4()), model_id=identity, run_id=record.run_id, method=request.method, result=result)
         session.add(explanation)
+        session.flush()
+        register_metadata(
+            session,
+            experiment_id=record.experiment_id,
+            run_id=record.run_id,
+            model_id=identity,
+            artifact_type="explanation",
+            name=f"{record.model_type} {request.method} explanation",
+            description="Bounded post-hoc explanation of a frozen model.",
+            payload=result,
+            operation_key=f"explanation:{explanation.id}",
+        )
     return explanation

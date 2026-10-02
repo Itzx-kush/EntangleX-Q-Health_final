@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Header, Query
 from ..database import session_scope
 from ..jobs.manager import manager
 from ..storage.entities import Job
@@ -9,8 +9,10 @@ from .schemas import JobOut, TrainingConfig, TrainingResponse
 router = APIRouter(prefix="/training/jobs", tags=["training jobs"])
 
 @router.post("", response_model=TrainingResponse, status_code=202)
-def create_job(config: TrainingConfig):
-    job, experiment = manager.enqueue(config)
+def create_job(config: TrainingConfig, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key")):
+    # Preserve the historical manager call shape when no optional idempotency
+    # header is supplied; several integrations replace this boundary in tests.
+    job, experiment = manager.enqueue(config) if idempotency_key is None else manager.enqueue(config, idempotency_key=idempotency_key)
     return {"job": job, "experiment": experiment}
 
 @router.get("", response_model=list[JobOut])

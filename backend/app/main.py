@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import func, select
-from .api import alignment, datasets, experiments, models, pipeline, quantum, training
+from .api import alignment, datasets, experiments, models, pipeline, quantum, runs, training
 from .api.middleware import BodyLimitMiddleware
 from .api.security import authorize
 from .api.schemas import ExperimentOut
@@ -54,7 +54,7 @@ app.add_middleware(BodyLimitMiddleware, max_bytes=settings.upload_limit + 65536)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=[s.strip() for s in settings.trusted_hosts.split(",")])
 cors_origins = [s.strip() for s in settings.cors_origins.split(",") if s.strip()]
 allow_credentials = "*" not in cors_origins
-app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=allow_credentials, allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type", "Authorization"], expose_headers=["Content-Disposition", "X-Request-ID"])
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=allow_credentials, allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type", "Authorization", "Idempotency-Key"], expose_headers=["Content-Disposition", "X-Request-ID"])
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):
@@ -96,7 +96,7 @@ def health():
     return {"status": "ok", "version": "0.1.0", "mode": "single-workstation research prototype", "authentication_required": bool(settings.api_token), "quantum": availability(), "disclaimer": DISCLAIMER}
 
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
-for router in [datasets.router, pipeline.router, training.router, models.router, experiments.router, quantum.router, alignment.router]:
+for router in [datasets.router, pipeline.router, training.router, models.router, experiments.router, runs.router, quantum.router, alignment.router]:
     api.include_router(router)
 
 @api.get("/summary", tags=["dashboard"])
