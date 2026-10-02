@@ -22,6 +22,7 @@ import './styles/product-polish.css';
 import './styles/account-workspace.css';
 import './styles/research-history.css';
 import './styles/guest-migration.css';
+import './styles/workspace-premium.css';
 
 const queryClient=new QueryClient({defaultOptions:{queries:{staleTime:3000,retry:1}}});
 

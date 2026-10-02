@@ -36,6 +36,8 @@ const navGroups:NavGroup[]=[
     {label:'Overview',path:'/',icon:LayoutDashboard},
     {label:'Datasets',path:'/datasets',icon:Database},
     {label:'Data quality',path:'/quality',icon:ShieldCheck},
+  ]},
+  {label:'Pipeline',items:[
     {label:'Preprocessing',path:'/preprocessing',icon:SlidersHorizontal},
     {label:'Feature selection',path:'/features',icon:BarChart3},
     {label:'PCA / dimensions',path:'/pca',icon:BarChart3},
@@ -44,14 +46,17 @@ const navGroups:NavGroup[]=[
     {label:'Training',path:'/training',icon:PlayCircle},
     {label:'Comparison',path:'/comparison',icon:BarChart3},
     {label:'Robustness Lab',path:'/robustness',icon:ShieldCheck},
+  ]},
+  {label:'Quantum',items:[
     {label:'Quantum Lab',path:'/quantum',icon:Atom},
   ]},
   {label:'Interpretation',items:[
     {label:'Explainability',path:'/explainability',icon:Brain},
     {label:'Research prediction',path:'/prediction',icon:Zap},
   ]},
-  {label:'Experiments',items:[
+  {label:'Studio',items:[
     {label:'Experiment registry',path:'/experiments',icon:FlaskConical},
+    {label:'SIH Demo Center',path:'/demo',icon:PlayCircle},
   ]},
 ];
 
@@ -62,12 +67,8 @@ pageNames['/account']='My account';
 pageNames['/my-research']='My Research';
 pageNames['/settings']='Settings center';
 
-const mobilePrimaryNav:NavEntry[]=[
-  navGroups[0].items[0],
-  navGroups[0].items[1],
-  navGroups[1].items[2],
-  navGroups[3].items[0],
-];
+const navByPath=(path:string)=>navGroups.flatMap(group=>group.items).find(item=>item.path===path)!;
+const mobilePrimaryNav:NavEntry[]=[navByPath('/'),navByPath('/datasets'),navByPath('/quantum'),navByPath('/experiments')];
 
 function readSettings():UiSettings{
   const storedTheme=localStorage.getItem('qhealth-theme')||localStorage.getItem('qhealth-tictac-theme')||'research';
@@ -211,9 +212,8 @@ function MobileMoreSheet({onClose}:{onClose:()=>void}){
         </div>)}
         <div className="mobile-more-group">
           <p className="sidebar-label">Workspace</p>
-          <NavLink to="/demo" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span><ChevronRight size={14} className="ml-auto"/></NavLink>
-          {isAuthenticated&&<NavLink to="/account" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><UserRound size={16}/><span>My account</span><ChevronRight size={14} className="ml-auto"/></NavLink>}
           {isAuthenticated&&<NavLink to="/my-research" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><History size={16}/><span>My Research</span><ChevronRight size={14} className="ml-auto"/></NavLink>}
+          {isAuthenticated&&<NavLink to="/account" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><UserRound size={16}/><span>My account</span><ChevronRight size={14} className="ml-auto"/></NavLink>}
           <NavLink to="/settings" onClick={onClose} className={({isActive})=>'mobile-more-link '+(isActive?'active':'')}><Settings2 size={16}/><span>Settings</span><ChevronRight size={14} className="ml-auto"/></NavLink>
         </div>
       </nav>
@@ -271,13 +271,13 @@ export function ResearchShell({children}:{children:ReactNode}){
     <aside className={'research-sidebar variant-'+uiSettings.sidebar+' '+(uiSettings.layout==='icon'?'is-collapsed ':'')+(mobile?'is-mobile-open ':'')+(uiSettings.layout==='offcanvas'?'is-offcanvas':'')} aria-label="Primary navigation">
       <div className="sidebar-brand"><NavLink to="/" className="brand-mark" aria-label="Q-Health overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><div className="brand-copy"><img className="brand-logo brand-logo-light" src="/entanglex-logo-dark.svg" alt="EntangleX"/><img className="brand-logo brand-logo-dark" src="/entanglex-logo-dark.svg" alt="EntangleX"/><span>Q-HEALTH</span></div><button className="sidebar-close btn btn-ghost" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={16}/></button></div>
       <div className="sidebar-context"><span className="context-kicker">Research workspace</span><strong>SIH 2026 · PS 26139</strong><span>Hybrid biomedical ML</span></div>
-      <nav className="sidebar-nav">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} aria-label={label} title={label} className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Icon size={16}/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse"/>}</NavLink>)}</div>)}<div className="sidebar-group sidebar-special"><p className="sidebar-label">Presentation</p><NavLink to="/demo" aria-label="SIH Demo Center" title="SIH Demo Center" className={({isActive})=>'sidebar-link demo-link '+(isActive?'active':'')}><PlayCircle size={16}/><span>SIH Demo Center</span></NavLink></div></nav>
-      <div className="sidebar-bottom">{isAuthenticated&&<NavLink to="/account" aria-label="My account" title="My account" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><UserRound size={16}/><span>My account</span></NavLink>}{isAuthenticated&&<NavLink to="/my-research" aria-label="My Research" title="My Research" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><History size={16}/><span>My Research</span></NavLink>}<button className="sidebar-link" onClick={()=>setPalette(true)} aria-label="Command palette"><Command size={16}/><span>Command palette</span><kbd>⌘K</kbd></button><NavLink to="/settings" aria-label="Settings" title="Settings" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Settings2 size={16}/><span>Settings</span></NavLink><button className="sidebar-link" onClick={()=>setConfig(true)} aria-label="Open theme and layout settings"><Settings2 size={16}/><span>Theme & Layout</span></button><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
+      <nav className="sidebar-nav">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} aria-label={label} title={label} className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Icon size={16}/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse"/>}</NavLink>)}</div>)}</nav>
+      <div className="sidebar-bottom"><p className="sidebar-label workspace-label">Workspace</p>{isAuthenticated&&<NavLink to="/my-research" aria-label="My Research" title="My Research" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><History size={16}/><span>My Research</span></NavLink>}{isAuthenticated&&<NavLink to="/account" aria-label="My account" title="My account" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><UserRound size={16}/><span>My account</span></NavLink>}<button className="sidebar-link" onClick={()=>setPalette(true)} aria-label="Command palette"><Command size={16}/><span>Command palette</span><kbd>⌘K</kbd></button><NavLink to="/settings" aria-label="Settings" title="Settings" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Settings2 size={16}/><span>Settings</span></NavLink><button className="sidebar-link" onClick={()=>setConfig(true)} aria-label="Open theme and layout settings"><Settings2 size={16}/><span>Theme & Layout</span></button><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
     </aside>
     {mobile&&<button className="navigation-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
       <div className="research-workspace">
-      <header className="research-topbar"><div className="topbar-left"><NavLink to="/" className="mobile-brand-mark" aria-label="Q-Health overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><button className="mobile-menu btn btn-ghost" onClick={()=>{if(isMobileViewport)setMobileMore(true);else setMobile(true)}} aria-label="Open navigation"><Menu size={18}/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> {isAuthenticated?'Personal workspace':'EntangleX workspace'}</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15}/><span>Search commands</span><kbd>⌘K</kbd></button><span className={'connection-indicator '+(health.data?'is-live':'') }><span className="status-dot"/><span>{health.data?'Connected':'Offline'}</span></span><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16}/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme settings"><Settings2 size={16}/></button><AccountMenu/>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
-      <div className="research-context-bar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={13}/><strong>{title}</strong></div><div className="context-actions"><span className="context-chip"><span className="status-dot is-live"/> {isAuthenticated?'Personal workspace':'Guest prototype'}</span><NavLink className="context-demo-link" to="/demo"><PlayCircle size={13}/> Presentation mode</NavLink></div></div>
+      <header className="research-topbar"><div className="topbar-left"><NavLink to="/" className="mobile-brand-mark" aria-label="Q-Health overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><button className="mobile-menu btn btn-ghost" onClick={()=>{if(isMobileViewport)setMobileMore(true);else setMobile(true)}} aria-label="Open navigation"><Menu size={18}/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> {isAuthenticated?'Personal workspace':'Guest research'}</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15}/><span>Search commands</span><kbd>⌘K</kbd></button><span className={'connection-indicator '+(health.data?'is-live':'') }><span className="status-dot"/><span>{health.data?'Connected':'Offline'}</span></span><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16}/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme settings"><Settings2 size={16}/></button><AccountMenu/>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
+      <div className="research-context-bar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={13}/><strong>{title}</strong></div><div className="context-actions"><span className="context-chip"><span className="status-dot is-live"/> {isAuthenticated?'Personal workspace':'Guest research mode'}</span><NavLink className="context-demo-link" to="/demo"><PlayCircle size={13}/> Presentation mode</NavLink></div></div>
       <div className={'research-body '+(!showInspector?'inspector-closed':'')}><main className="research-main"><VerifiedContextBar/><GuestMigrationBanner/>{children}<div className="bottom-status"><span><span className={'status-dot '+(health.data?'is-live':'is-offline')}/>{health.data?'Backend connected':'Backend unavailable'}</span><span>Quantum: {health.data?.quantum.available?'available':'not reported'}</span><span>Jobs: {status.data?.jobs.active??summary.data?.counts.active_jobs??'—'} active</span><span className="ml-auto">Research prototype · no clinical diagnosis</span></div></main><ContextInspector summary={summary.data} health={health.data} status={status.data} jobs={jobs.data} visible={showInspector} onClose={()=>setShowInspector(false)}/></div>
       <footer className="research-footer"><span>EntangleX Q-Health · Hybrid quantum–classical research platform</span><span>Measured outputs only · <NavLink to="/settings">Settings</NavLink></span></footer>
     </div>
