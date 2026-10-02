@@ -208,3 +208,36 @@ class StudyRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+
+class ExternalValidation(Base):
+    """First-class record of external dataset validation for an explicitly locked model."""
+
+    __tablename__ = "external_validations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    training_dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    training_dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    external_dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    external_dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    study_id: Mapped[str | None] = mapped_column(ForeignKey("multi_seed_studies.id"), nullable=True, index=True)
+    study_seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    compatibility: Mapped[dict] = mapped_column(JSON, default=dict)
+    label_mapping: Mapped[dict] = mapped_column(JSON, default=dict)
+    threshold_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    internal_metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    comparison: Mapped[dict] = mapped_column(JSON, default=dict)
+    generalization_gap: Mapped[dict] = mapped_column(JSON, default=dict)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+

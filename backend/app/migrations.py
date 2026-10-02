@@ -17,6 +17,7 @@ MIGRATION_ID = "20261002_01_experiment_run_artifact"
 MANIFEST_MIGRATION_ID = "20261002_02_immutable_run_manifest"
 DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
 MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
+EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
 
 
 
@@ -187,4 +188,54 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": MULTI_SEED_STUDY_MIGRATION_ID, "applied_at": utcnow()},
-            )
+            )
+
+        ext_val_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": EXTERNAL_VALIDATION_MIGRATION_ID},
+        ).scalar()
+        if not ext_val_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS external_validations (
+                    id VARCHAR(36) PRIMARY KEY,
+                    model_id VARCHAR(36) NOT NULL REFERENCES models(id),
+                    run_id VARCHAR(36) REFERENCES runs(id),
+                    experiment_id VARCHAR(36) NOT NULL REFERENCES experiments(id),
+                    training_dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    training_dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    external_dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    external_dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    study_id VARCHAR(36) REFERENCES multi_seed_studies(id),
+                    study_seed INTEGER,
+                    status VARCHAR(24) NOT NULL DEFAULT 'created',
+                    operation_key VARCHAR(128) NOT NULL UNIQUE,
+                    compatibility JSON NOT NULL DEFAULT '{}',
+                    label_mapping JSON NOT NULL DEFAULT '{}',
+                    threshold_metadata JSON NOT NULL DEFAULT '{}',
+                    metrics JSON NOT NULL DEFAULT '{}',
+                    internal_metrics JSON NOT NULL DEFAULT '{}',
+                    comparison JSON NOT NULL DEFAULT '{}',
+                    generalization_gap JSON NOT NULL DEFAULT '{}',
+                    provenance JSON NOT NULL DEFAULT '{}',
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    limitations JSON NOT NULL DEFAULT '[]',
+                    warnings JSON NOT NULL DEFAULT '[]',
+                    failure JSON,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME
+                )
+            """))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_model_id ON external_validations(model_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_run_id ON external_validations(run_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_experiment_id ON external_validations(experiment_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_training_dataset_id ON external_validations(training_dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_external_dataset_id ON external_validations(external_dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_status ON external_validations(status)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_operation_key ON external_validations(operation_key)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_artifact_id ON external_validations(artifact_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_external_validations_created_at ON external_validations(created_at)"))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": EXTERNAL_VALIDATION_MIGRATION_ID, "applied_at": utcnow()},
+            )
+

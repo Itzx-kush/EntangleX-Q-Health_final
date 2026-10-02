@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import func, select
-from .api import ai, alignment, datasets, experiments, models, pipeline, quantum, runs, studies, training
+from .api import ai, alignment, datasets, experiments, models, pipeline, quantum, runs, studies, training, validation
 
 from .api.middleware import BodyLimitMiddleware
 from .api.security import authorize
@@ -99,8 +99,7 @@ def health():
     return {"status": "ok", "version": "0.1.0", "mode": "single-workstation research prototype", "authentication_required": bool(settings.api_token), "quantum": availability(), "disclaimer": DISCLAIMER}
 
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
-for router in [ai.router, datasets.router, pipeline.router, training.router, models.router, experiments.router, runs.router, quantum.router, alignment.router, studies.router]:
-
+for router in [ai.router, datasets.router, pipeline.router, training.router, models.router, experiments.router, runs.router, quantum.router, alignment.router, studies.router, validation.router]:
     api.include_router(router)
 
 @api.get("/summary", tags=["dashboard"])

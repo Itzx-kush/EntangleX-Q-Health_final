@@ -9,7 +9,8 @@ from ..storage.entities import ModelRecord, ExplanationRecord
 from ..storage.repository import recent, require
 from ..utils.errors import AppError
 from ..utils.serialization import clean_json
-from .schemas import ModelOut, PredictionRequest, PredictionOut, ExplanationRequest, ExplanationOut, CircuitOut
+from .schemas import ModelOut, PredictionRequest, PredictionOut, ExplanationRequest, ExplanationOut, CircuitOut, ExternalValidationOut
+from ..validation.service import list_validations
 
 router = APIRouter(prefix="/models", tags=["model registry, prediction, explainability"])
 
@@ -62,3 +63,41 @@ def fitted_circuit(identity: UUID):
     if not quantum:
         raise AppError("circuit_unavailable", "A completed quantum model is required for circuit retrieval.", 404)
     return quantum["circuit"]
+
+@router.get("/{identity}/external-validation", response_model=list[ExternalValidationOut])
+def model_external_validations(identity: UUID):
+    with session_scope() as session:
+        require(session, ModelRecord, str(identity))
+        records = list_validations(session, model_id=str(identity))
+        return [
+            ExternalValidationOut(
+                id=record.id,
+                model_id=record.model_id,
+                model_type=record.provenance.get("model_type", "unknown"),
+                run_id=record.run_id,
+                experiment_id=record.experiment_id,
+                training_dataset_id=record.training_dataset_id,
+                training_dataset_version_id=record.training_dataset_version_id,
+                external_dataset_id=record.external_dataset_id,
+                external_dataset_version_id=record.external_dataset_version_id,
+                study_id=record.study_id,
+                study_seed=record.study_seed,
+                status=record.status,
+                operation_key=record.operation_key,
+                compatibility=clean_json(record.compatibility),
+                label_mapping=clean_json(record.label_mapping),
+                threshold_metadata=clean_json(record.threshold_metadata),
+                metrics=clean_json(record.metrics),
+                internal_metrics=clean_json(record.internal_metrics),
+                comparison=clean_json(record.comparison),
+                generalization_gap=clean_json(record.generalization_gap),
+                provenance=clean_json(record.provenance),
+                artifact_id=record.artifact_id,
+                limitations=record.limitations,
+                warnings=record.warnings,
+                failure=record.failure,
+                created_at=record.created_at,
+                completed_at=record.completed_at,
+            )
+            for record in records
+        ]
