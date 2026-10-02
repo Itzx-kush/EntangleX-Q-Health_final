@@ -1,5 +1,6 @@
 import {useEffect,useState,type CSSProperties} from 'react';
 import {ArrowDown,ArrowRight,ArrowUpRight,Atom,BrainCircuit,Database,Menu,ShieldCheck,X} from 'lucide-react';
+import {InteractiveQuantumField} from './InteractiveQuantumField';
 
 type PublicExperienceProps={
   onRequestAccess:(destination?:string)=>void;
@@ -109,6 +110,7 @@ export function PublicExperience({onRequestAccess}:PublicExperienceProps){
 
     <main id="top">
       <section className="public-hero public-shell" aria-labelledby="public-hero-title">
+        <InteractiveQuantumField/>
         <div className="public-hero-copy" data-public-reveal>
           <p className="public-eyebrow"><span>ENTANGLEX</span> Biomedical research platform</p>
           <h1 id="public-hero-title">Hybrid quantum–classical intelligence for biomedical research.</h1>
