@@ -1,5 +1,5 @@
 import {lazy,Suspense} from 'react';
-import {Navigate,Route,Routes} from 'react-router-dom';
+import {Navigate,Route,Routes,useLocation} from 'react-router-dom';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
@@ -27,7 +27,14 @@ const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then
 export default function App(){
   return <ResearchShell>
     <ThemeToggle/>
-    <Suspense fallback={<Loading/>}><Routes>
+    <WorkspaceRoutes/>
+  </ResearchShell>;
+}
+
+function WorkspaceRoutes(){
+  const location=useLocation();
+  return <div className="workspace-route-frame" key={location.pathname}>
+    <Suspense fallback={<Loading/>}><Routes location={location}>
       <Route path="/" element={<Overview/>}/>
       <Route path="/datasets" element={<DatasetsRoute/>}/>
       <Route path="/quality" element={<QualityRoute/>}/>
@@ -48,7 +55,7 @@ export default function App(){
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
-  </ResearchShell>;
+  </div>;
 }
 
 function DatasetsRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedDemoLanding current="/datasets"/>:<Datasets/>; }
