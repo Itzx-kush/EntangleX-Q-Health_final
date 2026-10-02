@@ -42,6 +42,16 @@
     color-mix(in srgb,var(--qh-sidebar-bg,var(--tremor-card)) 97%,#06060a)!important;
   box-shadow:12px 0 40px rgba(3,4,10,.08)!important;
 }
+
+/* Keep the real desktop layout width in sync with the collapsed navigation state. */
+.research-shell.is-collapsed .research-sidebar,
+[data-layout="icon"] .research-sidebar{
+  width:76px!important;
+}
+.research-shell.is-collapsed .research-workspace,
+[data-layout="icon"] .research-workspace{
+  margin-left:76px!important;
+}
 .research-workspace{margin-left:252px}
 .sidebar-brand{
   min-height:78px!important;
