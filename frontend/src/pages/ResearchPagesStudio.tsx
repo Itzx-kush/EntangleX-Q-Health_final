@@ -11,16 +11,19 @@ import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
 import type {Experiment} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
+import {useResearchRecorder} from '../research/useResearchHistory';
+import {experimentActivity} from '../research/historyRecords';
 
 export function Experiments(){
   const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
   const qc=useQueryClient();
   const {update}=useDraft();
   const navigate=useNavigate();
+  const history=useResearchRecorder();
   const [query,setQuery]=useState('');
   const [status,setStatus]=useState('all');
   const [selected,setSelected]=useState<Experiment|null>(null);
-  const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});navigate('/experiments/'+r.experiment.id)}});
+  const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});void history.record(experimentActivity(r.experiment));navigate('/experiments/'+r.experiment.id)}});
   const statuses=Array.from(new Set((list.data||[]).map(e=>e.status)));
   const rows=(list.data||[]).filter(e=>{
     const hay=(e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();

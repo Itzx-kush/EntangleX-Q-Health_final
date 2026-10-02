@@ -1,0 +1,18 @@
+.guest-migration-banner{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;margin:0 0 16px;padding:12px 14px;border:1px solid var(--qh-color-border);border-radius:var(--qh-radius-lg);background:var(--qh-color-surface);box-shadow:var(--qh-shadow-xs);color:var(--qh-color-foreground)}
+.guest-migration-banner>svg{color:var(--qh-color-primary)}
+.guest-migration-banner>div{display:grid;gap:2px;min-width:0}
+.guest-migration-banner strong{font-size:13px}
+.guest-migration-banner span{font-size:12px;color:var(--qh-color-muted)}
+.guest-migration-banner.is-complete{border-color:color-mix(in srgb,#10b981 35%,var(--qh-color-border));background:color-mix(in srgb,#ecfdf5 70%,var(--qh-color-surface))}
+.guest-migration-banner.is-complete>svg{color:#059669}
+.guest-migration-banner.is-failed{border-color:color-mix(in srgb,#f59e0b 45%,var(--qh-color-border));background:color-mix(in srgb,#fffbeb 72%,var(--qh-color-surface))}
+.guest-migration-banner.is-failed>svg{color:#d97706}
+.guest-migration-dismiss{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--qh-color-muted);cursor:pointer}
+.guest-migration-dismiss:hover{background:var(--qh-color-surface-hover);color:var(--qh-color-foreground)}
+.guest-migration-dismiss:focus-visible{outline:3px solid var(--qh-color-focus);outline-offset:2px}
+.guest-migration-spinner{animation:guest-migration-spin .8s linear infinite}
+.research-record-origin{color:#047857!important;font-weight:650}
+@keyframes guest-migration-spin{to{transform:rotate(360deg)}}
+@media(max-width:767px){.guest-migration-banner{grid-template-columns:auto minmax(0,1fr) auto;margin:0 12px 14px}.guest-migration-banner .btn{grid-column:2;justify-self:start}.guest-migration-dismiss{grid-column:3;grid-row:1}}
+@media(max-width:390px){.guest-migration-banner{margin-inline:0;padding:11px;gap:9px}.guest-migration-banner span{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.guest-migration-spinner{animation:none}}

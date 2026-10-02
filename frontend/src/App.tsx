@@ -21,6 +21,8 @@ const Experiments=lazy(()=>import('./pages/ResearchPagesStudio').then(m=>({defau
 const ExperimentDetail=lazy(()=>import('./pages/ResearchPagesStudio').then(m=>({default:m.ExperimentDetail})));
 const DemoCenter=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.DemoCenter})));
 const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.SettingsPage})));
+const AccountPage=lazy(()=>import('./pages/AccountPage').then(m=>({default:m.AccountPage})));
+const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then(m=>({default:m.ResearchHistoryPage})));
 
 export default function App(){
   return <ResearchShell>
@@ -41,6 +43,8 @@ export default function App(){
       <Route path="/experiments" element={<Experiments/>}/>
       <Route path="/experiments/:id" element={<ExperimentDetail/>}/>
       <Route path="/demo" element={<DemoCenter/>}/>
+      <Route path="/account" element={<AccountPage/>}/>
+      <Route path="/my-research" element={<ResearchHistoryPage/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
