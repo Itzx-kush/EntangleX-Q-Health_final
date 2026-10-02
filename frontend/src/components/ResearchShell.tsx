@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState,type ReactNode} from 'react';
 import {NavLink,useLocation,useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {
-  Activity,Atom,BarChart3,Brain,ChevronLeft,ChevronRight,Command,Database,
+  Activity,Atom,BarChart3,Brain,Bot,ChevronLeft,ChevronRight,Command,Database,
   FlaskConical,History,LayoutDashboard,Menu,MoreHorizontal,PanelRight,PlayCircle,Search,Settings2,
   ShieldCheck,SlidersHorizontal,UserRound,X,Zap
 } from 'lucide-react';
@@ -57,6 +57,7 @@ const navGroups:NavGroup[]=[
   {label:'Studio',items:[
     {label:'Experiment registry',path:'/experiments',icon:FlaskConical},
     {label:'SIH Demo Center',path:'/demo',icon:PlayCircle},
+    {label:'AI Assistant',path:'/ai',icon:Bot},
   ]},
 ];
 
