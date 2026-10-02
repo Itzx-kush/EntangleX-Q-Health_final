@@ -163,7 +163,7 @@ def evaluate_robustness(experiment_id: str, request: RobustnessRequest) -> dict:
     first_bundle = loaded[0][1]
     if first_bundle["dataset_id"] != experiment.dataset_id:
         raise AppError("robustness_dataset_context", "The experiment and stored model artifact do not reference the same dataset.", 409)
-    dataset, source = load_frame(first_bundle["dataset_id"])
+    dataset, source = load_frame(first_bundle["dataset_id"], first_bundle.get("dataset_version_id"), first_bundle.get("dataset_hash"))
     target = dataset.provenance["target"]
     positive = first_bundle["positive_label"]
     labels_all = (source[target].astype(str) == positive).astype(int).to_numpy()
@@ -203,7 +203,7 @@ def evaluate_robustness(experiment_id: str, request: RobustnessRequest) -> dict:
                     "reason": perturbation.get("reason") or failure,
                     "experiment_id": experiment_id,
                     "dataset_id": experiment.dataset_id,
-                    "dataset_hash": dataset.sha256,
+                    "dataset_hash": first_bundle["dataset_hash"],
                     "split_hash": (experiment.summary or {}).get("split", {}).get("split_hash"),
                     "model_id": model.id,
                     "model_type": model.model_type,
@@ -232,13 +232,13 @@ def evaluate_robustness(experiment_id: str, request: RobustnessRequest) -> dict:
                     "reproducibility_metadata": {
                         "method_version": METHOD_VERSION,
                         "perturbation_fingerprint": fingerprint({
-                            "dataset_hash": dataset.sha256,
+                            "dataset_hash": first_bundle["dataset_hash"],
                             "test_indices": test_indices.tolist(),
                             "scenario": scenario.model_dump(mode="json"),
                             "seed": scenario_seed,
                         }),
                         "condition_fingerprint": fingerprint({
-                            "dataset_hash": dataset.sha256,
+                            "dataset_hash": first_bundle["dataset_hash"],
                             "test_indices": test_indices.tolist(),
                             "scenario": scenario.model_dump(mode="json"),
                             "seed": scenario_seed,

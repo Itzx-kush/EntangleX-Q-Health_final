@@ -9,7 +9,7 @@ from sqlalchemy import select
 from ..api.schemas import DatasetUploadMetadata
 from ..config import get_settings
 from ..database import session_scope
-from ..storage.entities import Dataset, Experiment
+from ..storage.entities import Dataset, DatasetVersion, Experiment, Run
 from ..storage.files import atomic_bytes, safe_path, sanitize_filename, verify
 from ..storage.repository import require
 from ..utils.errors import AppError
@@ -142,6 +142,13 @@ def register_csv(
         with session_scope() as session:
             record = Dataset(id=identity, name=metadata.name, filename=sanitize_filename(filename), sha256=sha, provenance=provenance, quality=quality, created_at=timestamp)
             session.add(record)
+            session.flush()
+            from ..dataset_versions.service import register_initial_version
+            register_initial_version(
+                session, dataset=record, frame=frame, content=content,
+                storage_reference=f"data/datasets/{identity}.csv",
+                provenance=provenance, quality=quality,
+            )
         return record
     except Exception:
         path.unlink(missing_ok=True)
@@ -173,9 +180,31 @@ def register_builtin(slug: str, target: str | None = None, positive_label: str |
         )
         sha = hashlib.sha256(content).hexdigest()
         with session_scope() as session:
-            matches = list(session.scalars(select(Dataset).where(Dataset.sha256 == sha, Dataset.name == entry["name"])))
+            versioned_dataset_ids = select(DatasetVersion.dataset_id).where(
+                DatasetVersion.content_sha256 == sha
+            )
+            matches = list(session.scalars(select(Dataset).where(
+                Dataset.name == entry["name"],
+                (Dataset.sha256 == sha) | Dataset.id.in_(versioned_dataset_ids),
+            )))
             for existing in matches:
-                if existing.provenance.get("target") == resolved_target and existing.provenance.get("positive_label") == resolved_positive:
+                exact_version = session.scalar(select(DatasetVersion).where(
+                    DatasetVersion.dataset_id == existing.id,
+                    DatasetVersion.content_sha256 == sha,
+                    DatasetVersion.target == resolved_target,
+                    DatasetVersion.positive_label == resolved_positive,
+                ))
+                if exact_version:
+                    existing.current_version_id = exact_version.id
+                    existing.sha256 = exact_version.content_sha256
+                    existing.provenance = exact_version.provenance
+                    existing.quality = exact_version.quality_summary
+                    return existing
+                if (
+                    existing.sha256 == sha
+                    and existing.provenance.get("target") == resolved_target
+                    and existing.provenance.get("positive_label") == resolved_positive
+                ):
                     return existing
         heuristic = next((c for c in detection["candidates"] if c["column"] == resolved_target), None)
         target_detection = {
@@ -206,12 +235,24 @@ def register_builtin(slug: str, target: str | None = None, positive_label: str |
             },
         )
 
-def load_frame(identity: str) -> tuple[Dataset, pd.DataFrame]:
+def load_versioned_frame(identity: str, version_id: str | None = None, expected_hash: str | None = None) -> tuple[Dataset, DatasetVersion | None, pd.DataFrame]:
+    from ..dataset_versions.service import read_version_bytes, resolve_version
     with session_scope() as session:
         record = require(session, Dataset, identity)
+        version = resolve_version(session, record, version_id=version_id, expected_hash=expected_hash)
+    if version is not None:
+        content = read_version_bytes(version)
+        frame = parse_csv(content, version.target, version.positive_label)
+        return record, version, frame
+    # Honest compatibility path for unverifiable/unmigrated legacy rows.
     path = safe_path("data/datasets", identity, ".csv")
     verify(path, record.sha256)
-    return record, parse_csv(path.read_bytes(), record.provenance["target"], record.provenance["positive_label"])
+    return record, None, parse_csv(path.read_bytes(), record.provenance["target"], record.provenance["positive_label"])
+
+
+def load_frame(identity: str, version_id: str | None = None, expected_hash: str | None = None) -> tuple[Dataset, pd.DataFrame]:
+    record, _version, frame = load_versioned_frame(identity, version_id, expected_hash)
+    return record, frame
 
 def register_demo() -> Dataset:
     with _demo_registration_lock:
@@ -233,8 +274,25 @@ def _register_demo() -> Dataset:
     content = frame.to_csv(index=False, lineterminator="\n").encode("utf-8")
     sha = hashlib.sha256(content).hexdigest()
     with session_scope() as session:
-        existing = session.scalar(select(Dataset).where(Dataset.sha256 == sha, Dataset.name == meta.name))
+        versioned_dataset_ids = select(DatasetVersion.dataset_id).where(
+            DatasetVersion.content_sha256 == sha
+        )
+        existing = session.scalar(select(Dataset).where(
+            Dataset.name == meta.name,
+            (Dataset.sha256 == sha) | Dataset.id.in_(versioned_dataset_ids),
+        ))
         if existing is not None:
+            exact_version = session.scalar(select(DatasetVersion).where(
+                DatasetVersion.dataset_id == existing.id,
+                DatasetVersion.content_sha256 == sha,
+                DatasetVersion.target == meta.target,
+                DatasetVersion.positive_label == meta.positive_label,
+            ))
+            if exact_version:
+                existing.current_version_id = exact_version.id
+                existing.sha256 = exact_version.content_sha256
+                existing.provenance = exact_version.provenance
+                existing.quality = exact_version.quality_summary
             return existing
     return register_csv(
         content,
@@ -249,33 +307,84 @@ def delete_dataset(identity: str) -> None:
         _delete_dataset(identity)
 
 def _delete_dataset(identity: str) -> None:
+    from ..dataset_versions.service import _storage_path
+
     with session_scope() as session:
         dataset = require(session, Dataset, identity)
-        if session.scalar(select(Experiment.id).where(Experiment.dataset_id == identity).limit(1)):
-            raise AppError("dataset_in_use", "This dataset is referenced by an experiment and is retained for reproducibility.", 409)
-        expected = dataset.sha256
-    path = safe_path("data/datasets", identity, ".csv")
-    if not path.is_file():
-        raise AppError("integrity_error", "Stored dataset is missing and cannot be safely deleted.", 409)
+        if (
+            session.scalar(select(Experiment.id).where(Experiment.dataset_id == identity).limit(1))
+            or session.scalar(select(Run.id).where(Run.dataset_id == identity).limit(1))
+        ):
+            raise AppError(
+                "dataset_in_use",
+                "This dataset is referenced by scientific history and is retained for reproducibility.",
+                409,
+            )
+        versions = list(
+            session.scalars(select(DatasetVersion).where(DatasetVersion.dataset_id == identity))
+        )
+
+    stored: dict[str, tuple[object, bytes]] = {}
+    for version in versions:
+        path = _storage_path(version.storage_reference)
+        try:
+            content = path.read_bytes()
+        except OSError as exc:
+            raise AppError(
+                "integrity_error",
+                "Stored Dataset Version is missing and cannot be safely deleted.",
+                409,
+            ) from exc
+        if hashlib.sha256(content).hexdigest() != version.content_sha256:
+            raise AppError("integrity_error", "Stored Dataset Version integrity has changed.", 409)
+        stored[str(path)] = (path, content)
+
+    if not versions:
+        path = safe_path("data/datasets", identity, ".csv")
+        try:
+            original = path.read_bytes()
+        except OSError as exc:
+            raise AppError(
+                "integrity_error",
+                "Stored dataset is missing and cannot be safely deleted.",
+                409,
+            ) from exc
+        if hashlib.sha256(original).hexdigest() != dataset.sha256:
+            raise AppError("integrity_error", "Stored dataset integrity has changed.", 409)
+        stored[str(path)] = (path, original)
+
+    removed = []
     try:
-        original = path.read_bytes()
-    except OSError as exc:
-        raise AppError("integrity_error", "Stored dataset could not be read and cannot be safely deleted.", 409) from exc
-    if hashlib.sha256(original).hexdigest() != expected:
-        raise AppError("integrity_error", "Stored dataset integrity has changed.", 409)
-    try:
-        path.unlink()
-    except OSError as exc:
-        raise AppError("storage_delete_failed", "Stored dataset could not be removed safely.", 409) from exc
-    try:
+        for path, content in stored.values():
+            path.unlink()
+            removed.append((path, content))
         with session_scope() as session:
             dataset = require(session, Dataset, identity)
-            if session.scalar(select(Experiment.id).where(Experiment.dataset_id == identity).limit(1)):
-                raise AppError("dataset_in_use", "This dataset is referenced by an experiment and is retained for reproducibility.", 409)
+            if (
+                session.scalar(select(Experiment.id).where(Experiment.dataset_id == identity).limit(1))
+                or session.scalar(select(Run.id).where(Run.dataset_id == identity).limit(1))
+            ):
+                raise AppError(
+                    "dataset_in_use",
+                    "This dataset is referenced by scientific history and is retained for reproducibility.",
+                    409,
+                )
+            dataset.current_version_id = None
+            session.flush()
+            for version in session.scalars(
+                select(DatasetVersion).where(DatasetVersion.dataset_id == identity)
+            ):
+                session.delete(version)
+            session.flush()
             session.delete(dataset)
     except Exception:
-        try:
-            atomic_bytes(path, original)
-        except OSError as exc:
-            raise AppError("storage_consistency", "Dataset deletion failed and storage could not be restored.", 500) from exc
+        for path, content in removed:
+            try:
+                atomic_bytes(path, content)
+            except OSError as exc:
+                raise AppError(
+                    "storage_consistency",
+                    "Dataset deletion failed and storage could not be restored.",
+                    500,
+                ) from exc
         raise

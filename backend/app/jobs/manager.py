@@ -89,6 +89,10 @@ class TrainingManager:
             if not 8 <= len(idempotency_key) <= 200 or any(ord(char) < 33 for char in idempotency_key):
                 raise AppError("idempotency_key_invalid", "Idempotency-Key must contain 8 to 200 visible non-space characters.")
         data = prepare_data(config)  # Preflight validation, not model fitting.
+        # Freeze an omitted current-version selection into the actual execution
+        # configuration before creating Experiment/Run/manifest records.
+        if data.dataset_version is not None and config.dataset_version_id is None:
+            config = config.model_copy(update={"dataset_version_id": data.dataset_version.id})
         if {"vqc", "qsvc", "qnn"}.intersection(config.models):
             require_quantum()
         if "hybrid_pennylane_torch" in config.models:
@@ -121,9 +125,9 @@ class TrainingManager:
                         raise AppError("experiment_dataset_mismatch", "The experiment and run configuration must use the same dataset.", 409)
                 else:
                     experiment = Experiment(id=str(uuid4()), dataset_id=str(config.dataset_id), parent_id=parent_id,
-                        config=config.model_dump(mode="json"), summary={"dataset_provenance": data.dataset.provenance,
+                        config=config.model_dump(mode="json"), summary={"dataset_provenance": data.provenance,
                         "split": data.split_metadata(), "software": software_versions(),
-                        "comparison_fingerprint": fingerprint({"dataset": data.dataset.sha256, "split": data.split_hash,
+                        "comparison_fingerprint": fingerprint({"dataset": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256, "split": data.split_hash,
                             "features": data.features, "pipeline": config.pipeline.model_dump(), "threshold": config.probability_threshold,
                             "threshold_strategy": config.threshold_strategy, "target_sensitivity": config.target_sensitivity,
                             "calibration": config.calibration, "class_weight": config.parameters.class_weight}),
@@ -138,10 +142,11 @@ class TrainingManager:
                     operation_key=operation_key,
                     execution_metadata={"executor": "single_process_thread_pool", "worker_count": 1},
                     reproducibility_metadata={
-                        "dataset_hash": data.dataset.sha256,
+                        "dataset_hash": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256,
                         "split": data.split_metadata(),
                         "software": software_versions(),
                     },
+                    dataset_version_id=data.dataset_version.id if data.dataset_version else None,
                 )
                 create_locked_manifest(
                     session, run=run, experiment=experiment, data=data,

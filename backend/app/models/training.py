@@ -128,10 +128,11 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
     }
     comparison_conditions = {
         "dataset_id": data.dataset.id,
-        "dataset_hash": data.dataset.sha256,
-        "target": data.dataset.provenance["target"],
-        "positive_label": data.dataset.provenance["positive_label"],
-        "negative_label": data.dataset.provenance["negative_label"],
+        "dataset_version_id": data.dataset_version.id if data.dataset_version else None,
+        "dataset_hash": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256,
+        "target": data.provenance["target"],
+        "positive_label": data.provenance["positive_label"],
+        "negative_label": data.provenance["negative_label"],
         "source_row_count": len(data.frame),
         "evaluated_row_count": split_metadata["evaluated_sample_count"],
         "sample_pool_hash": split_metadata["sample_pool_hash"],
@@ -150,9 +151,9 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
     }
     comparison_conditions["comparison_fingerprint"] = fingerprint(comparison_conditions)
     details = {
-        "task": "binary_classification", "positive_label": data.dataset.provenance["positive_label"],
-        "negative_label": data.dataset.provenance["negative_label"], "input_features": data.features,
-        "numeric_features": data.numeric, "dataset_provenance": data.dataset.provenance,
+        "task": "binary_classification", "positive_label": data.provenance["positive_label"],
+        "negative_label": data.provenance["negative_label"], "input_features": data.features,
+        "numeric_features": data.numeric, "dataset_provenance": data.provenance,
         "split": split_metadata, "configuration": config.model_dump(mode="json"),
         "comparison_conditions": comparison_conditions, "common_representation": representation,
         "preprocessing": preprocessing,
@@ -164,7 +165,7 @@ def train_model(kind: str, config: TrainingConfig, data: PreparedData, checkpoin
         "warnings": training_warnings, "limitations": limitations,
     }
     bundle = {"estimator": final, "features": data.features, "numeric": data.numeric,
-              "dataset_id": data.dataset.id, "dataset_hash": data.dataset.sha256,
+              "dataset_id": data.dataset.id, "dataset_version_id": data.dataset_version.id if data.dataset_version else None, "dataset_hash": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256,
               "train_indices": data.train.tolist(), "test_indices": data.test.tolist(),
               "config": config.model_dump(mode="json"), "positive_label": details["positive_label"], "negative_label": details["negative_label"],
               "operating_threshold": evaluation_threshold, "threshold_units": threshold_units,
