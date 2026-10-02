@@ -4,7 +4,7 @@ import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
 import {QuantumWorkbench} from './components/QuantumWorkbench';
-import {VerifiedQuantum} from './components/VerifiedDemoViews';
+import {VerifiedDemoLanding,VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
@@ -27,11 +27,11 @@ export default function App(){
     <ThemeToggle/>
     <Suspense fallback={<Loading/>}><Routes>
       <Route path="/" element={<Overview/>}/>
-      <Route path="/datasets" element={<Datasets/>}/>
-      <Route path="/quality" element={<Quality/>}/>
-      <Route path="/preprocessing" element={<PipelineStage endpoint="/preprocessing/preview" eyebrow="03 / Prepare" title="Preprocessing" description="Configure leakage-safe transformations that are fitted within the backend research pipeline and carried into every model comparison." />}/>
-      <Route path="/features" element={<PipelineStage endpoint="/feature-selection/preview" eyebrow="04 / Select" title="Feature selection" description="Inspect training-only feature selection decisions without converting benchmark association into biological causation." />}/>
-      <Route path="/pca" element={<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary." />}/>
+      <Route path="/datasets" element={<DatasetsRoute/>}/>
+      <Route path="/quality" element={<QualityRoute/>}/>
+      <Route path="/preprocessing" element={<PreprocessingRoute/>}/>
+      <Route path="/features" element={<FeaturesRoute/>}/>
+      <Route path="/pca" element={<PcaRoute/>}/>
       <Route path="/training" element={<Training/>}/>
       <Route path="/comparison" element={<Comparison/>}/>
       <Route path="/robustness" element={<Robustness/>}/>
@@ -47,6 +47,11 @@ export default function App(){
   </ResearchShell>;
 }
 
+function DatasetsRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedDemoLanding current="/datasets"/>:<Datasets/>; }
+function QualityRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedQuality/>:<Quality/>; }
+function PreprocessingRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="preprocessing"/>:<PipelineStage endpoint="/preprocessing/preview" eyebrow="03 / Prepare" title="Preprocessing" description="Configure leakage-safe transformations that are fitted within the backend research pipeline and carried into every model comparison."/>; }
+function FeaturesRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="features"/>:<PipelineStage endpoint="/feature-selection/preview" eyebrow="04 / Select" title="Feature selection" description="Inspect training-only feature selection decisions without converting benchmark association into biological causation."/>; }
+function PcaRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="pca"/>:<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary."/>; }
 function QuantumRoute(){
   const demo=useVerifiedDemo();
   return demo.active?<VerifiedQuantum/>:<QuantumWorkbench/>;
