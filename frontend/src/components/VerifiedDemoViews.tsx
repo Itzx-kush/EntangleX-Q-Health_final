@@ -112,25 +112,46 @@ function ModelTable({models}:{models:ModelRecord[]}){
 
 export function VerifiedComparison(){
   return <DemoBoundary>{data=>{
-    const featuredModel=data.models.find(model=>model.model_type==='hybrid_pennylane_torch')||data.models.find(model=>model.model_type==='random_forest')||data.models[0];
-    const featuredOperating=featuredModel?.metrics.operating_point||data.evidence.benchmark.models.find(model=>model.model_id===featuredModel?.id)?.operating_point;
-    const rows=data.models.map(model=>({name:modelLabels[model.model_type],f1:Number(model.metrics.test?.f1??0)}));
+    const benchmarkModels=(data.evidence.benchmark.models||[]) as Array<Record<string,any>>;
+    const benchmarkById=new Map(benchmarkModels.map(model=>[String(model.model_id),model]));
+    const models=data.models.map(model=>{
+      const evidence=benchmarkById.get(model.id);
+      const evidenceMetrics=(evidence?.metrics||{}) as Record<string,any>;
+      return {
+        ...model,
+        metrics:{
+          ...model.metrics,
+          training:model.metrics.training||evidenceMetrics.training,
+          test:model.metrics.test?.roc_curve?.fpr?.length?model.metrics.test:{
+            ...(model.metrics.test||{}),
+            ...(evidenceMetrics.test||{})
+          },
+          validation:model.metrics.validation||evidenceMetrics.validation,
+          timing:model.metrics.timing||evidenceMetrics.timing,
+          calibration:model.metrics.calibration||evidenceMetrics.calibration,
+          operating_point:model.metrics.operating_point||evidence?.operating_point||evidenceMetrics.operating_point
+        }
+      } as ModelRecord;
+    });
+    const featuredModel=models.find(model=>model.model_type==='hybrid_pennylane_torch')||models.find(model=>model.model_type==='random_forest')||models[0];
+    const featuredOperating=featuredModel?.metrics.operating_point||benchmarkById.get(featuredModel?.id||'')?.operating_point;
+    const rows=models.map(model=>({name:modelLabels[model.model_type],f1:Number(model.metrics.test?.f1??0)}));
     const validation=featuredModel?.metrics.validation?.summary||{};
     const test=featuredModel?.metrics.test;
     const timing=featuredModel?.metrics.timing;
     return <div>
       <PageHeader eyebrow="Hero analytics · controlled seven-model comparison" title="Classical, quantum & hybrid evidence" description="All models share the packaged dataset identity, sample pool, split, preprocessing representation, seed, and threshold protocol."/>
-      <EvidenceStrip source="Controlled benchmark record" scope={`${data.models.length} models · one experiment`}/>
+      <EvidenceStrip source="Controlled benchmark record" scope={`${models.length} models · one experiment`}/>
       <StageNav current="/comparison"/>
       <WorkbenchRail items={[
-        {label:'Models',value:data.models.length,detail:'One experiment',tone:'blue'},
-        {label:'Classical',value:data.models.filter(m=>family(m.model_type)==='Classical').length,detail:'Measured artifacts',tone:'green'},
-        {label:'Quantum',value:data.models.filter(m=>family(m.model_type)==='Quantum').length,detail:'Local simulation',tone:'purple'},
-        {label:'Hybrid',value:data.models.filter(m=>family(m.model_type)==='Hybrid').length,detail:'PennyLane + PyTorch',tone:'amber'}
+        {label:'Models',value:models.length,detail:'One experiment',tone:'blue'},
+        {label:'Classical',value:models.filter(m=>family(m.model_type)==='Classical').length,detail:'Measured artifacts',tone:'green'},
+        {label:'Quantum',value:models.filter(m=>family(m.model_type)==='Quantum').length,detail:'Local simulation',tone:'purple'},
+        {label:'Hybrid',value:models.filter(m=>family(m.model_type)==='Hybrid').length,detail:'PennyLane + PyTorch',tone:'amber'}
       ]}/>
 
       <Card className="mt-5" title="Measured model comparison" description="Persisted held-out results from the same verified experiment. Selectable live controls are intentionally omitted in verified mode.">
-        <ModelTable models={data.models}/>
+        <ModelTable models={models}/>
       </Card>
 
       <div className="mt-5 tremor-grid-main">
@@ -159,7 +180,7 @@ export function VerifiedComparison(){
 
       <div className="mt-5">
         <Card title="ROC comparison" description="Measured held-out ROC curves from the persisted benchmark artifacts.">
-          <RocChart models={data.models}/>
+          <RocChart models={models}/>
         </Card>
       </div>
 
