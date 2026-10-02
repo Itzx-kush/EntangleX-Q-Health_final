@@ -198,10 +198,10 @@ function MobileBottomNavigation({onMore}:{onMore:()=>void}){
 function MobileMoreSheet({onClose}:{onClose:()=>void}){
   const {isAuthenticated}=useAuth();
   return <div className="mobile-more-overlay" role="presentation" onMouseDown={onClose}>
-    <aside className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More research navigation" onMouseDown={e=>e.stopPropagation()}>
+    <aside className="mobile-more-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" onMouseDown={e=>e.stopPropagation()}>
       <div className="mobile-more-head">
-        <div><p className="eyebrow">EntangleX Q-Health</p><h2>Research navigation</h2><p className="muted">Open any existing workspace route.</p></div>
-        <button className="btn btn-ghost px-2" type="button" onClick={onClose} aria-label="Close more navigation"><X size={17}/></button>
+        <div><p className="eyebrow">EntangleX Q-Health</p><h2 id="mobile-more-title">Research navigation</h2><p className="muted">Open any existing workspace route.</p></div>
+        <button autoFocus className="btn btn-ghost px-2" type="button" onClick={onClose} aria-label="Close more navigation"><X size={17}/></button>
       </div>
       <nav className="mobile-more-groups">
         {navGroups.map(group=><div className="mobile-more-group" key={group.label}>
