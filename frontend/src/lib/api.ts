@@ -37,7 +37,7 @@ export const api={
   get:<T>(path:string)=>request(path).then(r=>r.json() as Promise<T>),
   post:<T>(path:string,body?:unknown)=>request(path,{method:'POST',body:body===undefined?undefined:JSON.stringify(body)}).then(r=>r.json() as Promise<T>),
   upload:<T>(path:string,body:FormData)=>request(path,{method:'POST',body}).then(r=>r.json() as Promise<T>),
-  remove:(path:string)=>request(path,{method:'DELETE'}).then(()=>undefined),
+  remove:<T=void>(path:string)=>request(path,{method:'DELETE'}).then(async response=>response.status===204?undefined as T:await response.json() as T),
   download:async(path:string,filename:string)=>{const blob=await request(path).then(r=>r.blob());const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),800);}
 };
 
@@ -64,6 +64,7 @@ export const qh={
   cancelJob:(id:string)=>api.post<Job>(`/training/jobs/${id}/cancel`),
   experiments:()=>api.get<Experiment[]>('/experiments'),
   experiment:(id:string)=>api.get<ExperimentDetail>(`/experiments/${id}`),
+  deleteExperiment:(id:string)=>api.remove<{id:string;status:'archived';deleted_at:string;already_deleted:boolean;preserved_records:Record<string,number>}>(`/experiments/${id}`),
   comparison:(id:string)=>api.get<Comparison>(`/experiments/${id}/comparison`),
   verifiedEvidence:(id:string)=>api.get<VerifiedEvidencePackage>(`/experiments/${id}/verified-evidence`),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),

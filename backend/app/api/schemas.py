@@ -285,6 +285,13 @@ class ExperimentOut(Schema):
     summary: dict[str, Any]
     created_at: datetime
 
+class ExperimentDeletionOut(Schema):
+    id: str
+    status: Literal["archived"]
+    deleted_at: datetime
+    already_deleted: bool
+    preserved_records: dict[str, int]
+
 class ModelOut(Schema):
     id: str
     experiment_id: str

@@ -6,12 +6,13 @@ from ..database import session_scope
 from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
+from ..experiments.lifecycle import archive_experiment
 from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
 from ..storage.entities import Experiment, ModelRecord, Job
-from ..storage.repository import recent, require
+from ..storage.repository import require
 from ..utils.errors import AppError
-from .schemas import ExperimentOut, ModelOut, JobOut, RobustnessRecordOut, RobustnessRequest, TrainingConfig, TrainingResponse, Schema
+from .schemas import ExperimentDeletionOut, ExperimentOut, ModelOut, JobOut, RobustnessRecordOut, RobustnessRequest, TrainingConfig, TrainingResponse, Schema
 
 class ExperimentDetailOut(Schema):
     experiment: ExperimentOut
@@ -23,7 +24,17 @@ router = APIRouter(prefix="/experiments", tags=["experiments and reports"])
 @router.get("", response_model=list[ExperimentOut])
 def list_experiments(limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
     with session_scope() as session:
-        return recent(session, Experiment, limit, offset)
+        return list(session.scalars(
+            select(Experiment)
+            .where(Experiment.deleted_at.is_(None))
+            .order_by(Experiment.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ))
+
+@router.delete("/{identity}", response_model=ExperimentDeletionOut)
+def delete_experiment(identity: UUID):
+    return archive_experiment(str(identity))
 
 @router.get("/{identity}", response_model=ExperimentDetailOut)
 def get_experiment(identity: UUID):

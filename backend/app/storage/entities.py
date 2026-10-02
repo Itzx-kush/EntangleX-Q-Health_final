@@ -59,6 +59,7 @@ class Experiment(Base):
     config: Mapped[dict] = mapped_column(JSON)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
 class ModelRecord(Base):
     __tablename__ = "models"

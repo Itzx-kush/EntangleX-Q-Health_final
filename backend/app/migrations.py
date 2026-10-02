@@ -21,6 +21,7 @@ EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
 DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
 CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
 TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
+EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
 
 
 
@@ -74,6 +75,21 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": TRAINING_EXECUTION_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        experiment_lifecycle_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": EXPERIMENT_LIFECYCLE_MIGRATION_ID},
+        ).scalar()
+        if not experiment_lifecycle_applied:
+            if "deleted_at" not in _columns(connection, "experiments"):
+                connection.execute(text("ALTER TABLE experiments ADD COLUMN deleted_at DATETIME"))
+            connection.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_experiments_deleted_at ON experiments(deleted_at)"
+            ))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": EXPERIMENT_LIFECYCLE_MIGRATION_ID, "applied_at": utcnow()},
             )
 
         manifest_applied = connection.execute(
