@@ -112,7 +112,18 @@ export function Datasets(){
  const [inspection,setInspection]=useState<DatasetInspection|null>(null);
  const [confirmed,setConfirmed]=useState(false);
  const [form,setForm]=useState({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
- const choose=(dataset:Dataset)=>{demo.deactivate();selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);setSelected(dataset)};
+ const choose=(dataset:Dataset)=>{
+  const slug=dataset.provenance.library_slug;
+  const verifiedItem=library.data?.find(item=>item.slug===slug);
+  const verifiedReady=verifiedItem?.demo_readiness.status==='ready'&&verifiedItem.demo_readiness.instant_demo_available&&Boolean(verifiedItem.demo_readiness.experiment_id);
+  selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);
+  if(verifiedReady){
+   demo.activate(verifiedItem.demo_readiness.experiment_id as string,dataset.id);
+  }else{
+   demo.deactivate();
+  }
+  setSelected(dataset);
+};
  const builtIn=useMutation({
   mutationFn:(slug:string)=>qh.registerBuiltIn(slug),
   onSuccess:dataset=>{choose(dataset);qc.invalidateQueries({queryKey:['datasets']})},
