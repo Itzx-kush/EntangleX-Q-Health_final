@@ -9,7 +9,7 @@ import {InfluenceBars,MetricBars,RocChart,ThresholdTradeoffChart,ValueBars} from
 import {StageNav} from '../pages/ResearchPagesCore';
 import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
-import type {ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
+import type {MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
 const toneFor=(kind:ModelKind)=>family(kind)==='Hybrid'?'purple':family(kind)==='Quantum'?'blue':'green';
@@ -136,7 +136,7 @@ export function VerifiedComparison(){
     const featuredModel=models.find(model=>model.model_type==='hybrid_pennylane_torch')||models.find(model=>model.model_type==='random_forest')||models[0];
     const featuredOperating=featuredModel?.metrics.operating_point||benchmarkById.get(featuredModel?.id||'')?.operating_point;
     const rows=models.map(model=>({name:modelLabels[model.model_type],f1:Number(model.metrics.test?.f1??0)}));
-    const validation=featuredModel?.metrics.validation?.summary||{};
+    const validation=(featuredModel?.metrics.validation?.summary||{}) as Partial<Record<MetricName,{mean:number|null;std:number|null}>>;
     const test=featuredModel?.metrics.test;
     const timing=featuredModel?.metrics.timing;
     return <div>
