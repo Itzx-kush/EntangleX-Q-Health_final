@@ -1,8 +1,10 @@
-import {useLayoutEffect,type ReactNode} from 'react';
+import {useEffect,useLayoutEffect,useState,type ReactNode} from 'react';
 import {ArrowRight,FlaskConical,ShieldCheck,TriangleAlert} from 'lucide-react';
+import {useNavigate} from 'react-router-dom';
 import {useAuth} from './AuthProvider';
 import {useGuestMigration} from './GuestMigrationProvider';
 import {LogoIntro} from '../components/LogoIntro';
+import {PublicExperience} from '../components/PublicExperience';
 import './auth.css';
 
 function applyStoredTheme(){
@@ -92,14 +94,26 @@ function Welcome(){
 }
 
 export function AuthGate({children}:{children:ReactNode}){
-  const {loading,isAuthenticated,isGuest}=useAuth();
+  const {loading,isAuthenticated,isGuest,error}=useAuth();
+  const navigate=useNavigate();
+  const [showAccess,setShowAccess]=useState(false);
   useLayoutEffect(()=>{
     applyStoredTheme();
     const sync=()=>applyStoredTheme();
     window.addEventListener('qhealth-settings-changed',sync);
     return()=>window.removeEventListener('qhealth-settings-changed',sync);
   },[]);
+  useEffect(()=>{
+    if(error)setShowAccess(true);
+  },[error]);
   if(loading)return <AuthLoading/>;
-  if(!isAuthenticated&&!isGuest)return <Welcome/>;
+  if(!isAuthenticated&&!isGuest){
+    const requestAccess=(destination='/')=>{
+      if(destination!==window.location.pathname)navigate(destination);
+      setShowAccess(true);
+      window.scrollTo({top:0,behavior:'auto'});
+    };
+    return <><LogoIntro/>{showAccess?<Welcome/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
+  }
   return <><LogoIntro/>{children}</>;
 }
