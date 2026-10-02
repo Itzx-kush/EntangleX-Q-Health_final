@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
-import {ArrowLeft,ArrowRight,Atom,FlaskConical,ShieldCheck,TriangleAlert} from 'lucide-react';
+import {ArrowLeft,ArrowRight,Atom,FlaskConical,Github,ShieldCheck,TriangleAlert} from 'lucide-react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from './AuthProvider';
 import {useGuestMigration} from './GuestMigrationProvider';
@@ -49,24 +49,24 @@ function AccessTransition({guest}:{guest:boolean}){
   </div>;
 }
 
-function Welcome({onBack,onGoogleStart}:{onBack:()=>void;onGoogleStart:()=>void}){
-  const {continueAsGuest,error,clearError,isConfigured,signInWithGoogle}=useAuth();
+function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'google'|'github')=>void}){
+  const {continueAsGuest,error,clearError,isConfigured,signInWithGoogle,signInWithGitHub}=useAuth();
   const {migration,continueGuestSession}=useGuestMigration();
   const preservingGuestWork=Boolean(migration&&migration.status!=='completed');
-  const [authenticating,setAuthenticating]=useState(false);
+  const [authenticating,setAuthenticating]=useState<'google'|'github'|null>(null);
   const [enteringGuest,setEnteringGuest]=useState(false);
   const guestTimer=useRef<number|null>(null);
 
   useEffect(()=>{
-    if(error)setAuthenticating(false);
+    if(error)setAuthenticating(null);
   },[error]);
   useEffect(()=>()=>{if(guestTimer.current!==null)window.clearTimeout(guestTimer.current)},[]);
 
-  const beginGoogle=async()=>{
+  const beginOAuth=async(provider:'google'|'github')=>{
     if(authenticating)return;
-    setAuthenticating(true);
-    onGoogleStart();
-    await signInWithGoogle();
+    setAuthenticating(provider);
+    onOAuthStart(provider);
+    await (provider==='google'?signInWithGoogle():signInWithGitHub());
   };
 
   const beginGuest=()=>{
@@ -113,16 +113,23 @@ function Welcome({onBack,onGoogleStart}:{onBack:()=>void;onGoogleStart:()=>void}
         <p>{preservingGuestWork?'Your current guest session will remain available during sign-in.':'Choose how you would like to continue.'}</p>
       </div>
 
-      <button className="auth-google-button" type="button" disabled={authenticating||enteringGuest} aria-busy={authenticating} onClick={()=>void beginGoogle()}>
-        <GoogleMark/>
-        <span>{authenticating?'Connecting to Google…':'Continue with Google'}</span>
-        {authenticating?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
-      </button>
-      <p className="auth-action-copy">{preservingGuestWork?'Continue with Google to add eligible research metadata to My Research.':'Sign in to keep research activity in your private workspace.'}</p>
+      <div className="auth-oauth-actions">
+        <button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='google'} onClick={()=>void beginOAuth('google')}>
+          <GoogleMark/>
+          <span>{authenticating==='google'?'Connecting to Google…':'Continue with Google'}</span>
+          {authenticating==='google'?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
+        </button>
+        <button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='github'} onClick={()=>void beginOAuth('github')}>
+          <Github className="auth-github-mark" aria-hidden="true"/>
+          <span>{authenticating==='github'?'Connecting to GitHub…':'Continue with GitHub'}</span>
+          {authenticating==='github'?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
+        </button>
+      </div>
+      <p className="auth-action-copy">{preservingGuestWork?'Continue with Google or GitHub to add eligible research metadata to My Research.':'Sign in to keep research activity in your private workspace.'}</p>
 
       <div className="auth-divider"><span>or</span></div>
 
-      <button className="auth-guest-button" type="button" disabled={authenticating||enteringGuest} aria-busy={enteringGuest} onClick={beginGuest}>
+      <button className="auth-guest-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={enteringGuest} onClick={beginGuest}>
         <span>{enteringGuest?'Entering research workspace…':preservingGuestWork?'Return to guest research':'Continue as Guest'}</span>
         {!enteringGuest&&<ArrowRight size={16} aria-hidden="true"/>}
       </button>
@@ -130,7 +137,7 @@ function Welcome({onBack,onGoogleStart}:{onBack:()=>void;onGoogleStart:()=>void}
 
       {!isConfigured&&!error&&<div className="auth-notice" role="status">
         <TriangleAlert size={16} aria-hidden="true"/>
-        <span>Google sign-in is not configured here yet. Guest access remains available.</span>
+        <span>Account sign-in is not configured here yet. Guest access remains available.</span>
       </div>}
       {error&&<div className="auth-error" role="alert">
         <TriangleAlert size={17} aria-hidden="true"/>
@@ -148,7 +155,7 @@ export function AuthGate({children}:{children:ReactNode}){
   const navigate=useNavigate();
   const [showAccess,setShowAccess]=useState(false);
   const [workspaceReady,setWorkspaceReady]=useState(false);
-  const [accessKind,setAccessKind]=useState<'google'|'guest'|null>(null);
+  const [accessKind,setAccessKind]=useState<'google'|'github'|'guest'|null>(null);
 
   useLayoutEffect(()=>{
     applyStoredTheme();
@@ -186,7 +193,7 @@ export function AuthGate({children}:{children:ReactNode}){
       setAccessKind(null);
       window.scrollTo({top:0,behavior:'auto'});
     };
-    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onGoogleStart={()=>setAccessKind('google')}/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
+    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onOAuthStart={setAccessKind}/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
   }
 
   const guestAccess=accessKind==='guest'||isGuest;
