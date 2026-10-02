@@ -409,6 +409,10 @@ class RunOut(Schema):
     reproducibility_metadata: dict[str, Any]
     result_summary: dict[str, Any]
     failure: dict[str, Any] | None
+    manifest_artifact_id: str | None = None
+    configuration_fingerprint: str | None = None
+    reproducibility_status: str | None = None
+    manifest_locked_at: datetime | None = None
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None

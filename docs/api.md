@@ -42,6 +42,10 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/runs` | Paginated Runs; optional `experiment_id` and `status` filters |
 | GET | `/runs/{id}` | Run lifecycle, associated Job, models and artifact metadata |
 | GET | `/runs/{id}/artifacts` | Integrity metadata for outputs associated with the Run |
+| GET | `/runs/{id}/manifest` | Immutable schema-v1 manifest Artifact plus integrity result |
+| GET | `/runs/{id}/manifest/integrity` | Recompute and verify manifest SHA-256, fingerprint and lineage |
+| GET | `/runs/{id}/provenance` | Compact Dataset → Run → Manifest → output Artifact relationships |
+| GET | `/runs/{id}/reproducibility` | Configurational reproducibility status and limitations |
 | GET | `/experiments/{id}/artifacts` | Experiment-wide artifact metadata, including reports not attributable to one Run |
 | GET | `/artifacts/{id}` | Artifact metadata only; does not publish or download private files |
 | GET | `/experiments/{id}/report?format=html` | Escaped downloadable HTML research report |
@@ -55,6 +59,11 @@ characters. Reusing the key with the same configuration returns the original
 Run/Job identity; conflicting reuse returns 409. The historical training
 response remains `{job, experiment}`. The explicit Experiment execution
 response adds `run`.
+
+New Runs lock the manifest before they enter `queued`. Historical Runs without
+a manifest return 404 from the manifest route and
+`INCOMPLETE_PROVENANCE` from the reproducibility route; no historical
+configuration is fabricated. See `reproducibility_manifest.md`.
 
 ## Dataset metadata
 

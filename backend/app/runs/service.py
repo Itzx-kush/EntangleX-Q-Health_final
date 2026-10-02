@@ -69,7 +69,14 @@ def transition(
         run.started_at = now
     elif status == "completed":
         run.completed_at = now
-        run.result_summary = result_summary or {}
+        elapsed = None
+        if run.started_at is not None:
+            comparable_now = now.replace(tzinfo=None) if run.started_at.tzinfo is None else now
+            elapsed = (comparable_now - run.started_at).total_seconds()
+        run.result_summary = {
+            **(result_summary or {}),
+            "elapsed_execution_seconds": elapsed,
+        }
     elif status == "failed":
         run.failed_at = now
         run.failure = failure or {"code": "execution_failed", "message": "Scientific execution failed."}

@@ -57,6 +57,15 @@ Experiment has exactly one Run, and is registered as a mutable report artifact
 because the legacy endpoint regenerates the same file. Artifact storage
 references are internal relative paths, never public URLs.
 
+Before a new Run moves from `created` to `queued`, the backend creates exactly
+one immutable `experiment_manifest` Artifact. Its strict versioned content
+captures current Dataset integrity, sample/split/CV fingerprints, resolved
+pipeline/model/quantum/threshold/evaluation configuration, software versions
+and safe runtime facts. The Run stores an indexed configuration fingerprint and
+manifest reference. Volatile queue/start/completion/failure data remains on
+Run/Job and does not change that fingerprint. See
+`reproducibility_manifest.md`.
+
 ## Database relationships
 
 `Dataset -> Experiment -> Run -> Job/ModelRecord/Artifact`; each `ModelRecord`
