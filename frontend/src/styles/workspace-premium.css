@@ -376,3 +376,15 @@
   .sidebar-link,.sidebar-link svg,.btn,.command-trigger,.icon-button,.tremor-card,.tremor-metric,.input,.select,.textarea{transition:none!important}
 }
 [data-motion="reduced"] .workspace-route-frame{animation:none}
+
+/* Final desktop cascade guard: the premium layer is the last layout owner. */
+@media (min-width:768px){
+  html[data-layout="icon"] .research-shell .research-sidebar,
+  .research-shell.is-collapsed .research-sidebar{
+    width:76px!important;
+  }
+  html[data-layout="icon"] .research-shell .research-workspace,
+  .research-shell.is-collapsed .research-workspace{
+    margin-left:76px!important;
+  }
+}
