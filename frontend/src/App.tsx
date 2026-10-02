@@ -4,7 +4,7 @@ import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
 import {QuantumWorkbench} from './components/QuantumWorkbench';
-import {VerifiedDemoLanding,VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
+import {VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 import {AiProvider} from './contexts/AiContext';
 import {AiPopup} from './components/AiPopup';
@@ -65,7 +65,7 @@ function WorkspaceRoutes(){
   </div>;
 }
 
-function DatasetsRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedDemoLanding current="/datasets"/>:<Datasets/>; }
+function DatasetsRoute(){ return <Datasets/>; }
 function QualityRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedQuality/>:<Quality/>; }
 function PreprocessingRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="preprocessing"/>:<PipelineStage endpoint="/preprocessing/preview" eyebrow="03 / Prepare" title="Preprocessing" description="Configure leakage-safe transformations that are fitted within the backend research pipeline and carried into every model comparison."/>; }
 function FeaturesRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="features"/>:<PipelineStage endpoint="/feature-selection/preview" eyebrow="04 / Select" title="Feature selection" description="Inspect training-only feature selection decisions without converting benchmark association into biological causation."/>; }
