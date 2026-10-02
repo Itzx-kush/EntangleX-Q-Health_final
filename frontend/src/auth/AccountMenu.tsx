@@ -7,7 +7,7 @@ import {AccountAvatar,accountEmail,accountName} from './AccountIdentity';
 import {useGuestMigration} from './GuestMigrationProvider';
 
 export function AccountMenu(){
-  const {user,isAuthenticated,error,signingOut,signOut}=useAuth();
+  const {user,profile,isAuthenticated,error,signingOut,signOut}=useAuth();
   const {beginUpgrade,hasMigratableState}=useGuestMigration();
   const [open,setOpen]=useState(false);
   const [mobile,setMobile]=useState(()=>typeof window.matchMedia==='function'&&window.matchMedia('(max-width: 767px)').matches);
@@ -69,8 +69,8 @@ export function AccountMenu(){
 
   const menu=open&&<div ref={menuRef} id="account-menu" className="account-menu" role="menu" aria-label="Account menu" onKeyDown={onMenuKeyDown}>
     <div className="account-menu-identity">
-      <AccountAvatar user={user} size="medium"/>
-      <span><strong>{accountName(user)}</strong><small>{accountEmail(user)}</small></span>
+      <AccountAvatar user={user} profile={profile} size="medium"/>
+      <span><strong>{accountName(user,profile)}</strong><small>{accountEmail(user,profile)}</small></span>
     </div>
     <div className="account-menu-section">
       <span className="account-menu-label">Account</span>
@@ -100,8 +100,8 @@ export function AccountMenu(){
       aria-controls="account-menu"
       onClick={()=>setOpen(value=>!value)}
     >
-      <AccountAvatar user={user} size="small"/>
-      <span className="account-trigger-copy"><strong>{accountName(user)}</strong><small>Personal workspace</small></span>
+      <AccountAvatar user={user} profile={profile} size="small"/>
+      <span className="account-trigger-copy"><strong>{accountName(user,profile)}</strong><small>Personal workspace</small></span>
       <ChevronDown size={14} aria-hidden="true"/>
     </button>
     {open&&!mobile&&menu}
