@@ -38,11 +38,13 @@ function AuthLoading(){
 }
 
 function AccessTransition({guest}:{guest:boolean}){
-  return <div className="auth-access-transition" role="status" aria-live="polite" aria-busy="true">
-    <div className="auth-transition-mark"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></div>
+  return <div className={'auth-access-transition '+(guest?'is-guest':'is-authenticated')} role="status" aria-live="polite" aria-busy="true">
+    <div className="auth-convergence" aria-hidden="true">{Array.from({length:16},(_,index)=><i key={index}/>)}</div>
+    <div className="auth-transition-mark"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/><span/></div>
     <span>{guest?'GUEST RESEARCH SESSION':'AUTHENTICATED WORKSPACE'}</span>
     <h2>{guest?'Entering research workspace…':'Workspace ready'}</h2>
     <p>{guest?'Preparing the existing research prototype.':'Restoring your research environment…'}</p>
+    <div className="auth-transition-lockup"><img src="/entanglex-logo-dark.svg" alt="EntangleX"/><b>Q-HEALTH</b></div>
     <div className="auth-transition-line" aria-hidden="true"><i/></div>
   </div>;
 }
@@ -187,5 +189,6 @@ export function AuthGate({children}:{children:ReactNode}){
     return <>{intro}{showAccess?<Welcome onBack={backToPublic} onGoogleStart={()=>setAccessKind('google')}/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
   }
 
-  return <>{intro}{workspaceReady?children:<AccessTransition guest={accessKind==='guest'||isGuest}/>}</>;
+  const guestAccess=accessKind==='guest'||isGuest;
+  return <>{intro}<div className={'workspace-reveal-shell '+(workspaceReady?'is-ready ':'')+(guestAccess?'is-guest':'is-authenticated')}>{children}</div>{!workspaceReady&&<AccessTransition guest={guestAccess}/>}</>;
 }
