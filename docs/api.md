@@ -37,10 +37,24 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/experiments/{id}` | `{experiment, models, jobs}` |
 | GET | `/experiments/{id}/comparison` | Shared-split metadata, all model records and completed classical/quantum pairs |
 | POST | `/experiments/{id}/rerun` | 202; a new experiment/job using original config and parent link |
+| GET | `/experiments/{id}/runs` | Paginated scientific Runs owned by the Experiment |
+| POST | `/experiments/{id}/runs` | 202; execute the existing Experiment as a new Run and Job |
+| GET | `/runs` | Paginated Runs; optional `experiment_id` and `status` filters |
+| GET | `/runs/{id}` | Run lifecycle, associated Job, models and artifact metadata |
+| GET | `/runs/{id}/artifacts` | Integrity metadata for outputs associated with the Run |
+| GET | `/experiments/{id}/artifacts` | Experiment-wide artifact metadata, including reports not attributable to one Run |
+| GET | `/artifacts/{id}` | Artifact metadata only; does not publish or download private files |
 | GET | `/experiments/{id}/report?format=html` | Escaped downloadable HTML research report |
 | GET | `/experiments/{id}/report?format=json` | JSON research report |
 | GET | `/quantum/capabilities` | Presence of optional modules and non-verification statement |
 | POST | `/quantum/circuit` | `CircuitRequest`; calculated logical circuit structure, no execution |
+
+`POST /api/training/jobs` and `POST /api/experiments/{id}/runs` optionally
+accept an `Idempotency-Key` header containing 8–200 visible non-space
+characters. Reusing the key with the same configuration returns the original
+Run/Job identity; conflicting reuse returns 409. The historical training
+response remains `{job, experiment}`. The explicit Experiment execution
+response adds `run`.
 
 ## Dataset metadata
 

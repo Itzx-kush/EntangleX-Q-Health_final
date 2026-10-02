@@ -18,6 +18,8 @@ The frontend uses React/TypeScript with Vite, typed fetch services, route-specif
 | `backend/app/evaluation` | Positive-class metrics, fold summaries, calibration diagnostics |
 | `backend/app/explainability` | Permutation/SHAP/perturbation explanations of frozen models |
 | `backend/app/jobs` | Single-worker queue, state transitions, cancellation, failure retention |
+| `backend/app/runs` | Scientific Run creation, lifecycle transitions and Experiment lineage |
+| `backend/app/artifacts` | Integrity-checked metadata registry for file-backed and metadata-only outputs |
 | `backend/app/experiments` | Equivalent-condition comparison and HTML/JSON reporting |
 | `backend/app/storage` | Registry entities, UUID paths, atomic artifact writes and integrity hashes |
 | `frontend/src/pages` | Thirteen implemented workspace/detail screens |
@@ -27,14 +29,48 @@ The frontend uses React/TypeScript with Vite, typed fetch services, route-specif
 
 1. The multipart upload route validates metadata and bounds the whole request before CSV parsing. CSV bytes are stored under a generated UUID; their SHA-256 and aggregate quality are recorded.
 2. Configuration validation establishes target, positive label, independent-sample assumption, feature list, optional deterministic subsampling, duplicate handling and shared partitions.
-3. The worker receives an experiment/job identity. Each model receives fresh fold-local pipelines for CV and a final fit on the complete training partition.
+3. A training request creates an Experiment, one scientific Run, and one scheduling Job. The worker receives all three identities. Each model receives fresh fold-local pipelines for CV and a final fit on the complete training partition.
 4. Evaluation calculates separate training, validation and held-out results. Successful pipelines plus private partition indices are stored as local trusted artifacts. Failed models remain registry entries without invented metrics.
 5. The frontend polls explicit job state. Comparisons join models only inside one experiment; reports include source/configuration, measured outputs and limitations.
 6. Prediction validates the exact raw input schema and reloads a hash-checked trained pipeline. Sample input and prediction payloads are returned without persistence. Explicit explanation jobs persist aggregate influence only.
 
+## Experiment, Run, Job and Artifact
+
+An **Experiment** is the durable research question/configuration scope. A **Run**
+is one concrete scientific execution of that Experiment. A **Job** is the
+infrastructure scheduling/progress record for a Run. An **Artifact** is an
+integrity-registered output. Creating another execution through
+`POST /api/experiments/{id}/runs` adds a Run and Job to the same Experiment
+without duplicating the experiment definition.
+
+Run states are `created -> queued -> running -> completed`, with terminal
+`failed` and `cancelled` alternatives. Job states retain their historical
+infrastructure vocabulary (`succeeded`, `partial`, `interrupted`, and so on).
+A partially successful Job produces a completed Run whose result summary
+truthfully records persisted and failed model counts; completion means the
+scientific publication flow finished, not merely that a worker started.
+
+Model files, evaluation results and quantum metadata are registered as immutable
+Run artifacts. Explanations receive the producing model's Run lineage. The
+existing HTML report is experiment-wide; it is linked to a Run only when the
+Experiment has exactly one Run, and is registered as a mutable report artifact
+because the legacy endpoint regenerates the same file. Artifact storage
+references are internal relative paths, never public URLs.
+
 ## Database relationships
 
-`Dataset -> Experiment -> ModelRecord`; each `Experiment` has a `Job`; each `ModelRecord` may have multiple `ExplanationRecord` entries. `Experiment.parent_id` links a rerun to its original without overwriting either. Foreign keys are enabled. SQLite uses WAL and a busy timeout. A referenced dataset cannot be removed through the API.
+`Dataset -> Experiment -> Run -> Job/ModelRecord/Artifact`; each `ModelRecord`
+may have multiple `ExplanationRecord` entries. Existing direct
+Experiment/Dataset links remain for compatibility. `Experiment.parent_id` still
+links the legacy rerun endpoint to its original without overwriting either.
+Foreign keys are enabled. SQLite uses WAL and a busy timeout. A referenced
+dataset cannot be removed through the API.
+
+Historical rows are not assigned fabricated Runs. Their nullable `run_id`
+remains null and all legacy APIs continue to read them. New tables and nullable
+foreign keys are installed by the additive, idempotent
+`20261002_01_experiment_run_artifact` migration, recorded in
+`schema_migrations`. No table or historical row is dropped or rewritten.
 
 Configuration and metrics are JSON columns. Raw records remain private CSV files, never ORM row-by-row medical-record objects. Model artifacts include raw-feature schema and private train/test indices to reconstruct frozen-model explanations. These private indices are not included in public experiment summaries.
 
@@ -48,4 +84,8 @@ The executor has one worker and a bounded queue. A process-global quantum random
 
 CSV-only upload, SQLite, lightweight executor, Vite, HTML/JSON export, four-qubit defaults and bounded explanations are explicit MVP choices. QNN or real quantum hardware is not a supplied mandatory concrete requirement; the implemented quantum estimators are VQC and QSVC. Optional Supabase authentication adds identity and a private metadata-only activity stream without changing the research backend. PDF export, RBAC, external validation cohorts and model serving across independent workers are not silently simulated; their absence is documented in `limitations.md`.
 
-No migration engine is bundled. Initial schema creation is idempotent, but future schema changes need explicit migrations/backups. Generated implementation is not proof of runtime compatibility.
+The repository now has a deliberately small explicit SQLite migration runner
+for additive local schema evolution. It is not a general distributed migration
+engine; production changes still require backups, deterministic upgrade tests,
+and one migration owner. Generated implementation is not proof of runtime
+compatibility.

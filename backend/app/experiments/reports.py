@@ -1,11 +1,12 @@
 import html
 import json
 from sqlalchemy import select
+from ..artifacts.service import register_file
 from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
-from ..storage.entities import Experiment, ModelRecord, ExplanationRecord
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, Run
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
 from ..utils.serialization import utcnow
@@ -69,5 +70,26 @@ def html_report(identity: str) -> str:
     ] or "Not evaluated; run a bounded Robustness Lab condition to add evidence."))
     sections.append("<h2>Clinical validation boundary</h2><p>" + escaped(data["scientific_boundary"]) + "</p><footer>Report generated " + escaped(data["generated_at"]) + ". No raw records are exported.</footer>")
     document = '<!doctype html><html lang="en"><meta charset="utf-8"><title>EntangleX Q-Health research report</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:20px;color:#183442}h1,h2{color:#126675}aside{border-left:5px solid #378593;padding:18px;background:#eff7f7}pre{font:12px/1.5 monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7fa;padding:18px}h2{margin-top:36px}@media print{body{margin:0;max-width:none}pre{font-size:10px}h2,h3{break-after:avoid}}</style><body>' + "".join(sections) + "</body></html>"
-    atomic_bytes(safe_path("experiments", identity, ".html"), document.encode("utf-8"))
+    path = safe_path("experiments", identity, ".html")
+    atomic_bytes(path, document.encode("utf-8"))
+    with session_scope() as session:
+        runs = list(session.scalars(select(Run).where(Run.experiment_id == identity)))
+        # The existing report is experiment-wide. Associate it with a Run only
+        # when that lineage is unambiguous; never fabricate historical lineage.
+        run_id = runs[0].id if len(runs) == 1 else None
+        register_file(
+            session,
+            experiment_id=identity,
+            run_id=run_id,
+            model_id=None,
+            artifact_type="report",
+            name="Experiment HTML report",
+            description="Existing experiment-wide research report.",
+            path=path,
+            storage_reference=f"experiments/{identity}.html",
+            content_type="text/html",
+            operation_key=f"experiment-report:{identity}:html",
+            immutable=False,
+            details={"scope": "experiment", "format": "html"},
+        )
     return document

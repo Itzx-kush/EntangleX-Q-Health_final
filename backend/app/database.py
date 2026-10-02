@@ -34,3 +34,5 @@ def session_scope():
 def init_db():
     from .storage import entities  # Register all tables.
     Base.metadata.create_all(engine)
+    from .migrations import apply_migrations
+    apply_migrations()
