@@ -28,11 +28,13 @@ const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then
 const AiAssistantPage=lazy(()=>import('./pages/AiAssistantPage').then(m=>({default:m.AiAssistantPage})));
 
 export default function App(){
-  return <AiProvider><ResearchShell>
-    <ThemeToggle/>
+  return <AiProvider>
+    <ResearchShell>
+      <ThemeToggle/>
+      <WorkspaceRoutes/>
+    </ResearchShell>
     <AiPopup/>
-    <WorkspaceRoutes/>
-  </ResearchShell></AiProvider>;
+  </AiProvider>;
 }
 
 function WorkspaceRoutes(){
