@@ -79,5 +79,10 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
   resourceAdvisor:(body:{model_type:'vqc'|'qsvc'|'qnn';quantum:TrainingConfig['quantum'];feature_dimension:number;sample_count:number;dataset_id:string|null;experiment_id:string|null})=>api.post<ResourceAdvisorResponse>('/quantum/resource-advisor',body),
   circuit:(body:unknown)=>api.post<Circuit>('/quantum/circuit',body),
   fittedCircuit:(id:string)=>api.get<Circuit>(`/models/${id}/circuit`),
-  report:(id:string,format:'html'|'json')=>api.download(`/experiments/${id}/report?format=${format}`,`qhealth-${id}.${format}`)
+  report:(id:string,format:'html'|'json')=>api.download(
+    `/experiments/${id}/report?format=${format}`,
+    `qhealth-${id}.${format}`
+  ),
+  aiChat:(body:{message:string;conversation:{role:'user'|'model';content:string}[]})=>
+    api.post<{reply:string}>('/ai/chat',body)
 };
