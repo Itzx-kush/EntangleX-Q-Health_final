@@ -12,6 +12,8 @@ import {dateTime,metric,modelLabels,seconds,shortId,isHybridModel,isQiskitQuantu
 import type {EvidencePair,Experiment,Influence,ModelKind,ModelRecord,PerturbationType,RobustnessEvidence} from '../types/qhealth';
 import {GlareHover,BorderGlow,Reveal,QuantumVisual,SpotlightPanel} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,ProbabilityBand,StatusStrip,WorkbenchRail} from '../components/TremorWorkbench';
+import {VerifiedComparison,VerifiedExplainability,VerifiedPrediction,VerifiedRobustness,VerifiedTraining} from '../components/VerifiedDemoViews';
+import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
 
 
 function CircuitViz({circuit}:{circuit:{qubits:number;gates:{name:string;qubits:number[];parameters:string[]}[]}}){
@@ -37,6 +39,10 @@ function measuredDifference(quantum:number|null|undefined,classical:number|null|
 }
 
 export function Training(){
+ const demo=useVerifiedDemo();
+ return demo.active?<VerifiedTraining/>:<LiveTraining/>;
+}
+function LiveTraining(){
  const {draft,update,pipeline,quantum}=useDraft();
  const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:3000});
  const dataset=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});
@@ -100,6 +106,10 @@ export function Training(){
 }
 
 export function Comparison(){
+ const demo=useVerifiedDemo();
+ return demo.active?<VerifiedComparison/>:<LiveComparison/>;
+}
+function LiveComparison(){
  const {draft}=useDraft();
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
  const [scope,setScope]=useState<'active'|'all'>(draft.dataset_id?'active':'all');
@@ -167,6 +177,10 @@ function EvidencePanel({pair}:{pair:EvidencePair}){
 }
 
 export function Robustness(){
+ const demo=useVerifiedDemo();
+ return demo.active?<VerifiedRobustness/>:<LiveRobustness/>;
+}
+function LiveRobustness(){
  const {draft}=useDraft();
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
@@ -240,6 +254,10 @@ export function Quantum(){
 }
 
 export function Explainability(){
+ const demo=useVerifiedDemo();
+ return demo.active?<VerifiedExplainability/>:<LiveExplainability/>;
+}
+function LiveExplainability(){
  const {draft}=useDraft();
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
@@ -256,6 +274,10 @@ function ShapContributionList({title,items}:{title:string;items:Influence[]}){
 }
 
 export function PredictionPage(){
+ const demo=useVerifiedDemo();
+ return demo.active?<VerifiedPrediction/>:<LivePredictionPage/>;
+}
+function LivePredictionPage(){
  const {draft}=useDraft();
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});

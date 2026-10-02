@@ -46,6 +46,10 @@ def test_showcase_metadata_is_deterministic_and_references_catalog_dataset():
     assert first["showcase"]["target"] == "diabetes_status"
     assert first["showcase"]["positive_class"] == "positive"
     assert first["flagship_experiment_preset"]["auto_start_training"] is False
+    assert first["flagship_experiment_preset"]["models"] == [
+        "logistic_regression", "svm", "random_forest",
+        "vqc", "qsvc", "qnn", HYBRID_MODEL_ID,
+    ]
 
 
 def test_hybrid_uses_existing_threshold_contract_and_existing_models_still_validate():

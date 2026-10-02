@@ -4,6 +4,8 @@ import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
 import {QuantumWorkbench} from './components/QuantumWorkbench';
+import {VerifiedQuantum} from './components/VerifiedDemoViews';
+import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -33,7 +35,7 @@ export default function App(){
       <Route path="/training" element={<Training/>}/>
       <Route path="/comparison" element={<Comparison/>}/>
       <Route path="/robustness" element={<Robustness/>}/>
-      <Route path="/quantum" element={<QuantumWorkbench/>}/>
+      <Route path="/quantum" element={<QuantumRoute/>}/>
       <Route path="/explainability" element={<Explainability/>}/>
       <Route path="/prediction" element={<PredictionPage/>}/>
       <Route path="/experiments" element={<Experiments/>}/>
@@ -43,4 +45,9 @@ export default function App(){
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
   </ResearchShell>;
+}
+
+function QuantumRoute(){
+  const demo=useVerifiedDemo();
+  return demo.active?<VerifiedQuantum/>:<QuantumWorkbench/>;
 }
