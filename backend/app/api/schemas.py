@@ -549,3 +549,15 @@ class AlignmentContractOut(Schema):
     showcase: ShowcaseContextOut
     flagship_experiment_preset: FlagshipPresetOut
     flagship_architecture: FlagshipArchitectureOut
+
+
+class ChatMessage(Schema):
+    role: Literal["user", "model"]
+    content: str = Field(min_length=1, max_length=2000)
+
+class ChatRequest(Schema):
+    message: str = Field(min_length=1, max_length=2000)
+    conversation: list[ChatMessage] = Field(default_factory=list, max_length=10)
+
+class ChatResponse(Schema):
+    reply: str
