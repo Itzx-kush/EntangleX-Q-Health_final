@@ -8,6 +8,12 @@ services:
     envVars:
       - key: VITE_API_BASE
         value: https://entanglex-q-health-api.onrender.com/api
+      # Supabase public browser configuration.
+      # Values are intentionally entered in Render, not committed to Git.
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
     routes:
       - type: rewrite
         source: /*
@@ -21,7 +27,7 @@ services:
         value: no-referrer
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://entanglex-q-health-api.onrender.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://entanglex-q-health-api.onrender.com https://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 
   - type: web
     runtime: docker
