@@ -48,6 +48,7 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/runs/{id}/reproducibility` | Configurational reproducibility status and limitations |
 | GET | `/experiments/{id}/artifacts` | Experiment-wide artifact metadata, including reports not attributable to one Run |
 | GET | `/artifacts/{id}` | Artifact metadata only; does not publish or download private files |
+| GET | `/models/{id}/external-validation` | List all completed external validation studies performed on the model |
 | GET | `/experiments/{id}/report?format=html` | Escaped downloadable HTML research report |
 | GET | `/experiments/{id}/report?format=json` | JSON research report |
 | GET | `/quantum/capabilities` | Presence of optional modules and non-verification statement |
@@ -59,6 +60,12 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/studies/multi-seed/{id}/summary` | Aggregated metrics, 95% bootstrap intervals and limitations |
 | GET | `/studies/multi-seed/{id}/comparison` | Paired seed-delta comparisons across models |
 | POST | `/studies/multi-seed/{id}/cancel` | Cooperative cancellation of pending seeds |
+| POST | `/validation/external` | Execute external validation of a locked model against an external dataset (`ExternalValidationRequest`) |
+| POST | `/validation/external/preflight` | Non-mutating 16-step schema and target compatibility preflight check |
+| GET | `/validation/external` | Paginated external validation records, optional `model_id` or `external_dataset_id` filter |
+| GET | `/validation/external/{id}` | Detailed `ExternalValidationOut` record with metrics, comparisons, and audit |
+| GET | `/validation/external/{id}/metrics` | Focused metrics and internal vs external comparison summary with generalization gap |
+| GET | `/validation/external/{id}/provenance` | Cryptographic provenance chain, dataset hashes, and model artifact digests |
 
 `POST /api/training/jobs` and `POST /api/experiments/{id}/runs` optionally
 accept an `Idempotency-Key` header containing 8–200 visible non-space

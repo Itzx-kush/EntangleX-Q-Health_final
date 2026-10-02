@@ -751,3 +751,119 @@ class MultiSeedStudyResponse(Schema):
     study: MultiSeedStudyOut
     runs: list[StudyRunOut]
 
+
+class ExternalValidationRequest(Schema):
+    model_config = ConfigDict(extra="forbid")
+
+    model_id: UUID
+    external_dataset_id: UUID
+    external_dataset_version_id: UUID | None = None
+    label_mapping: dict[str, str] | None = None
+    notes: str | None = None
+
+
+class FeatureCompatibilityOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    compatible: bool
+    required_features: list[str]
+    present_features: list[str]
+    missing_features: list[str]
+    extra_features: list[str]
+    type_mismatches: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class LabelCompatibilityOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    compatible: bool
+    model_positive_label: str
+    model_negative_label: str
+    external_target: str
+    external_positive_label: str | None = None
+    external_negative_label: str | None = None
+    observed_classes: list[str]
+    mapping_strategy: str
+    mapped_positive_value: str | None = None
+    mapped_negative_value: str | None = None
+    reasons: list[str] = Field(default_factory=list)
+
+
+class ThresholdLockOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    threshold_used: float
+    threshold_source: str
+    threshold_units: str
+    external_threshold_tuning: bool = False
+
+
+class IndependenceAssessmentOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    content_hash_distinct: bool
+    dataset_identity_distinct: bool
+    version_distinct: bool
+    declared_source: str | None = None
+    independence_status: str
+
+
+class ValidationPreflightOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    ready: bool
+    model_id: str
+    model_type: str
+    training_dataset: dict[str, Any]
+    external_dataset: dict[str, Any]
+    feature_compatibility: FeatureCompatibilityOut
+    label_compatibility: LabelCompatibilityOut
+    threshold_lock: ThresholdLockOut
+    artifact_integrity: dict[str, Any]
+    independence: IndependenceAssessmentOut
+    warnings: list[str] = Field(default_factory=list)
+    block_reasons: list[str] = Field(default_factory=list)
+
+
+class MetricComparisonItemOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    metric: str
+    internal_value: float | None = None
+    external_value: float | None = None
+    delta: float | None = None
+    relative_change: float | None = None
+    interpretation: str = "Observed external-to-internal difference."
+
+
+class ExternalValidationOut(Schema):
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: str
+    model_id: str
+    model_type: str
+    run_id: str | None = None
+    experiment_id: str
+    training_dataset_id: str
+    training_dataset_version_id: str | None = None
+    external_dataset_id: str
+    external_dataset_version_id: str | None = None
+    study_id: str | None = None
+    study_seed: int | None = None
+    status: str
+    operation_key: str
+    compatibility: dict[str, Any]
+    label_mapping: dict[str, Any]
+    threshold_metadata: dict[str, Any]
+    metrics: dict[str, Any]
+    internal_metrics: dict[str, Any]
+    comparison: dict[str, Any]
+    generalization_gap: dict[str, float | None]
+    provenance: dict[str, Any]
+    artifact_id: str | None = None
+    limitations: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    failure: dict[str, Any] | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
