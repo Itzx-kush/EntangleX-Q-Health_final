@@ -52,6 +52,13 @@ All IDs are generated UUIDs. Lists support `limit` (default 100, maximum 500) an
 | GET | `/experiments/{id}/report?format=json` | JSON research report |
 | GET | `/quantum/capabilities` | Presence of optional modules and non-verification statement |
 | POST | `/quantum/circuit` | `CircuitRequest`; calculated logical circuit structure, no execution |
+| POST | `/studies/multi-seed` | Create and enqueue multi-seed evaluation study (`MultiSeedStudyRequest`) |
+| GET | `/studies/multi-seed` | Paginated multi-seed studies |
+| GET | `/studies/multi-seed/{id}` | Detailed status of multi-seed study |
+| GET | `/studies/multi-seed/{id}/runs` | Runs created under the multi-seed study |
+| GET | `/studies/multi-seed/{id}/summary` | Aggregated metrics, 95% bootstrap intervals and limitations |
+| GET | `/studies/multi-seed/{id}/comparison` | Paired seed-delta comparisons across models |
+| POST | `/studies/multi-seed/{id}/cancel` | Cooperative cancellation of pending seeds |
 
 `POST /api/training/jobs` and `POST /api/experiments/{id}/runs` optionally
 accept an `Idempotency-Key` header containing 8–200 visible non-space
@@ -135,3 +142,11 @@ The existing `GET /api/datasets`, `POST /api/datasets/upload` and `POST /api/dat
 ## Controlled comparison evidence
 
 `GET /api/experiments/{id}/comparison` preserves its existing model and pair fields and adds persisted evidence for the fair benchmark. Each pair includes `benchmark_type`, `model_identities`, `fairness`, `common_representation`, holdout results, metric/timing deltas, OOF operating points, simulator resources, robustness evidence, and limitations. `fairness.controlled_comparison` is derived from per-model metadata; failed checks produce `mismatch_reasons` and `NOT CONTROLLED`. Missing measurements remain `null` rather than becoming zero. `controlled_benchmarks` contains only verified Random Forest / PennyLane + PyTorch pairs.
+
+## Multi-Seed Statistical Evaluation (2026-10-03)
+
+The multi-seed statistical evaluation engine assesses descriptive stability across multiple deterministic random seeds for an existing experiment configuration.
+- `POST /api/studies/multi-seed`: Accepts `MultiSeedStudyRequest` (`base_experiment_id` or explicit `experiment_config`, optional list of seeds, optional `notes`). Supports `Idempotency-Key`.
+- `GET /api/studies/multi-seed/{id}/summary`: Returns per-model, per-metric descriptive aggregates (`mean`, `median`, `std`, `min`, `max`, `n`, `valid_count`, `missing_count`), deterministic 95% bootstrap percentile intervals, and explicit scientific limitations (no clinical validity or quantum superiority claims).
+- `GET /api/studies/multi-seed/{id}/comparison`: Returns matched-seed paired deltas ($\text{target} - \text{baseline}$) with paired bootstrap intervals. Unmatched seeds are neutrally excluded.
+- Summaries are registered as immutable artifacts in the artifact registry with HMAC-SHA256 signatures. See `docs/specifications/multi_seed_statistical_evaluation.md`.

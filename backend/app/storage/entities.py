@@ -158,3 +158,53 @@ class Artifact(Base):
     immutable: Mapped[bool] = mapped_column(Boolean, default=True)
     operation_key: Mapped[str] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class MultiSeedStudy(Base):
+    """First-class multi-seed statistical evaluation study across deterministic seeds."""
+
+    __tablename__ = "multi_seed_studies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    base_experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    requested_seeds: Mapped[list] = mapped_column(JSON)
+    completed_seeds: Mapped[list] = mapped_column(JSON, default=list)
+    failed_seeds: Mapped[list] = mapped_column(JSON, default=list)
+    cancelled_seeds: Mapped[list] = mapped_column(JSON, default=list)
+    model_identities: Mapped[list] = mapped_column(JSON)
+    locked_config: Mapped[dict] = mapped_column(JSON)
+    configuration_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    protocol_version: Mapped[str] = mapped_column(String(32), default="multi_seed_evaluation_v1")
+    aggregate_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    reproducibility_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    study_artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StudyRun(Base):
+    """Link between a MultiSeedStudy and a concrete execution Run."""
+
+    __tablename__ = "study_runs"
+    __table_args__ = (
+        UniqueConstraint("study_id", "seed", name="uq_study_runs_study_seed"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    study_id: Mapped[str] = mapped_column(ForeignKey("multi_seed_studies.id"), index=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    job_id: Mapped[str | None] = mapped_column(ForeignKey("jobs.id"), nullable=True, index=True)
+    seed: Mapped[int] = mapped_column(Integer)
+    seed_order: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+

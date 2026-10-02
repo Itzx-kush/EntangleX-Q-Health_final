@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     max_columns: int = Field(default=200, ge=2, le=500)
     quantum_max_samples: int = Field(default=256, ge=20, le=1024)
     max_queued_jobs: int = Field(default=3, ge=1, le=10)
+    max_study_seeds: int = Field(default=20, ge=2, le=50)
     log_level: str = "INFO"
+
     groq_api_key: str = ""
     groq_model: str = "qwen/qwen3.8-27b"
 
