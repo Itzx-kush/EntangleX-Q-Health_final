@@ -11,3 +11,4 @@ pandas==2.3.3
 scipy==1.17.1
 scikit-learn==1.9.1
 dill==0.4.1
+groq==1.7.0
