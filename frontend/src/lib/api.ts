@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -86,6 +86,14 @@ export const qh={
   controlledComparisonPreflight:(id:string)=>api.post<ControlledComparisonProtocol&{preflight:true}>(`/experiments/${id}/controlled-comparison/preflight`,{}),
   createControlledComparison:(id:string)=>api.post<ControlledComparisonProtocol>(`/experiments/${id}/controlled-comparison`,{}),
   verifiedEvidence:(id:string)=>api.get<VerifiedEvidencePackage>(`/experiments/${id}/verified-evidence`),
+  evidencePackagePreflight:(id:string)=>api.post<EvidencePackagePreflight>(`/experiments/${id}/evidence-package/preflight`,{}),
+  createEvidencePackage:(id:string)=>api.post<ResearchEvidencePackage>(`/experiments/${id}/evidence-package`,{}),
+  evidencePackage:(id:string)=>api.get<ResearchEvidencePackage>(`/experiments/${id}/evidence-package`),
+  evidencePackageProvenance:(id:string,packageId:string)=>api.get<Pick<ResearchEvidencePackage,'package_id'|'package_fingerprint'|'source_context'|'provenance'|'integrity'|'artifact'>>(`/experiments/${id}/evidence-package/${packageId}/provenance`),
+  downloadEvidencePackage:(id:string,packageId:string)=>api.download(
+    `/experiments/${id}/evidence-package/${packageId}/download`,
+    `qhealth-evidence-package-${packageId}.json`
+  ),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),
   rerun:(id:string)=>api.post<{job:Job;experiment:Experiment}>(`/experiments/${id}/rerun`),

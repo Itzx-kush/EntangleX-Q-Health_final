@@ -496,3 +496,31 @@ class ControlledComparisonProtocol(Base):
     artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
+
+class ResearchEvidencePackage(Base):
+    """Immutable manifest of the persisted evidence state for an experiment."""
+
+    __tablename__ = "research_evidence_packages"
+    __table_args__ = (
+        UniqueConstraint(
+            "experiment_id",
+            "package_fingerprint",
+            name="uq_research_evidence_package_snapshot",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    schema_version: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    package_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    configuration_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    source_context_type: Mapped[str] = mapped_column(String(40), index=True)
+    evidence_inventory: Mapped[dict] = mapped_column(JSON, default=dict)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    evidence_gaps: Mapped[list] = mapped_column(JSON, default=list)
+    manifest: Mapped[dict] = mapped_column(JSON, default=dict)
+    artifact_id: Mapped[str] = mapped_column(ForeignKey("artifacts.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+

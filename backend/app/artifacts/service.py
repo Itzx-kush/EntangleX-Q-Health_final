@@ -81,6 +81,7 @@ def register_metadata(
     description: str,
     payload: dict,
     operation_key: str,
+    artifact_id: str | None = None,
 ) -> Artifact:
     integrity_hash = fingerprint(payload)
     existing = session.scalar(select(Artifact).where(Artifact.operation_key == operation_key))
@@ -89,7 +90,7 @@ def register_metadata(
             raise AppError("artifact_conflict", "An immutable metadata artifact operation produced different content.", 409)
         return existing
     artifact = Artifact(
-        id=str(uuid4()),
+        id=artifact_id or str(uuid4()),
         experiment_id=experiment_id,
         run_id=run_id,
         model_id=model_id,

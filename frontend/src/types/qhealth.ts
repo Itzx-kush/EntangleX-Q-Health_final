@@ -60,6 +60,36 @@ export interface ModelCard {
   artifact:{artifact_id:string;integrity_hash:string;immutable:boolean};
 }
 export interface ExperimentDetail {experiment:Experiment;models:ModelRecord[];jobs:Job[]}
+export type EvidenceAvailability='available'|'not_available'|'not_applicable'|'limited'|'incomplete'|'blocked';
+export interface EvidenceInventoryEntry {
+  status:EvidenceAvailability;record_count:number;referenced_ids:string[];artifact_ids:string[];
+  latest_compatible_evidence:string|null;configuration_fingerprints:string[];
+  evidence_timestamp:string|null;limitations:string[];availability_reason:string;
+  [key:string]:unknown;
+}
+export interface ResearchEvidencePackage {
+  schema_version:'research_evidence_package_v1';package_id:string;
+  package_status:'READY'|'PARTIAL'|'INCOMPLETE'|'BLOCKED';
+  package_fingerprint:string;configuration_fingerprint:string;
+  created_at:string;created?:boolean;
+  experiment:{id:string;name:string|null;status:string;configuration_fingerprint:string};
+  dataset:{dataset_id:string;name:string;dataset_version_id:string|null;content_sha256:string;schema_fingerprint:string|null;target:string|null;target_type:string|null};
+  models:Record<string,unknown>[];
+  source_context:{type:'live_run'|'verified_demo_experiment';[key:string]:unknown};
+  evidence_inventory:Record<string,EvidenceInventoryEntry>;
+  provenance:{experiment_id:string;run_ids:string[];artifact_ids:string[];configuration_fingerprints:string[];evidence_source_fingerprints:string[]};
+  integrity:{dataset_hash:string;model_artifact_hashes:string[];evidence_artifact_hashes:Record<string,string>;package_fingerprint:string;artifact_id:string;hash_algorithm:'sha256'};
+  limitations:string[];evidence_gaps:{category:string;status:string;reason:string}[];
+  artifact:{id:string;artifact_type:string;content_type:string;integrity_hash:string;hash_algorithm:string;immutable:boolean};
+}
+export interface EvidencePackagePreflight {
+  feasible:boolean;package_status:ResearchEvidencePackage['package_status'];
+  package_fingerprint_candidate:string;evidence_inventory:ResearchEvidencePackage['evidence_inventory'];
+  blockers:{code:string;message?:string;record_id?:string}[];
+  warnings:{code:string;message:string}[];
+  missing_evidence:ResearchEvidencePackage['evidence_gaps'];core_missing_evidence:string[];
+  manifest:ResearchEvidencePackage;
+}
 export interface Preview {train_count:number;test_count:number;input_features:string[];selected_features:string[];output_features:string[];selection_scores:{feature:string;score:number|null;selected:boolean}[];pca_explained_variance:number[];pca_loadings:number[][];split_hash:string;stages:string[];warnings:string[]}
 export interface Circuit {model_type:string;execution_kind:string;backend:string;qubits:number;logical_depth:number|null;parameter_count:number;gate_counts:Record<string,number>;text:string;gates:{name:string;qubits:number[];parameters:string[]}[];limitation:string}
 export interface ResourceAdvisorChange {field:string;from:number;to:number;reason:string}

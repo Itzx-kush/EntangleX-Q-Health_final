@@ -72,6 +72,40 @@ export function Experiments(){
   </div>
 }
 
+export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string}){
+  const qc=useQueryClient();
+  const packageQuery=useQuery({
+    queryKey:['evidence-package',experimentId],
+    queryFn:()=>qh.evidencePackage(experimentId),
+    retry:false,
+  });
+  const generate=useMutation({
+    mutationFn:()=>qh.createEvidencePackage(experimentId),
+    onSuccess:value=>qc.setQueryData(['evidence-package',experimentId],value),
+  });
+  const [inspect,setInspect]=useState(false);
+  const value=packageQuery.data;
+  const categories=value?Object.entries(value.evidence_inventory):[];
+  return <Card className="mt-5" title="Research Evidence Package" description="Immutable, machine-readable manifest of the persisted evidence associated with this experiment.">
+    <ErrorBanner error={(generate.error as Error)?.message}/>
+    {!value?<div>
+      <p className="text-sm muted">{packageQuery.isLoading?'Checking for an existing package…':'No package has been generated for the current evidence state.'}</p>
+      <Button className="mt-3" disabled={packageQuery.isLoading||generate.isPending} onClick={()=>generate.mutate()}>{generate.isPending?'Running preflight…':'Generate package'}</Button>
+    </div>:<>
+      <div className="flex flex-wrap items-center gap-2"><StatusBadge value={value.package_status}/><Badge tone={value.artifact.immutable?'green':'amber'}>{value.artifact.immutable?'IMMUTABLE ARTIFACT':'INTEGRITY UNAVAILABLE'}</Badge><span className="text-xs muted">{dateTime(value.created_at)}</span></div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div><span className="metric-label">PACKAGE ID</span><strong className="mono block text-xs">{value.package_id}</strong></div>
+        <div><span className="metric-label">FINGERPRINT</span><strong className="mono block text-xs" title={value.package_fingerprint}>{value.package_fingerprint.slice(0,20)}…</strong></div>
+        <div><span className="metric-label">SOURCE</span><strong className="block text-sm">{value.source_context.type.replaceAll('_',' ')}</strong></div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{categories.map(([name,entry])=><div className="rounded-xl border p-3" key={name}><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{name.replaceAll('_',' ')}</span><StatusBadge value={entry.status}/></div><small className="muted">{entry.record_count} persisted record{entry.record_count===1?'':'s'}</small></div>)}</div>
+      {value.evidence_gaps.length>0&&<Notice tone="amber">{value.evidence_gaps.length} evidence categor{value.evidence_gaps.length===1?'y is':'ies are'} unavailable, incomplete, or limited. This is an evidence state, not a quality score.</Notice>}
+      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={generate.isPending} onClick={()=>generate.mutate()}><RotateCcw size={13}/>{generate.isPending?'Refreshing…':'Refresh package'}</Button><Button variant="outline" onClick={()=>setInspect(current=>!current)}>{inspect?'Close package':'Inspect package'}</Button><Button variant="outline" onClick={()=>qh.downloadEvidencePackage(experimentId,value.package_id)}><Download size={13}/>Download JSON</Button></div>
+      {inspect&&<div className="mt-4"><div className="two-grid"><div className="rounded-xl border p-4"><div className="metric-label">PROVENANCE</div><p className="mt-2 text-xs">Runs: {value.provenance.run_ids.length} · Referenced artifacts: {value.provenance.artifact_ids.length}</p><p className="mt-1 mono text-[10px] break-all">Artifact {value.integrity.artifact_id}</p></div><div className="rounded-xl border p-4"><div className="metric-label">LIMITATIONS</div><ul className="mt-2 list-disc pl-4 text-xs">{value.limitations.map(item=><li key={item}>{item}</li>)}</ul></div></div><JsonDisclosure label="Open full machine-readable package" value={value}/></div>}
+    </>}
+  </Card>
+}
+
 export function ExperimentDetail(){
   const {id=''}=useParams();
   const result=useQuery({queryKey:['experiment',id],queryFn:()=>qh.experiment(id),enabled:Boolean(id),refetchInterval:query=>['queued','running','cancel_requested'].includes(query.state.data?.experiment.status||'')?5000:false});
@@ -97,6 +131,7 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <ResearchEvidencePackagePanel experimentId={id}/>
     <div className="mt-5"><Card title="Measured model records" description="Only measurements returned by the backend are displayed.">
       {detail.models.length?detail.models.map(model=><GlareHover key={model.id} className="border-b py-5 last:border-b-0"><article className="py-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h3 className="font-semibold">{modelLabels[model.model_type]}</h3><StatusBadge value={model.status}/></div><small className="muted">Model {shortId(model.id)} · {dateTime(model.created_at)}</small></div><button className="btn btn-ghost" onClick={()=>setExpanded(expanded===model.id?null:model.id)}>{expanded===model.id?'Collapse':'Inspect'}</button></div>{model.model_type==='hybrid_pennylane_torch'&&model.details.quantum&&<div className="mt-4 rounded-xl border p-4"><div className="metric-label">HYBRID EXECUTION EVIDENCE</div><div className="mt-3 grid gap-3 md:grid-cols-3"><div><span className="metric-label">FRAMEWORKS</span><strong className="block">{model.details.quantum.framework} + {model.details.quantum.classical_framework}</strong></div><div><span className="metric-label">EXECUTION</span><strong className="block">{model.details.quantum.execution_kind}</strong></div><div><span className="metric-label">BACKEND</span><strong className="block">{model.details.quantum.backend}</strong></div><div><span className="metric-label">QUBITS / LAYERS</span><strong className="block">{model.details.quantum.qubits} / {model.details.quantum.quantum_layers}</strong></div><div><span className="metric-label">PROBABILITY</span><strong className="block">Measured positive-class output</strong></div><div><span className="metric-label">HARDWARE</span><strong className="block">Not implemented</strong></div></div><Notice tone="amber">Quantum advantage: not established. Operating threshold is selected from out-of-fold validation evidence.</Notice></div>}{model.metrics.test&&<div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]"><div className="rounded-xl border p-4"><div className="metric-label">HELD-OUT METRICS</div><div className="mt-3 space-y-1">{(['sensitivity','specificity','roc_auc','f1','accuracy','precision','recall'] as const).map(k=><div className="flex justify-between border-b py-1.5 last:border-0" key={k}><span className="text-xs muted">{k}</span><strong className="mono text-xs">{metric(model.metrics.test?.[k],k!=='roc_auc')}</strong></div>)}</div></div><div className="rounded-xl border p-4"><div className="metric-label">RUNTIME</div><div className="mt-3 space-y-1 text-xs">{[['Final training',seconds(model.metrics.timing?.final_training_seconds)],['CV total',seconds(model.metrics.timing?.cv_total_seconds)],['Test inference',seconds(model.metrics.timing?.test_inference_seconds_per_sample)+'/sample']].map(x=><div className="flex justify-between border-b py-1.5 last:border-0" key={String(x[0])}><span className="muted">{x[0]}</span><strong>{x[1]}</strong></div>)}</div></div></div>}{expanded===model.id&&<><ModelCardPanel model={model}/><CalibrationLaboratory model={model} />
                             <ThresholdAnalysis model={model} /><QuantumDiagnostics model={model} /><JsonDisclosure label="Model identity, provenance, metrics and limitations" value={{details:model.details,metrics:model.metrics}}/></>}</article></GlareHover>):<EmptyState title="No model records">Model records appear when the backend training job completes or records a failure.</EmptyState>}
