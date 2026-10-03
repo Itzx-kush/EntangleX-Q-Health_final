@@ -1,4 +1,4 @@
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage,DatasetQualityPreflightResponse,DatasetQualityScorecard,ScorecardComparison} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -22,59 +22,14 @@ const base=apiBase;
 let token='';
 export function setSessionToken(value:string){token=value.trim();}
 
-type ApiErrorBody={
-  error?:{code?:string;message?:string;request_id?:string;fields?:unknown};
-  detail?:string|{message?:string};
-  message?:string;
-};
-
-export class ApiError extends Error{
-  status:number;
-  code:string;
-  requestId?:string;
-  details?:unknown;
-  constructor(message:string,{status,code='http_error',requestId,details}:{status:number;code?:string;requestId?:string;details?:unknown}){
-    super(message);
-    this.name='ApiError';
-    this.status=status;
-    this.code=code;
-    this.requestId=requestId;
-    this.details=details;
-  }
-}
-
-export class ApiTransportError extends Error{
-  constructor(message='Unable to reach the Q-Health backend. Check the connection and try again.',options?:ErrorOptions){
-    super(message,options);
-    this.name='ApiTransportError';
-  }
-}
-
-export function isApiError(error:unknown):error is ApiError{
-  return error instanceof ApiError;
-}
-
 async function request(path:string,options:RequestInit={}){
   const headers=new Headers(options.headers);
   if(token) headers.set('Authorization',`Bearer ${token}`);
   if(options.body && !(options.body instanceof FormData)) headers.set('Content-Type','application/json');
-  let response:Response;
-  try{
-    response=await fetch(`${base}${path}`,{...options,headers,credentials:'omit',cache:'no-store'});
-  }catch(error){
-    throw new ApiTransportError(undefined,{cause:error});
-  }
+  const response=await fetch(`${base}${path}`,{...options,headers,credentials:'omit',cache:'no-store'});
   if(!response.ok){
-    const body=await response.json().catch(()=>({})) as ApiErrorBody;
-    const detail=typeof body.detail==='string'?body.detail:body.detail?.message;
-    const requestId=body.error?.request_id||response.headers.get('X-Request-ID')||undefined;
-    const message=body.error?.message||detail||body.message||`Request failed (${response.status})`;
-    throw new ApiError(requestId?`${message} · Request ID: ${requestId}`:message,{
-      status:response.status,
-      code:body.error?.code,
-      requestId,
-      details:body.error?.fields??body.detail,
-    });
+    const body=await response.json().catch(()=>({})) as {error?:{message?:string;request_id?:string}};
+    throw new Error(body.error?.request_id ? `${body.error?.message||'Request failed'} · ${body.error.request_id}` : body.error?.message||`Request failed (${response.status})`);
   }
   return response;
 }
@@ -166,11 +121,35 @@ export const qh={
     });
     return api.get<LineageSnapshot>(`/experiments/${id}/lineage?${query}`);
   },
-  experimentAudit:(id:string,category?:string)=>{const q=category&&category!=='all'?'?event_category='+encodeURIComponent(category):'';return api.get<AuditTimeline>('/experiments/'+id+'/audit'+q)},
-  experimentAuditExport:(id:string)=>api.download('/experiments/'+id+'/audit/export','qhealth-audit-'+id+'.json'),
-  auditIntegrity:(objectType?:string,objectId?:string)=>{const sp=new URLSearchParams();if(objectType)sp.set('object_type',objectType);if(objectId)sp.set('object_id',objectId);return api.get<AuditIntegrity>('/audit/integrity'+(sp.toString()?'?'+sp.toString():''))},
-  auditEvents:(params?:AuditFilterParams)=>{const sp=new URLSearchParams();if(params)Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')sp.set(k,String(v))});return api.get<ScientificAuditEvent[]>('/audit/events'+(sp.toString()?'?'+sp.toString():''))},
-  objectAudit:(objectType:string,objectId:string)=>api.get<AuditTimeline>('/audit/'+objectType+'/'+objectId),
+  subgroupPreflight:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupPreflightResponse>(`/experiments/${id}/subgroup-analysis/preflight`,body),
+  createSubgroupAnalysis:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupStudy>(`/experiments/${id}/subgroup-analysis`,body),
+  subgroupStudies:(id:string)=>api.get<SubgroupStudy[]>(`/experiments/${id}/subgroup-analysis`),
+  subgroupStudy:(id:string,studyId:string)=>api.get<SubgroupStudy>(`/experiments/${id}/subgroup-analysis/${studyId}`),
+  downloadSubgroupStudy:(id:string,studyId:string)=>api.download(`/experiments/${id}/subgroup-analysis/${studyId}/export`,`qhealth-subgroup-${studyId}.json`),
+  experimentAudit:(id:string,category?:string)=>{
+    const q=category&&category!=='all'?`?category=${category}`:'';
+    return api.get<AuditTimeline>(`/experiments/${id}/audit${q}`);
+  },
+  experimentAuditExport:(id:string)=>api.download(
+    `/experiments/${id}/audit/export`,
+    `qhealth-audit-${id}.json`
+  ),
+  auditIntegrity:(objectType?:string,objectId?:string)=>{
+    const q=objectType&&objectId?`?object_type=${objectType}&object_id=${objectId}`:'';
+    return api.get<AuditIntegrity>(`/audit/integrity${q}`);
+  },
+  auditEvents:(params?:AuditFilterParams)=>{
+    const sp=new URLSearchParams();
+    if(params){
+      Object.entries(params).forEach(([k,v])=>{
+        if(v!==undefined&&v!==null&&v!=='')sp.set(k,String(v));
+      });
+    }
+    const q=sp.toString()?`?${sp.toString()}`:'';
+    return api.get<ScientificAuditEvent[]>(`/audit/events${q}`);
+  },
+  objectAudit:(objectType:string,objectId:string)=>
+    api.get<AuditTimeline>(`/audit/${objectType}/${objectId}`),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),
   rerun:(id:string)=>api.post<{job:Job;experiment:Experiment}>(`/experiments/${id}/rerun`),
@@ -196,25 +175,16 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
     `/experiments/${id}/report?format=${format}`,
     `qhealth-${id}.${format}`
   ),
-  subgroupPreflight:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupPreflightResponse>(`/experiments/${id}/subgroup-analysis/preflight`,body),
-  createSubgroupAnalysis:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupStudy>(`/experiments/${id}/subgroup-analysis`,body),
-  subgroupStudies:(id:string)=>api.get<SubgroupStudy[]>(`/experiments/${id}/subgroup-analysis`),
-  subgroupStudy:(id:string,studyId:string)=>api.get<SubgroupStudy>(`/experiments/${id}/subgroup-analysis/${studyId}`),
-  downloadSubgroupStudy:(id:string,studyId:string)=>api.download(`/experiments/${id}/subgroup-analysis/${studyId}/export`,`qhealth-subgroup-${studyId}.json`),
+  aiChat:(body:{message:string;conversation:{role:'user'|'model';content:string}[]})=>
+    api.post<{reply:string}>('/ai/chat',body),
   datasetQualityPreflight:(datasetId:string,body?:{thresholds?:Record<string,unknown>;dataset_version_id?:string;protocol_version_id?:string;pipeline_version_id?:string;subgroup_field?:string;target_column?:string;positive_label?:string})=>
     api.post<DatasetQualityPreflightResponse>(`/datasets/${datasetId}/quality-scorecard/preflight`,body||{}),
   assessDatasetQuality:(datasetId:string,body?:{thresholds?:Record<string,unknown>;dataset_version_id?:string;experiment_id?:string;protocol_version_id?:string;pipeline_version_id?:string;reference_dataset_version_id?:string;subgroup_field?:string;target_column?:string;positive_label?:string;operation_key?:string})=>
     api.post<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard`,body||{}),
   datasetQualityScorecards:(datasetId:string,versionId?:string)=>
-    api.get<DatasetQualityScorecard[]>(`/datasets/${datasetId}/quality-scorecard${versionId ? `?dataset_version_id=${encodeURIComponent(versionId)}` : ''}`),
-  latestDatasetQualityScorecard:async(datasetId:string,versionId?:string)=>{
-    try{
-      return await api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/latest${versionId ? `?dataset_version_id=${encodeURIComponent(versionId)}` : ''}`);
-    }catch(error){
-      if(isApiError(error)&&error.status===404&&error.code==='quality_scorecard_not_found')return null;
-      throw error;
-    }
-  },
+    api.get<DatasetQualityScorecard[]>(`/datasets/${datasetId}/quality-scorecard${versionId ? `?version_id=${versionId}` : ''}`),
+  latestDatasetQualityScorecard:(datasetId:string,versionId?:string)=>
+    api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/latest${versionId ? `?version_id=${versionId}` : ''}`),
   datasetQualityScorecard:(datasetId:string,scorecardId:string)=>
     api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/${scorecardId}`),
   compareDatasetQualityScorecards:(datasetId:string,baseId:string,targetId:string)=>
@@ -223,6 +193,5 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
     api.download(`/datasets/${datasetId}/quality-scorecard/${scorecardId}/export?format=${format}`,`scorecard-${scorecardId}.${format==='json'?'json':'md'}`),
   experimentDatasetQuality:(experimentId:string)=>
     api.get<DatasetQualityScorecard>(`/experiments/${experimentId}/dataset-quality`),
-  aiChat:(body:{message:string;conversation:{role:'user'|'model';content:string}[]})=>
-    api.post<{reply:string}>('/ai/chat',body)
 };
+

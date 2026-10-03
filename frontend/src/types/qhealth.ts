@@ -360,6 +360,7 @@ export interface SubgroupAnalysisRequest{model_id?:string|null;dataset_id?:strin
 export interface SubgroupStudy{id:string;schema_version:string;experiment_id:string;model_id:string;model_type:string;run_id?:string|null;dataset_id:string;dataset_version_id?:string|null;status:string;operation_key:string;definition_fingerprint:string;subgroup_field:string;configuration:Record<string,unknown>;overall_population:{n:number;positive_n:number;negative_n:number;prevalence:number;missing_n:number;metrics:Record<string,SubgroupMetricValue>};subgroups:SubgroupResult[];subgroups_results?:SubgroupResult[];comparisons:SubgroupComparison[];limitations:string[];provenance:Record<string,unknown>;artifact_id?:string|null;created_at:string;completed_at?:string|null}
 export interface SubgroupPreflightResponse{feasible:boolean;subgroup_field:string;field_data_type:string;unique_values_count:number;missing_values_count:number;suggested_rules:SubgroupRule[];eligible_samples:number;blockers:string[];warnings:string[];limitations:string[];configuration_fingerprint:string}
 
+
 export type QualityCheckStatus = 'PASS' | 'WARN' | 'FAIL' | 'UNVERIFIABLE' | 'NOT_APPLICABLE';
 export type QualityCheckSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
