@@ -16,6 +16,7 @@ from ..evidence_packages.service import (
 )
 from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
+from ..lineage.service import lineage_preflight, lineage_snapshot
 from ..storage.entities import Experiment, ModelRecord, Job
 from ..storage.repository import require
 from ..utils.errors import AppError
@@ -49,6 +50,59 @@ def get_experiment(identity: UUID):
         return {"experiment": require(session, Experiment, str(identity)),
             "models": list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == str(identity)))),
             "jobs": list(session.scalars(select(Job).where(Job.experiment_id == str(identity))))}
+
+
+@router.get("/{identity}/lineage", response_model=dict)
+def get_experiment_lineage(
+    identity: UUID,
+    depth: str = Query("3", pattern=r"^(all|[1-9]|1[0-2])$"),
+    direction: Literal["ancestors", "descendants", "both"] = "both",
+    include_artifacts: bool = True,
+    include_evidence: bool = True,
+):
+    with session_scope() as session:
+        return lineage_snapshot(
+            session,
+            str(identity),
+            depth=depth,
+            direction=direction,
+            include_artifacts=include_artifacts,
+            include_evidence=include_evidence,
+        )
+
+
+@router.get("/{identity}/lineage/ancestors", response_model=dict)
+def get_experiment_lineage_ancestors(
+    identity: UUID,
+    depth: str = Query("3", pattern=r"^(all|[1-9]|1[0-2])$"),
+    include_artifacts: bool = True,
+    include_evidence: bool = True,
+):
+    with session_scope() as session:
+        return lineage_snapshot(
+            session, str(identity), depth=depth, direction="ancestors",
+            include_artifacts=include_artifacts, include_evidence=include_evidence,
+        )
+
+
+@router.get("/{identity}/lineage/descendants", response_model=dict)
+def get_experiment_lineage_descendants(
+    identity: UUID,
+    depth: str = Query("3", pattern=r"^(all|[1-9]|1[0-2])$"),
+    include_artifacts: bool = True,
+    include_evidence: bool = True,
+):
+    with session_scope() as session:
+        return lineage_snapshot(
+            session, str(identity), depth=depth, direction="descendants",
+            include_artifacts=include_artifacts, include_evidence=include_evidence,
+        )
+
+
+@router.get("/{identity}/lineage/preflight", response_model=dict)
+def get_experiment_lineage_preflight(identity: UUID):
+    with session_scope() as session:
+        return lineage_preflight(session, str(identity))
 
 @router.get("/{identity}/comparison", response_model=dict)
 def compare_models(identity: UUID):

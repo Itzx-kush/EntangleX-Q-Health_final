@@ -36,3 +36,5 @@ def init_db():
     Base.metadata.create_all(engine)
     from .migrations import apply_migrations
     apply_migrations()
+    from .lineage.capture import install_lineage_capture
+    install_lineage_capture()

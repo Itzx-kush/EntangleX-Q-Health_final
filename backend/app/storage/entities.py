@@ -524,3 +524,42 @@ class ResearchEvidencePackage(Base):
     artifact_id: Mapped[str] = mapped_column(ForeignKey("artifacts.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
+
+class LineageNode(Base):
+    """Immutable reference to a persisted provenance object."""
+
+    __tablename__ = "lineage_nodes"
+    __table_args__ = (
+        UniqueConstraint("object_type", "object_id", name="uq_lineage_node_object"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    object_type: Mapped[str] = mapped_column(String(48), index=True)
+    object_id: Mapped[str] = mapped_column(String(64), index=True)
+    schema_version: Mapped[str] = mapped_column(String(40))
+    reference_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    reference_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class LineageEdge(Base):
+    """Append-only provenance relationship between two lineage references."""
+
+    __tablename__ = "lineage_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_node_id", "target_node_id", "relationship_type",
+            name="uq_lineage_edge_relationship",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source_node_id: Mapped[str] = mapped_column(ForeignKey("lineage_nodes.id"), index=True)
+    target_node_id: Mapped[str] = mapped_column(ForeignKey("lineage_nodes.id"), index=True)
+    relationship_type: Mapped[str] = mapped_column(String(48), index=True)
+    schema_version: Mapped[str] = mapped_column(String(40))
+    relationship_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    relationship_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    immutable: Mapped[bool] = mapped_column(Boolean, default=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
