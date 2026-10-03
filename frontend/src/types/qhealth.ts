@@ -374,14 +374,17 @@ export interface QualityCheckResult {
 }
 
 export interface QualityDomainResult {
-  name: string;
-  title: string;
+  domain: string;
+  display_name: string;
   status: QualityCheckStatus;
-  passed: number;
-  warnings: number;
-  failures: number;
-  unverifiable: number;
+  total_checks: number;
+  passed_checks: number;
+  warning_checks: number;
+  failed_checks: number;
+  not_applicable_checks: number;
+  unverifiable_checks: number;
   checks: QualityCheckResult[];
+  summary: string;
 }
 
 export interface ScorecardSummary {
@@ -391,32 +394,28 @@ export interface ScorecardSummary {
   passed: number;
   warnings: number;
   failed: number;
+  not_applicable: number;
   unverifiable: number;
-  domain_scores: Record<string, number>;
+  critical_failures: number;
+  high_failures: number;
+  domain_scores: Record<string, string>;
 }
 
 export interface FeatureProfile {
   name: string;
   data_type: string;
-  missing_count: number;
-  missing_percentage: number;
-  unique_count: number;
+  null_count: number;
+  null_percentage: number;
+  distinct_count: number;
   is_constant: boolean;
-  is_identifier_candidate: boolean;
-  mean?: number | null;
-  std?: number | null;
-  min?: number | null;
-  max?: number | null;
-  top_categories?: Record<string, number>;
+  sample_stats: Record<string, unknown>;
 }
 
 export interface SchemaSnapshot {
   total_rows: number;
-  total_columns: number;
-  feature_count: number;
-  target_column?: string | null;
-  positive_label?: string | null;
-  features: Record<string, FeatureProfile>;
+  total_features: number;
+  target_column: string | null;
+  columns: FeatureProfile[];
 }
 
 export interface DatasetQualityScorecard {
@@ -428,15 +427,17 @@ export interface DatasetQualityScorecard {
   protocol_version_id?: string | null;
   pipeline_version_id?: string | null;
   status: QualityCheckStatus;
+  operation_key: string;
   assessment_fingerprint: string;
+  configuration: Record<string, unknown>;
   summary: ScorecardSummary;
   domains: Record<string, QualityDomainResult>;
-  schema_snapshot?: SchemaSnapshot;
+  schema_snapshot: SchemaSnapshot;
   limitations: string[];
-  recommendations: string[];
-  blocking_reasons: string[];
+  provenance: Record<string, unknown>;
   artifact_id?: string | null;
-  created_at?: string;
+  created_at: string;
+  completed_at?: string | null;
 }
 
 export interface DatasetQualityPreflightResponse {
