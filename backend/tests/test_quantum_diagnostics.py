@@ -1,10 +1,10 @@
 import pytest
 from uuid import uuid4
 from fastapi.testclient import TestClient
-from backend.app.main import app
-from backend.app.database import session_scope
-from backend.app.storage.entities import Experiment, Dataset, ModelRecord
-from backend.app.model_cards.service import assemble_card
+from app.main import app
+from app.database import session_scope
+from app.storage.entities import Experiment, Dataset, ModelRecord
+from app.model_cards.service import assemble_card
 
 client = TestClient(app)
 
