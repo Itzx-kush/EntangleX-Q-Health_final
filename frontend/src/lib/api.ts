@@ -1,4 +1,28 @@
+
 import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+
+export function resolveApiBase(configured:string|undefined,production:boolean){
+  const value=(configured||'/api').trim()||'/api';
+  const normalized=value.length>1?value.replace(/\/+$/,''):value;
+  if(production){
+    try{
+      const url=new URL(normalized);
+      if(['localhost','127.0.0.1','::1'].includes(url.hostname))throw new Error('Production API base must not target localhost.');
+      if(url.protocol!=='https:')throw new Error('Production cross-origin API base must use HTTPS.');
+    }catch(error){
+      if(normalized.startsWith('/'))return normalized;
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+      if(error instanceof Error&&error.message.startsWith('Production '))throw error;
+      throw new Error('Production API base must be a relative path or absolute HTTPS URL.');
+    }
+  }
+  return normalized;
+}
+export const apiBase=resolveApiBase(import.meta.env.VITE_API_BASE as string|undefined,import.meta.env.PROD);
+const base=apiBase;
+let token='';
+export function setSessionToken(value:string){token=value.trim();}
+import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -88,18 +112,6 @@ export const qh={
   pipelinePreflight:(body:unknown)=>api.post<PipelinePreflight>('/pipelines/preflight',body),
   publishPipeline:(id:string)=>api.post<PipelineVersion>(`/pipelines/${id}/publish`),
   pipelineDiff:(fromId:string,toId:string)=>api.get<PipelineDiff>(`/pipelines/${fromId}/diff/${toId}`),
-  experimentProtocol:(id:string)=>api.get<ExperimentProtocolResponse>(`/experiments/${id}/protocol`),
-  experimentProtocolCompliance:(id:string)=>api.get<ProtocolComplianceResponse>(`/experiments/${id}/protocol/compliance`),
-  attachProtocol:(id:string,protocolVersionId:string)=>api.post<{experiment_id:string;protocol_version_id:string;status:string;protocol_version:ExperimentProtocolVersion}>(`/experiments/${id}/protocol/attach`,{protocol_version_id:protocolVersionId}),
-  protocols:()=>api.get<ExperimentProtocolVersion[]>('/protocols'),
-  protocol:(id:string)=>api.get<ExperimentProtocolVersion>(`/protocols/${id}`),
-  createProtocol:(body:unknown)=>api.post<ExperimentProtocolVersion>('/protocols',body),
-  protocolPreflight:(body:unknown)=>api.post<ProtocolPreflight>('/protocols/preflight',body),
-  publishProtocol:(id:string)=>api.post<ExperimentProtocolVersion>(`/protocols/${id}/publish`),
-  protocolDiff:(fromId:string,toId:string)=>api.get<ProtocolDiff>(`/protocols/${fromId}/diff/${toId}`),
-  protocolTemplates:()=>api.get<ProtocolTemplate[]>('/protocol-templates'),
-  protocolTemplate:(id:string)=>api.get<ProtocolTemplate>(`/protocol-templates/${id}`),
-  instantiateProtocolTemplate:(id:string,body:unknown)=>api.post<ExperimentProtocolVersion&{created:boolean}>(`/protocol-templates/${id}/instantiate`,body),
   deleteExperiment:(id:string)=>api.remove<{id:string;status:'archived';deleted_at:string;already_deleted:boolean;preserved_records:Record<string,number>}>(`/experiments/${id}`),
   comparison:(id:string)=>api.get<Comparison>(`/experiments/${id}/comparison`),
   controlledComparisonPreflight:(id:string)=>api.post<ControlledComparisonProtocol&{preflight:true}>(`/experiments/${id}/controlled-comparison/preflight`,{}),

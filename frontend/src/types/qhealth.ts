@@ -1,3 +1,69 @@
+
+export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc' | 'qnn' | 'hybrid_pennylane_torch';
+export type MetricName = 'accuracy' | 'precision' | 'recall' | 'sensitivity' | 'specificity' | 'f1' | 'roc_auc';
+
+export interface PipelineConfig {
+  imputer:'median'|'mean'|'most_frequent'; scaler:'standard'|'minmax'|'robust'|'none';
+  outlier_strategy:'none'|'clip_quantiles'; lower_quantile:number; upper_quantile:number;
+  log_features:string[]; ratios:{name:string;numerator:string;denominator:string}[];
+  selection:'none'|'anova'|'mutual_info'|'variance'; k_features:number; variance_threshold:number;
+  pca_components:number|null; pca_whiten:boolean; angle_scaling:boolean;
+}
+export interface QuantumConfig {
+  provider_id?:'qiskit_local'; execution_mode?:'local_simulator';
+  backend:'statevector'|'aer'; qubits:number; feature_map_reps:number; ansatz_reps:number;
+  entanglement:'linear'|'full'; optimizer:'COBYLA'|'SPSA'; maxiter:number; shots:number; noise_probability:number;
+export interface HybridModelConfig {model_type:'hybrid_pennylane_torch';provider_id?:'pennylane_local';execution_mode?:'local_simulator';qubits:number;feature_map:'angle';quantum_layers:number;classical_hidden_dimensions:number[];classical_activation:'relu'|'tanh';optimizer:'adam'|'sgd';learning_rate:number;epochs:number;batch_size:number;deterministic_seed:number;sample_cap:number;backend:'default.qubit'}
+export interface QuantumBackendDescriptor {backend_id:string;display_name:string;provider_id:string;backend_type:string;available:boolean;capabilities:Record<string,string|number|null>}
+export interface QuantumProviderDescriptor {provider_id:string;display_name:string;provider_type:'LOCAL_SIMULATOR'|'REMOTE_SIMULATOR'|'HARDWARE'|'CUSTOM';enabled:boolean;availability:string;backends:QuantumBackendDescriptor[]}
+export interface TrainingConfig {
+  dataset_version_id?:string|null;pipeline_version_id?:string|null;
+  dataset_id:string; features:string[]|null; models:ModelKind[]; pipeline:PipelineConfig; quantum:QuantumConfig; hybrid:HybridModelConfig;
+  parameters:{logistic_c:number;svm_c:number;svm_kernel:'rbf'|'linear';forest_trees:number;forest_max_depth:number|null;class_weight:'balanced'|null};
+  seed:number; test_size:number; cv_folds:number; max_samples:number|null; duplicate_policy:'reject'|'drop_exact';
+  probability_threshold:number; threshold_strategy:'fixed'|'target_sensitivity'; target_sensitivity:number;
+  calibration:'none'|'sigmoid'|'isotonic'; calibration_folds:number;
+export interface Provenance {name:string;domain:string;source:string;source_url:string|null;version:string;target:string;positive_label:string;negative_label:string;features:string[];numeric_features:string[];categorical_features:string[];row_count:number;feature_count:number;class_distribution:Record<string,number>;target_classes:string[];is_demo:boolean;dataset_hash:string;license:string|null;origin?:'built_in'|'uploaded';dataset_status?:string;target_type?:string;recommended_duplicate_policy?:'reject'|'drop_exact';[key:string]:unknown}
+export interface Quality {scope:string;row_count:number;feature_count:number;class_distribution:Record<string,number>;minority_fraction:number;class_imbalance:boolean;missing_values:Record<string,number>;infinite_values:Record<string,number>;duplicate_rows:number;duplicate_feature_rows:number;constant_features:string[];low_variance_features:string[];suspiciously_predictive_features:string[];identifier_features:string[];highly_correlated_pairs:{feature_a:string;feature_b:string;absolute_correlation:number}[];warnings:string[];blockers:string[];distributions:Record<string,unknown>[];invalid_numeric_values:string}
+export interface Dataset {id:string;name:string;sha256:string;provenance:Provenance;quality:Quality;created_at:string}
+export interface TargetCandidate {column:string;score:number;confidence:'low'|'medium'|'high';target_type:string;class_labels:string[];class_distribution:Record<string,number>;unique_values:number;missing_fraction:number;eligible_for_current_pipeline:boolean;reasons:string[];penalties:string[];position:number}
+export interface DatasetInspection {filename:string;sha256:string;row_count:number;column_count:number;columns:string[];schema:{name:string;type:string;missing_count:number;unique_count:number}[];detected_target:string|null;target_type:string|null;confidence_score:number;confidence:'low'|'medium'|'high';selection_method:string;class_labels:string[];class_distribution:Record<string,number>;positive_label:string|null;positive_label_confidence:number;positive_label_reason:string;requires_manual_target:boolean;requires_positive_label:boolean;heuristic_notice:string;candidates:TargetCandidate[]}
+export interface DemoReadiness {status:'ready'|'requires_processing';instant_demo_available:boolean;artifact_version:string|null;experiment_id:string|null;model_ids:string[];verified_dataset_hash:string|null;verified_artifact_manifest_hash:string|null;unavailable_reason?:string|null}
+export interface DatasetLibraryItem {slug:string;name:string;domain:string;description:string;source:string;source_url:string;version:string;license:string;license_url:string;attribution:string;target:string;target_type:'binary_classification';positive_label:string;negative_label:string;row_count:number;feature_count:number;class_labels:string[];sha256:string;normalization:string[];recommended_duplicate_policy:'reject'|'drop_exact';origin:'built_in';dataset_status:'available';demo_readiness:DemoReadiness}
+export interface Job {id:string;experiment_id:string;run_id?:string|null;job_type?:string;status:string;priority?:number;progress:number;total_units?:number|null;completed_units?:number;failed_units?:number;skipped_units?:number;active_unit?:string|null;current_phase?:string|null;state:string;errors:Record<string,unknown>[];attempt_count?:number;resume_count?:number;current_checkpoint_id?:string|null;failure_category?:string|null;error_code?:string|null;error_message?:string|null;requested_at?:string|null;started_at?:string|null;completed_at?:string|null;cancelled_at?:string|null;created_at:string;updated_at:string;experiment_name?:string|null;models?:ModelRecord[]}
+export interface Experiment {id:string;name?:string|null;dataset_id:string;parent_id:string|null;pipeline_version_id?:string|null;status:string;config:TrainingConfig;summary:Record<string,unknown>;created_at:string}
+export interface Metrics {accuracy:number|null;precision:number|null;recall:number|null;sensitivity:number|null;specificity:number|null;f1:number|null;roc_auc:number|null;true_positive:number;true_negative:number;false_positive:number;false_negative:number;confusion_matrix:number[][];sample_count:number;roc_curve:{fpr:number[];tpr:number[];thresholds:(number|null)[]}|null;undefined_metrics:string[]}
+export interface ThresholdPoint {threshold:number;sensitivity:number|null;specificity:number|null;precision:number|null;recall:number|null;f1:number|null;accuracy:number|null;roc_auc:number|null}
+export interface OperatingPoint {selection_strategy:'fixed'|'target_sensitivity';target_sensitivity:number|null;target_specificity:number|null;selected_threshold:number|null;threshold_units:string;threshold_feasible:boolean;threshold_source:string;validation_metrics:ThresholdPoint|null;holdout_metrics:Partial<Record<MetricName,number|null>>|null;number_of_oof_samples:number|null;cv_fold_count:number|null;curve:ThresholdPoint[];interpretation:string;infeasible_reason?:string|null}
+export interface ModelMetrics {training:Metrics;test:Metrics;validation:{folds:Metrics[];summary:Record<MetricName,{mean:number|null;std:number|null;valid_folds:number}>;std_definition:string};timing:{final_training_seconds:number;cv_total_seconds:number;cv_fold_seconds:number[];test_inference_seconds:number;test_inference_seconds_per_sample:number};calibration:Record<string,unknown>;operating_point?:OperatingPoint}
+export interface HybridMetadata {framework?:string;classical_framework?:string;backend?:string;execution_kind?:string;real_hardware?:boolean;qubits?:number;quantum_layers?:number;classical_parameter_count?:number;quantum_parameter_count?:number;configuration?:{hidden_dimensions?:number[]};[key:string]:unknown}
+export interface ModelDetails extends Record<string,unknown> {quantum?:HybridMetadata;supports_probability?:boolean;probability_status?:string;operating_point?:OperatingPoint;experiment_kind?:string}
+export interface ModelRecord {id:string;experiment_id:string;dataset_id:string;model_type:ModelKind;status:string;progress?:number|null;details:ModelDetails;metrics:Partial<ModelMetrics>;created_at:string}
+export type ModelCardEvidenceStatus='available'|'not_available'|'not_applicable'|'limited'|'not_recorded'|'not_yet_evaluated';
+export interface ModelCard {
+  schema_version:'model_card_v1';card_id:string;generated_at:string;
+  card_status:'COMPLETE'|'COMPLETE_WITH_LIMITATIONS'|'INCOMPLETE_EVIDENCE'|'UNAVAILABLE';
+  intended_use:Record<string,unknown>;model_identity:Record<string,unknown>;task:Record<string,unknown>;
+  data:Record<string,unknown>;training:Record<string,unknown>;model:Record<string,unknown>;
+  evaluation:{status:ModelCardEvidenceStatus;evidence:Record<string,unknown>[]};
+  multi_seed_evidence:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  calibration:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  threshold:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  robustness:{status:ModelCardEvidenceStatus;records:Record<string,unknown>[]};
+  external_validation:{status:ModelCardEvidenceStatus;validations:Record<string,unknown>[]};
+  distribution_shift:{status:ModelCardEvidenceStatus;analyses:Record<string,unknown>[]};
+  group_validation:Record<string,unknown>&{status:ModelCardEvidenceStatus};
+  quantum:Record<string,unknown>&{status:ModelCardEvidenceStatus};
+  provenance:Record<string,unknown>;reproducibility:Record<string,unknown>;
+  limitations:{category:string;description:string;source:string}[];
+  evidence_gaps:{category:string;status:string;description:string}[];
+  artifact:{artifact_id:string;integrity_hash:string;immutable:boolean};
+export interface ExperimentDetail {experiment:Experiment;models:ModelRecord[];jobs:Job[]}
+export type EvidenceAvailability='available'|'not_available'|'not_applicable'|'limited'|'incomplete'|'blocked';
+export interface EvidenceInventoryEntry {
+  status:EvidenceAvailability;record_count:number;referenced_ids:string[];artifact_ids:string[];
+  latest_compatible_evidence:string|null;configuration_fingerprints:string[];
+  evidence_timestamp:string|null;limitations:string[];availability_reason:string;
 export type ModelKind = 'logistic_regression' | 'svm' | 'random_forest' | 'vqc' | 'qsvc' | 'qnn' | 'hybrid_pennylane_torch';
 export type MetricName = 'accuracy' | 'precision' | 'recall' | 'sensitivity' | 'specificity' | 'f1' | 'roc_auc';
 
@@ -216,69 +282,69 @@ export interface ProtocolDiffChange {
   change_type: 'Added' | 'Removed' | 'Changed';
   before: unknown;
   after: unknown;
+export type LineageNodeType='dataset'|'dataset_version'|'pipeline_definition'|'pipeline_version'|'pipeline_stage'|'experiment'|'run'|'job'|'job_checkpoint'|'job_execution_unit'|'model_record'|'artifact'|'multi_seed_study'|'study_run'|'external_validation'|'distribution_shift_analysis'|'calibration_study'|'threshold_analysis_study'|'robustness_record'|'ablation_study'|'quantum_diagnostic_report'|'controlled_comparison_protocol'|'explanation_record'|'research_evidence_package';
+export interface LineageNode {
+  id:string;object_type:LineageNodeType;object_id:string;label:string;
+  status:string|null;version:string|null;fingerprint:string|null;created_at:string|null;
+  exists:boolean;depth:number;metadata:Record<string,unknown>;
 }
-
-export interface ProtocolDiff {
-  from_version: string;
-  to_version: string;
-  from_fingerprint: string;
-  to_fingerprint: string;
-  changes: ProtocolDiffChange[];
-  change_count: number;
-  identical: boolean;
-  category_summaries: { category: string; status: 'Changed' | 'Unchanged' }[];
-  has_protocol_changes: boolean;
-  interpretation: string;
+export interface LineageEdge {
+  id:string;source_node_id:string;target_node_id:string;relationship_type:string;
+  schema_version:string;relationship_fingerprint:string;recorded_at:string|null;
+  metadata:Record<string,unknown>;capture_state:'recorded'|'legacy_reconstructed';
 }
-
-export interface ProtocolPreflight {
-  valid: boolean;
-  publishable: boolean;
-  fingerprint_deterministic: boolean;
-  fingerprint: string | null;
-  canonical_definition?: Record<string, unknown>;
-  blockers: { code: string; message?: string; reference_id?: string }[];
-  errors: { code: string; message?: string; reference_id?: string }[];
-  warnings: { code: string; message?: string }[];
+export interface LineageIntegrity {
+  missing_references:{node_id:string;object_type:string;object_id:string}[];
+  orphaned_edges:{edge_id:string;source_node_id:string;target_node_id:string}[];
+  invalid_edges:{edge_id:string;relationship_type:string;reason:string}[];
+  duplicate_relationships:{source_node_id:string;target_node_id:string;relationship_type:string;count:number}[];
+  fingerprint_mismatches:{node_id:string;object_type:string;object_id:string;recorded_fingerprint:string;current_fingerprint:string}[];
+  cycles:string[][];legacy_reconstructed_edges:string[];truncated:boolean;
 }
-
-export type ExperimentProtocolResponse =
-  | { experiment_id: string; status: 'AVAILABLE'; protocol_version: ExperimentProtocolVersion }
-  | { experiment_id: string; status: 'LEGACY_UNSPECIFIED'; protocol_version: null; reason: string };
-
-export type ComplianceStatus = 'MATCHED' | 'MISSING' | 'MISMATCHED' | 'NOT_APPLICABLE' | 'UNVERIFIABLE';
-
-export interface ProtocolComplianceRule {
-  rule: string;
-  category: string;
-  requirement: 'REQUIRED' | 'OPTIONAL' | 'DISABLED';
-  expected: unknown;
-  actual: unknown;
-  status: ComplianceStatus;
-  details: string;
+export interface LineageSummary {
+  node_count:number;edge_count:number;root_count:number;max_depth:number;
+  requested_depth:number|'all'|string;direction:'ancestors'|'descendants'|'both';
 }
-
-export interface ProtocolComplianceSummary {
-  matched: number;
-  missing: number;
-  mismatched: number;
-  not_applicable: number;
-  unverifiable: number;
-  total_checks: number;
+export interface LineageSnapshot {
+  experiment_id:string;lineage_schema_version:'deep_experiment_lineage_v1';
+  status:'COMPLETE'|'PARTIAL'|'LEGACY_UNRESOLVED'|'INTEGRITY_REVIEW';
+  lineage_fingerprint:string;roots:string[];nodes:LineageNode[];edges:LineageEdge[];
+  summary:LineageSummary;integrity:LineageIntegrity;limitations:string[];
 }
-
-export interface ProtocolComplianceResponse {
-  experiment_id: string;
-  status: 'AVAILABLE' | 'UNAVAILABLE';
-  protocol_version_id: string | null;
-  protocol_name: string | null;
-  protocol_version: string | null;
-  protocol_fingerprint: string | null;
-  compliance_summary: ProtocolComplianceSummary;
-  checks: ProtocolComplianceRule[];
-  reason?: string;
-  interpretation: string;
+export type PipelineLifecycleStatus='DRAFT'|'ACTIVE'|'DEPRECATED'|'ARCHIVED';
+export interface PipelineStage {
+  stage_id:string;stage_order:number;stage_type:string;stage_name:string;
+  configuration:Record<string,unknown>;component_version:string|null;fingerprint:string;
 }
+export interface PipelineVersion {
+  pipeline_version_id:string;pipeline_definition_id:string;pipeline_name:string;
+  version:string;version_number:number;schema_version:string;status:PipelineLifecycleStatus;
+  description:string|null;definition_fingerprint:string;parent_pipeline_version_id:string|null;
+  controlled_comparison_protocol_id:string|null;artifact_id:string|null;
+  source_context:string|null;canonical_definition:Record<string,unknown>;
+  stages:PipelineStage[];experiments:string[];usage_count:number;
+  published_at:string|null;created_at:string;scientific_boundary:string;created?:boolean;
+}
+export interface PipelineDiffChange {
+  stage:string;field:string|null;change_type:'Added'|'Removed'|'Changed';
+  before:unknown;after:unknown;
+}
+export interface PipelineDiff {
+  from_version:string;to_version:string;from_fingerprint:string;to_fingerprint:string;
+  changes:PipelineDiffChange[];
+  stage_summaries:{stage:string;status:'Added'|'Removed'|'Changed'|'Unchanged'}[];
+  has_computational_changes:boolean;interpretation:string;
+}
+export interface PipelinePreflight {
+  definition_valid:boolean;references_valid:boolean;fingerprint_deterministic:boolean;
+  all_required_components_present:boolean;publishable:boolean;fingerprint:string|null;
+  canonical_definition?:Record<string,unknown>;
+  blockers:{code:string;message?:string;reference_id?:string}[];
+  warnings:{code:string;message?:string}[];
+}
+export type ExperimentPipelineResponse =
+  | {experiment_id:string;status:'AVAILABLE';pipeline_version:PipelineVersion}
+  | {experiment_id:string;status:'LEGACY_UNRESOLVED';pipeline_version:null;reason:string};
 export interface Preview {train_count:number;test_count:number;input_features:string[];selected_features:string[];output_features:string[];selection_scores:{feature:string;score:number|null;selected:boolean}[];pca_explained_variance:number[];pca_loadings:number[][];split_hash:string;stages:string[];warnings:string[]}
 export interface Circuit {model_type:string;execution_kind:string;backend:string;qubits:number;logical_depth:number|null;parameter_count:number;gate_counts:Record<string,number>;text:string;gates:{name:string;qubits:number[];parameters:string[]}[];limitation:string}
 export interface ResourceAdvisorChange {field:string;from:number;to:number;reason:string}

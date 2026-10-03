@@ -178,6 +178,18 @@ def create_pipeline_version(session, request: PipelineCreateRequest) -> tuple[Pi
             stage_fingerprint=stage_hash,
         ))
     session.flush()
+    from ..audit.service import record_event
+    record_event(
+        session,
+        event_type="PIPELINE_VERSION_CREATED",
+        event_category="PIPELINE",
+        object_type="pipeline_version",
+        object_id=version.id,
+        source_component="pipeline_registry",
+        operation_key=f"pipeline-version-created:{version.id}",
+        after_fingerprint=version.definition_fingerprint,
+        metadata={"pipeline_name": family.name, "version": version.version_label, "schema_version": version.schema_version},
+    )
     return version, True
 
 
@@ -195,6 +207,18 @@ def publish_pipeline_version(session, version_id: str) -> PipelineVersion:
         version.status = "ACTIVE"
         version.published_at = utcnow()
         session.flush()
+        from ..audit.service import record_event
+        record_event(
+            session,
+            event_type="PIPELINE_VERSION_PUBLISHED",
+            event_category="PIPELINE",
+            object_type="pipeline_version",
+            object_id=version.id,
+            source_component="pipeline_registry",
+            operation_key=f"pipeline-version-published:{version.id}",
+            after_fingerprint=version.definition_fingerprint,
+            metadata={"version": version.version_label},
+        )
     finally:
         session.info.pop("pipeline_registry_publish", None)
     return version
