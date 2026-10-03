@@ -25,6 +25,9 @@ from ..storage.entities import (
     LineageNode,
     ModelRecord,
     MultiSeedStudy,
+    PipelineDefinition,
+    PipelineStage,
+    PipelineVersion,
     QuantumDiagnosticReport,
     ResearchEvidencePackage,
     RobustnessRecord,
@@ -70,12 +73,25 @@ MODEL_BY_TYPE = {
     "controlled_comparison_protocol": ControlledComparisonProtocol,
     "explanation_record": ExplanationRecord,
     "research_evidence_package": ResearchEvidencePackage,
+    "pipeline_definition": PipelineDefinition,
+    "pipeline_version": PipelineVersion,
+    "pipeline_stage": PipelineStage,
 }
 
 TYPE_BY_MODEL = {model: object_type for object_type, model in MODEL_BY_TYPE.items()}
 
 ALLOWED_RELATIONSHIPS = {
     "has_version": {("dataset", "dataset_version")},
+    "has_pipeline_version": {("pipeline_definition", "pipeline_version")},
+    "has_stage": {("pipeline_version", "pipeline_stage")},
+    "derived_from": {("pipeline_version", "pipeline_version")},
+    "defines_pipeline": {("dataset_version", "pipeline_version")},
+    "uses_pipeline": {
+        ("pipeline_version", "experiment"), ("pipeline_version", "run"),
+    },
+    "references_protocol": {
+        ("pipeline_version", "controlled_comparison_protocol"),
+    },
     "selected_by": {
         ("dataset", "experiment"), ("dataset_version", "experiment"),
         ("dataset_version", "run"), ("dataset_version", "model_record"),
@@ -116,6 +132,7 @@ ALLOWED_RELATIONSHIPS = {
     "packaged_as": {("experiment", "research_evidence_package")},
     "included_in": {
         ("artifact", "research_evidence_package"),
+        ("pipeline_version", "research_evidence_package"),
         *((object_type, "research_evidence_package") for object_type in EVIDENCE_TYPES if object_type != "research_evidence_package"),
     },
     "represented_by": {("research_evidence_package", "artifact")},
@@ -139,7 +156,7 @@ def _iso(value: datetime | None) -> str | None:
 
 def _stable_fingerprint(value: Any, object_type: str) -> str | None:
     for field in (
-        "package_fingerprint", "protocol_fingerprint", "configuration_fingerprint",
+        "package_fingerprint", "protocol_fingerprint", "definition_fingerprint", "configuration_fingerprint",
         "state_fingerprint", "result_fingerprint", "integrity_hash",
         "version_signature", "artifact_sha256", "sha256",
     ):
@@ -163,6 +180,7 @@ def _node_from_object(value: Any) -> dict:
         "name", "status", "model_type", "artifact_type", "version_label",
         "version_number", "checkpoint_type", "logical_unit", "job_type",
         "method", "perturbation_type", "schema_version", "source_context_type",
+        "version_label", "version_number", "stage_type", "stage_name",
     ):
         found = getattr(value, field, None)
         if found is not None:
@@ -256,14 +274,25 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
 
     if isinstance(value, DatasetVersion):
         add("dataset", value.dataset_id, "dataset_version", value.id, "has_version")
+    elif isinstance(value, PipelineDefinition):
+        pass
+    elif isinstance(value, PipelineVersion):
+        add("pipeline_definition", value.pipeline_definition_id, "pipeline_version", value.id, "has_pipeline_version")
+        add("pipeline_version", value.parent_pipeline_version_id, "pipeline_version", value.id, "derived_from")
+        add("dataset_version", (value.canonical_definition or {}).get("dataset_version_id"), "pipeline_version", value.id, "defines_pipeline")
+        add("pipeline_version", value.id, "controlled_comparison_protocol", value.controlled_comparison_protocol_id, "references_protocol")
+    elif isinstance(value, PipelineStage):
+        add("pipeline_version", value.pipeline_version_id, "pipeline_stage", value.id, "has_stage")
     elif isinstance(value, Experiment):
         version_id = (value.config or {}).get("dataset_version_id")
         add("dataset", value.dataset_id, "experiment", value.id, "selected_by")
         add("dataset_version", version_id, "experiment", value.id, "selected_by")
+        add("pipeline_version", value.pipeline_version_id, "experiment", value.id, "uses_pipeline")
         add("experiment", value.parent_id, "experiment", value.id, "rerun_of", {"target_is_rerun": True})
     elif isinstance(value, Run):
         add("experiment", value.experiment_id, "run", value.id, "produced_run")
         add("dataset_version", value.dataset_version_id, "run", value.id, "selected_by")
+        add("pipeline_version", value.pipeline_version_id, "run", value.id, "uses_pipeline")
     elif isinstance(value, Job):
         add("experiment", value.experiment_id, "job", value.id, "scheduled_as")
         add("run", value.run_id, "job", value.id, "scheduled_as")
@@ -337,6 +366,8 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
     elif isinstance(value, ResearchEvidencePackage):
         add("experiment", value.experiment_id, "research_evidence_package", value.id, "packaged_as")
         add("research_evidence_package", value.id, "artifact", value.artifact_id, "represented_by")
+        pipeline_version_id = (value.manifest or {}).get("pipeline", {}).get("pipeline_version_id")
+        add("pipeline_version", pipeline_version_id, "research_evidence_package", value.id, "included_in")
         for artifact_id_value in (value.provenance or {}).get("artifact_ids", []):
             if artifact_id_value != value.artifact_id:
                 add("artifact", artifact_id_value, "research_evidence_package", value.id, "included_in")
@@ -466,9 +497,16 @@ def _traverse(center: str, edges: list[dict], direction: str, depth: int) -> tup
                     local_seen.add(adjacent)
                     queue.append((adjacent, current_depth + 1))
 
-    if direction in {"ancestors", "both"}:
+    if direction == "both":
+        connected: dict[str, list[str]] = defaultdict(list)
+        for node, adjacent in outgoing.items():
+            connected[node].extend(adjacent)
+        for node, adjacent in incoming.items():
+            connected[node].extend(adjacent)
+        walk(connected)
+    elif direction == "ancestors":
         walk(incoming)
-    if direction in {"descendants", "both"}:
+    elif direction == "descendants":
         walk(outgoing)
     return selected, distances
 

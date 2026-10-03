@@ -38,3 +38,5 @@ def init_db():
     apply_migrations()
     from .lineage.capture import install_lineage_capture
     install_lineage_capture()
+    from .pipelines.immutability import install_pipeline_immutability
+    install_pipeline_immutability()

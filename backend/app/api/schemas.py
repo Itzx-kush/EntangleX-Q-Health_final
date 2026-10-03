@@ -78,6 +78,7 @@ class ModelParameters(Schema):
 class TrainingConfig(Schema):
     dataset_id: UUID
     dataset_version_id: UUID | None = None
+    pipeline_version_id: UUID | None = None
     condition_task_id: UUID | None = None
     features: list[str] | None = Field(default=None, max_length=200)
     models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(
@@ -285,6 +286,7 @@ class ExperimentOut(Schema):
     name: str | None = None
     dataset_id: str
     parent_id: str | None
+    pipeline_version_id: str | None = None
     status: str
     config: dict[str, Any]
     summary: dict[str, Any]
@@ -517,6 +519,7 @@ class RunOut(Schema):
     experiment_id: str
     dataset_id: str
     dataset_version_id: str | None = None
+    pipeline_version_id: str | None = None
     status: Literal["created", "queued", "running", "completed", "failed", "cancelled"]
     config: dict[str, Any]
     execution_metadata: dict[str, Any]

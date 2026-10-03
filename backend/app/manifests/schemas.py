@@ -18,6 +18,8 @@ class ManifestIdentity(Schema):
     configuration_fingerprint: str
     parent_run_id: str | None
     parent_experiment_id: str | None
+    pipeline_version_id: str | None = None
+    pipeline_fingerprint: str | None = None
 
 
 class DatasetProvenance(Schema):

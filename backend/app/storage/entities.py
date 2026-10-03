@@ -55,6 +55,7 @@ class Experiment(Base):
     name: Mapped[str | None] = mapped_column(String(240), nullable=True)
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     parent_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True)
+    pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="queued")
     config: Mapped[dict] = mapped_column(JSON)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -191,6 +192,7 @@ class Run(Base):
     experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="created", index=True)
     operation_key: Mapped[str] = mapped_column(String(128), unique=True)
     config: Mapped[dict] = mapped_column(JSON)
@@ -562,4 +564,62 @@ class LineageEdge(Base):
     relationship_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     immutable: Mapped[bool] = mapped_column(Boolean, default=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class PipelineDefinition(Base):
+    """Named pipeline family containing immutable computational versions."""
+
+    __tablename__ = "pipeline_definitions"
+    __table_args__ = (UniqueConstraint("name", name="uq_pipeline_definition_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160), index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    source_context: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class PipelineVersion(Base):
+    """One immutable, fingerprinted computational pipeline definition."""
+
+    __tablename__ = "pipeline_versions"
+    __table_args__ = (
+        UniqueConstraint("pipeline_definition_id", "version_number", name="uq_pipeline_version_number"),
+        UniqueConstraint("definition_fingerprint", name="uq_pipeline_version_fingerprint"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    pipeline_definition_id: Mapped[str] = mapped_column(ForeignKey("pipeline_definitions.id"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    version_label: Mapped[str] = mapped_column(String(24))
+    schema_version: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(24), default="DRAFT", index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    definition_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    canonical_definition: Mapped[dict] = mapped_column(JSON)
+    parent_pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
+    controlled_comparison_protocol_id: Mapped[str | None] = mapped_column(ForeignKey("controlled_comparison_protocols.id"), nullable=True, index=True)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    source_context: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class PipelineStage(Base):
+    """Ordered component snapshot belonging to exactly one Pipeline Version."""
+
+    __tablename__ = "pipeline_stages"
+    __table_args__ = (
+        UniqueConstraint("pipeline_version_id", "stage_order", name="uq_pipeline_stage_order"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    pipeline_version_id: Mapped[str] = mapped_column(ForeignKey("pipeline_versions.id"), index=True)
+    stage_order: Mapped[int] = mapped_column(Integer)
+    stage_type: Mapped[str] = mapped_column(String(48), index=True)
+    stage_name: Mapped[str] = mapped_column(String(120))
+    configuration: Mapped[dict] = mapped_column(JSON)
+    component_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    stage_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
