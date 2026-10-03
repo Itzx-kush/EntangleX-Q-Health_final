@@ -1,7 +1,7 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,RotateCcw,Trash2} from 'lucide-react';
+import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,History,RotateCcw,Trash2} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
 import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
 import {StageNav} from './ResearchPagesCore';
@@ -430,6 +430,110 @@ export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string
   </Card>
 }
 
+const auditCategoryTone=(category:string):'blue'|'green'|'amber'|'red'|'purple'=>{
+  switch(category.toUpperCase()){
+    case 'EXPERIMENT':
+    case 'MODEL':
+      return 'purple';
+    case 'DATASET':
+    case 'EVIDENCE':
+      return 'green';
+    case 'RUN':
+    case 'JOB':
+    case 'PIPELINE':
+      return 'blue';
+    case 'ARTIFACT':
+    case 'CONFIGURATION':
+      return 'amber';
+    default:
+      return 'blue';
+  }
+};
+
+export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string}){
+  const [selectedCategory,setSelectedCategory]=useState<string>('all');
+  const [expandedEventId,setExpandedEventId]=useState<string|null>(null);
+
+  const timeline=useQuery({
+    queryKey:['experiment-audit',experimentId,selectedCategory],
+    queryFn:()=>qh.experimentAudit(experimentId,selectedCategory),
+    retry:false,
+  });
+  const integrity=useQuery({
+    queryKey:['audit-integrity',experimentId],
+    queryFn:()=>qh.auditIntegrity('experiment',experimentId),
+    retry:false,
+  });
+
+  const value=timeline.data;
+  const categories=['all','EXPERIMENT','RUN','JOB','PIPELINE','MODEL','EVIDENCE','ARTIFACT','CONFIGURATION'];
+
+  return <Card className="mt-5" title="Scientific Audit Timeline" description="Immutable, chronological record of research-platform events recording operations and resulting persisted state.">
+    <ErrorBanner error={(timeline.error as Error)?.message}/>
+    <ErrorBanner error={(integrity.error as Error)?.message}/>
+    <div className="controls mb-4">
+      <label className="field"><span>Filter Category</span><Select value={selectedCategory} onChange={event=>setSelectedCategory(event.target.value)}>{categories.map(cat=><option key={cat} value={cat}>{cat==='all'?'All categories':cat.replaceAll('_',' ')}</option>)}</Select></label>
+    </div>
+
+    {timeline.isLoading?<Loading/>:!value?<EmptyState title="Audit timeline not available for this experiment">No audit snapshot could be loaded.</EmptyState>:<>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={(integrity.data?.valid ?? (value.integrity_status==='VERIFIED'))?'green':'amber'}>{(integrity.data?.valid ?? (value.integrity_status==='VERIFIED'))?'INTEGRITY VERIFIED':'INTEGRITY WARNING'}</Badge>
+          <Badge tone="blue">{value.total_events} RECORDED EVENT{value.total_events===1?'':'S'}</Badge>
+        </div>
+        <Button variant="outline" onClick={()=>qh.experimentAuditExport(experimentId)}><Download size={13}/>Export Audit JSON</Button>
+      </div>
+
+      {integrity.data?.issues.length? <Notice tone="amber">Audit integrity warning: {integrity.data.issues.map(i=>i.message).join('; ')}</Notice>:null}
+      {value.legacy_disclaimer&&<Notice tone="blue">{value.legacy_disclaimer}</Notice>}
+
+      {value.events.length===0?<EmptyState title="No audit events found">No recorded platform events match the active category filter.</EmptyState>:<div className="mt-4 space-y-3">
+        {value.events.map(event=>{
+          const isExpanded=expandedEventId===event.id;
+          return <div key={event.id} className="rounded-xl border p-3.5 transition hover:border-primary/30">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={auditCategoryTone(event.event_category)}>{event.event_category}</Badge>
+                <strong className="text-xs font-semibold">{event.event_type.replaceAll('_',' ')}</strong>
+                <span className="mono text-[10px] muted">{event.object_type}: {shortId(event.object_id)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs muted">{dateTime(event.occurred_at)}</span>
+                <Button variant="ghost" className="px-2 py-1 text-xs" onClick={()=>setExpandedEventId(isExpanded?null:event.id)}>{isExpanded?'Hide':'Details'}</Button>
+              </div>
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] muted">
+              <span>Actor: {event.actor_type}</span>
+              <span>·</span>
+              <span>Source: {event.source_component}</span>
+              {event.operation_key&&<><span>·</span><span className="mono truncate max-w-xs" title={event.operation_key}>Op: {event.operation_key}</span></>}
+            </div>
+
+            {isExpanded&&<div className="mt-3 border-t pt-3 space-y-2 text-xs">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div><span className="metric-label">EVENT FINGERPRINT (SHA-256)</span><span className="mono block truncate text-[10px] text-primary" title={event.event_fingerprint}>{event.event_fingerprint}</span></div>
+                <div><span className="metric-label">PREVIOUS EVENT POINTER</span><span className="mono block truncate text-[10px] muted" title={event.previous_event_fingerprint||'Chain root'}>{event.previous_event_fingerprint||'(chain root)'}</span></div>
+              </div>
+              {(event.before_fingerprint||event.after_fingerprint)&&<div className="grid gap-2 sm:grid-cols-2">
+                <div><span className="metric-label">STATE BEFORE</span><span className="mono block truncate text-[10px] muted" title={event.before_fingerprint||'None'}>{event.before_fingerprint||'(none)'}</span></div>
+                <div><span className="metric-label">STATE AFTER</span><span className="mono block truncate text-[10px] muted" title={event.after_fingerprint||'None'}>{event.after_fingerprint||'(none)'}</span></div>
+              </div>}
+              {event.parent_object_id&&<div className="text-[11px] muted">Parent: {event.parent_object_type} · {event.parent_object_id}</div>}
+              <JsonDisclosure label="Inspect structured event metadata" value={event.metadata}/>
+            </div>}
+          </div>;
+        })}
+      </div>}
+
+      <div className="mt-4 flex items-center gap-2 text-xs muted">
+        <History size={14}/>The Scientific Audit Timeline records platform events and persisted state transitions. It does not establish scientific validity, causal relationships, model quality, or performance.
+      </div>
+    </>}
+  </Card>;
+}
+
+
 export function ExperimentDetail(){
   const {id=''}=useParams();
   const result=useQuery({queryKey:['experiment',id],queryFn:()=>qh.experiment(id),enabled:Boolean(id),refetchInterval:query=>['queued','running','cancel_requested'].includes(query.state.data?.experiment.status||'')?5000:false});
@@ -458,6 +562,7 @@ export function ExperimentDetail(){
     <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>
+    <ScientificAuditTimelinePanel experimentId={id}/>
     <div className="mt-5"><Card title="Measured model records" description="Only measurements returned by the backend are displayed.">
       {detail.models.length?detail.models.map(model=><GlareHover key={model.id} className="border-b py-5 last:border-b-0"><article className="py-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h3 className="font-semibold">{modelLabels[model.model_type]}</h3><StatusBadge value={model.status}/></div><small className="muted">Model {shortId(model.id)} · {dateTime(model.created_at)}</small></div><button className="btn btn-ghost" onClick={()=>setExpanded(expanded===model.id?null:model.id)}>{expanded===model.id?'Collapse':'Inspect'}</button></div>{model.model_type==='hybrid_pennylane_torch'&&model.details.quantum&&<div className="mt-4 rounded-xl border p-4"><div className="metric-label">HYBRID EXECUTION EVIDENCE</div><div className="mt-3 grid gap-3 md:grid-cols-3"><div><span className="metric-label">FRAMEWORKS</span><strong className="block">{model.details.quantum.framework} + {model.details.quantum.classical_framework}</strong></div><div><span className="metric-label">EXECUTION</span><strong className="block">{model.details.quantum.execution_kind}</strong></div><div><span className="metric-label">BACKEND</span><strong className="block">{model.details.quantum.backend}</strong></div><div><span className="metric-label">QUBITS / LAYERS</span><strong className="block">{model.details.quantum.qubits} / {model.details.quantum.quantum_layers}</strong></div><div><span className="metric-label">PROBABILITY</span><strong className="block">Measured positive-class output</strong></div><div><span className="metric-label">HARDWARE</span><strong className="block">Not implemented</strong></div></div><Notice tone="amber">Quantum advantage: not established. Operating threshold is selected from out-of-fold validation evidence.</Notice></div>}{model.metrics.test&&<div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]"><div className="rounded-xl border p-4"><div className="metric-label">HELD-OUT METRICS</div><div className="mt-3 space-y-1">{(['sensitivity','specificity','roc_auc','f1','accuracy','precision','recall'] as const).map(k=><div className="flex justify-between border-b py-1.5 last:border-0" key={k}><span className="text-xs muted">{k}</span><strong className="mono text-xs">{metric(model.metrics.test?.[k],k!=='roc_auc')}</strong></div>)}</div></div><div className="rounded-xl border p-4"><div className="metric-label">RUNTIME</div><div className="mt-3 space-y-1 text-xs">{[['Final training',seconds(model.metrics.timing?.final_training_seconds)],['CV total',seconds(model.metrics.timing?.cv_total_seconds)],['Test inference',seconds(model.metrics.timing?.test_inference_seconds_per_sample)+'/sample']].map(x=><div className="flex justify-between border-b py-1.5 last:border-0" key={String(x[0])}><span className="muted">{x[0]}</span><strong>{x[1]}</strong></div>)}</div></div></div>}{expanded===model.id&&<><ModelCardPanel model={model}/><CalibrationLaboratory model={model} />
                             <ThresholdAnalysis model={model} /><QuantumDiagnostics model={model} /><JsonDisclosure label="Model identity, provenance, metrics and limitations" value={{details:model.details,metrics:model.metrics}}/></>}</article></GlareHover>):<EmptyState title="No model records">Model records appear when the backend training job completes or records a failure.</EmptyState>}

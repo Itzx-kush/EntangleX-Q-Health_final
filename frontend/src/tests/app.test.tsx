@@ -9,7 +9,6 @@ import {DraftProvider} from '../hooks/useDraft';
 import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,LegacyDemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
 import {Comparison,PredictionPage,Quantum,Robustness,Training} from '../pages/ResearchPagesModels';
-import {AiProvider} from '../contexts/AiContext';
 import {qh} from '../lib/api';
 
 vi.mock('../lib/api',()=>({
@@ -48,7 +47,7 @@ vi.mock('../lib/api',()=>({
 
 function renderWithProviders(ui:React.ReactNode,initialEntries=['/']){
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
-  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries}><DraftProvider><AiProvider>{ui}</AiProvider></DraftProvider></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries}><DraftProvider>{ui}</DraftProvider></MemoryRouter></QueryClientProvider>);
 }
 
 beforeEach(()=>{
