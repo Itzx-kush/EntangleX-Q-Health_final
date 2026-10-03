@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -83,6 +83,8 @@ export const qh={
   experiment:(id:string)=>api.get<ExperimentDetail>(`/experiments/${id}`),
   deleteExperiment:(id:string)=>api.remove<{id:string;status:'archived';deleted_at:string;already_deleted:boolean;preserved_records:Record<string,number>}>(`/experiments/${id}`),
   comparison:(id:string)=>api.get<Comparison>(`/experiments/${id}/comparison`),
+  controlledComparisonPreflight:(id:string)=>api.post<ControlledComparisonProtocol&{preflight:true}>(`/experiments/${id}/controlled-comparison/preflight`,{}),
+  createControlledComparison:(id:string)=>api.post<ControlledComparisonProtocol>(`/experiments/${id}/controlled-comparison`,{}),
   verifiedEvidence:(id:string)=>api.get<VerifiedEvidencePackage>(`/experiments/${id}/verified-evidence`),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),

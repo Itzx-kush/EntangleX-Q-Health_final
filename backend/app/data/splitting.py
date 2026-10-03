@@ -186,6 +186,8 @@ def prepare_data(config: TrainingConfig) -> PreparedData:
             
         group_metadata["train_group_count"] = len(train_g)
         group_metadata["test_group_count"] = len(test_g)
+        group_metadata["train_groups_fingerprint"] = fingerprint(sorted(str(value) for value in train_g))
+        group_metadata["test_groups_fingerprint"] = fingerprint(sorted(str(value) for value in test_g))
         
         split_hash_components = {
             "dataset_hash": dataset_version.content_sha256 if dataset_version else dataset.sha256, 
@@ -198,6 +200,7 @@ def prepare_data(config: TrainingConfig) -> PreparedData:
             "test_groups": sorted(list(test_g))
         }
         split_hash = fingerprint(split_hash_components)
+        group_metadata["group_split_fingerprint"] = split_hash
         
     else:
         try:

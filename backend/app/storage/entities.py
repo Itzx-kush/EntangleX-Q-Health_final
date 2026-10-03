@@ -473,3 +473,26 @@ class QuantumDiagnosticReport(Base):
     provenance: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+
+class ControlledComparisonProtocol(Base):
+    """Immutable evidence that classical/quantum pairs were control-checked."""
+
+    __tablename__ = "controlled_comparison_protocols"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    schema_version: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(40), index=True)
+    operation_key: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    configuration_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    protocol_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    classical_model_ids: Mapped[list] = mapped_column(JSON, default=list)
+    quantum_model_ids: Mapped[list] = mapped_column(JSON, default=list)
+    comparison_pairs: Mapped[list] = mapped_column(JSON, default=list)
+    control_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+

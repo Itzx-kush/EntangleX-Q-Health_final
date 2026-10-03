@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from ..api.schemas import ModelOut
 from ..database import session_scope
-from ..storage.entities import Experiment, ModelRecord, RobustnessRecord
+from ..storage.entities import ControlledComparisonProtocol, Experiment, ModelRecord, RobustnessRecord
 from ..storage.repository import require
 from ..utils.serialization import clean_json, fingerprint
 
@@ -186,8 +186,8 @@ def _fairness(experiment: Experiment, hybrid: ModelRecord, classical: ModelRecor
         "same_sample_budget": checks["sample_budget_match"],
         "sample_pool_hash": h.get("sample_pool_hash"),
         "split_hash": h.get("split_hash"),
-        "train_indices": h.get("train_indices"),
-        "test_indices": h.get("test_indices"),
+        "train_partition_fingerprint": fingerprint(h.get("train_indices")) if h.get("train_indices") is not None else None,
+        "test_population_fingerprint": fingerprint(h.get("test_indices")) if h.get("test_indices") is not None else None,
         "cv_fold_count": h.get("cv_folds"),
         "seed": h.get("seed"),
         "test_size": h.get("test_size"),
@@ -223,7 +223,11 @@ def _robustness_evidence(quantum: ModelRecord, classical: ModelRecord, records=(
         affected = (result.get("affected_sample_rows_hash") or result.get("sample_indices_hash")
                     or reproducibility.get("test_indices_fingerprint") or result.get("sample_count"))
         perturbation_fingerprint = reproducibility.get("perturbation_fingerprint")
-        key = (record.model_id, record.perturbation_type, record.perturbation_level, record.random_seed, affected, perturbation_fingerprint)
+        key = (
+            record.model_id, record.perturbation_type, record.perturbation_level,
+            record.random_seed, affected, perturbation_fingerprint,
+            result.get("threshold_source"),
+        )
         latest.setdefault(key, result)
     scenario_keys = {key[1:] for key in latest if key[0] in {quantum.id, classical.id}}
     scenarios = []
@@ -233,6 +237,7 @@ def _robustness_evidence(quantum: ModelRecord, classical: ModelRecord, records=(
         scenarios.append({
             "perturbation_type": scenario_key[0], "perturbation_level": scenario_key[1], "random_seed": scenario_key[2],
             "affected_samples_hash": scenario_key[3], "perturbation_fingerprint": scenario_key[4],
+            "threshold_source": scenario_key[5],
             "locked_thresholds": {"classical": (c_result or {}).get("threshold_used"), "hybrid": (q_result or {}).get("threshold_used")},
             "classical": c_result, "quantum": q_result,
             "delta_difference_quantum_minus_classical": delta_difference,
@@ -275,15 +280,39 @@ def comparison(identity: str) -> dict:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity).order_by(ModelRecord.created_at)))
         robustness_records = list(session.scalars(select(RobustnessRecord).where(RobustnessRecord.experiment_id == identity).order_by(RobustnessRecord.created_at.desc())))
+        protocol = session.scalar(
+            select(ControlledComparisonProtocol)
+            .where(ControlledComparisonProtocol.experiment_id == identity)
+            .order_by(ControlledComparisonProtocol.created_at.desc())
+        )
     ready = [model for model in models if model.status == "ready"]
     classical = [model for model in ready if model.model_type not in QUANTUM_MODELS]
     quantum = [model for model in ready if model.model_type in QUANTUM_MODELS]
     pairs = [build_evidence_pair(experiment, q, c, robustness_records) for q in quantum for c in classical]
+    protocol_pairs = {
+        (item["quantum_model"]["id"], item["classical_model"]["id"]): item
+        for item in (protocol.comparison_pairs if protocol else [])
+    }
+    for pair in pairs:
+        pair["controlled_protocol_pair"] = protocol_pairs.get((pair["quantum_model"], pair["classical_model"]))
+    controlled = [
+        pair for pair in pairs
+        if (pair.get("controlled_protocol_pair") or {}).get("status") in {"CONTROLLED", "CONTROLLED_WITH_LIMITATIONS"}
+    ]
     return {
         "experiment_id": identity, "dataset_id": experiment.dataset_id,
         "comparison_fingerprint": (experiment.summary or {}).get("comparison_fingerprint"), "split": (experiment.summary or {}).get("split"),
         "models": [ModelOut.model_validate(model).model_dump(mode="json") for model in models], "pairs": pairs,
-        "controlled_benchmarks": [pair for pair in pairs if pair["benchmark_type"] == "fair_controlled_diabetes_benchmark" and pair["fairness"]["controlled_comparison"]],
+        "controlled_benchmarks": controlled,
+        "controlled_protocol": None if protocol is None else {
+            "protocol_id": protocol.id,
+            "schema_version": protocol.schema_version,
+            "status": protocol.status,
+            "protocol_fingerprint": protocol.protocol_fingerprint,
+            "artifact_id": protocol.artifact_id,
+            "control_summary": protocol.control_summary,
+            "created_at": protocol.created_at,
+        },
         "conclusion": "No completed classical-hybrid pair is available." if not pairs else "Completed pairs are reported without ranking; only verified matched pairs receive controlled-comparison status.",
         "limitations": ["Fairness fields are verified from persisted per-model experiment metadata.", "A benchmark is not clinical validation, statistical significance, or proof of quantum advantage."],
     }

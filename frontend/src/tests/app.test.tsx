@@ -373,6 +373,7 @@ describe('operating-point and evidence UX',()=>{
     const quantum=model('quantum-model','qnn');
     vi.mocked(qh.comparison).mockResolvedValue({
       experiment_id:experiment.id,dataset_id:experiment.dataset_id,models:[classical,quantum],split:{split_hash:'split'},comparison_fingerprint:'fingerprint',
+      controlled_protocol:{protocol_id:'protocol-1',schema_version:'controlled_comparison_protocol_v1',status:'CONTROLLED_WITH_LIMITATIONS',protocol_fingerprint:'protocol-fingerprint',artifact_id:'artifact-1',control_summary:{pair_count:1},created_at:'2026-10-03T00:00:00Z'},
       conclusion:'All completed pairs are shown.',
       limitations:['Benchmark only'],
       pairs:[{
@@ -381,6 +382,7 @@ describe('operating-point and evidence UX',()=>{
         computational_cost:{classical:{final_training_seconds:1,cv_total_seconds:2,cv_mean_fold_seconds:1,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},quantum:{final_training_seconds:4,cv_total_seconds:8,cv_mean_fold_seconds:4,test_inference_seconds:.4,test_inference_seconds_per_sample:.02},deltas_quantum_minus_classical:{final_training_seconds:3,cv_total_seconds:6,cv_mean_fold_seconds:3,test_inference_seconds:.2,test_inference_seconds_per_sample:.01},semantics:'Measured runtime only.'},
         quantum_resources:{backend:'aer',execution_kind:'finite-shot local quantum simulation',qubits:2,shots:128,logical_depth:7,gate_counts:{cx:2},total_parameter_count:6,trainable_parameter_count:4,optimizer:'COBYLA',optimizer_objective_evaluations:5,noise_probability:0,real_hardware:false,resource_semantics:'Logical resources; not hardware cost.'},
         fairness:{dataset_id:'dataset-active',dataset_hash:'a'.repeat(64),target:'Early Stage Diabetes Risk Prediction',experiment_id:experiment.id,split_hash:'split',common_sample_count:100,source_sample_count:120,same_sample_budget:true,preprocessing_fingerprint:'fingerprint',cv_fold_count:3,seed:42,test_size:.25,target_sensitivity:.8,threshold_strategy:'target_sensitivity',controlled_comparison:true,status:'CONTROLLED COMPARISON',split_match:true,common_representation:{pca_components:2,hybrid_qubits:2,selected_feature_count:2}},
+        controlled_protocol_pair:{pair_id:'pair-1',status:'CONTROLLED_WITH_LIMITATIONS',classical_model:{id:classical.id,model_type:'logistic_regression'},quantum_model:{id:quantum.id,model_type:'qnn'},control_checks:[{name:'dataset_match',status:'PASS',passed:true,reason:'Verified from persisted evidence.',evidence:{}},{name:'quantum_diagnostics',status:'UNKNOWN',passed:null,reason:'Quantum diagnostics are unavailable.',evidence:{}}],control_matrix:{dataset_match:true,quantum_diagnostics:null},limitations:['Quantum diagnostics are unavailable.']},
         operating_points:{classical:operatingPoint,quantum:operatingPoint},robustness:{status:'not_evaluated',note:'Not implemented'},conclusion:'The classical model produced higher sensitivity. No general quantum advantage established.',limitations:['benchmark evidence only','no clinical validation','simulator-only','no general quantum advantage established'],test_metric_delta_quantum_minus_classical:{accuracy:-.1,precision:-.1,recall:-.1,sensitivity:-.1,specificity:-.1,f1:-.1,roc_auc:-.1},final_training_seconds_delta:3,
       }],
     });
@@ -394,6 +396,10 @@ describe('operating-point and evidence UX',()=>{
     expect(screen.getAllByText(/no general quantum advantage established/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Selected research threshold: 0.4200/i)).toBeInTheDocument();
     expect(screen.getByText('Validation, holdout, and runtime')).toBeInTheDocument();
+    expect(screen.getByText('Controlled comparison protocol')).toBeInTheDocument();
+    expect(screen.getByText('dataset match')).toBeInTheDocument();
+    expect(screen.getByText(/status describes experimental control, not model quality/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Winner$/i)).not.toBeInTheDocument();
   });
 
   it('shows an infeasible target without inventing a threshold',async()=>{
