@@ -51,6 +51,10 @@ export const qh={
   create_calibration_study:(body:any)=>api.post<any>('/calibration',body),
   calibration_study:(id:string)=>api.get<any>(`/calibration/${id}`),
 
+  quantum_diagnostics_preflight:(body:any)=>api.post<any>('/quantum/diagnostics/preflight',body),
+  create_quantum_diagnostics:(body:any)=>api.post<any>('/quantum/diagnostics',body),
+  quantum_diagnostics_by_run:(model_record_id:string)=>api.get<any>(`/quantum/diagnostics/run/${model_record_id}`),
+
   ablation_preflight:(body:any)=>api.post<any>('/ablation-studies/preflight',body),
   create_ablation_study:(body:any)=>api.post<any>('/ablation-studies',body),
   ablation_studies:(experiment_id:string)=>api.get<any>(`/ablation-studies/by-experiment/${experiment_id}`),

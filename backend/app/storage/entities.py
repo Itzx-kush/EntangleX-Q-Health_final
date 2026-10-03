@@ -377,3 +377,27 @@ class AblationStudy(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+class QuantumDiagnosticReport(Base):
+    __tablename__ = "quantum_diagnostic_reports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    experiment_id: Mapped[str] = mapped_column(String(36), ForeignKey("experiments.id"), index=True)
+    model_record_id: Mapped[str] = mapped_column(String(36), ForeignKey("models.id"), index=True)
+    model_type: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(20), default="completed")
+    model_configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    feature_encoding: Mapped[dict] = mapped_column(JSON, default=dict)
+    circuit_structure: Mapped[dict] = mapped_column(JSON, default=dict)
+    resource_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    optimizer_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    training_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    execution_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    stability_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    noise_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    configuration_fingerprint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+

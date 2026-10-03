@@ -393,3 +393,43 @@ def apply_migrations() -> None:
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": THRESHOLD_STUDIES_MIGRATION_ID, "applied_at": utcnow()},
             )
+
+        QUANTUM_DIAGNOSTICS_MIGRATION_ID = "0012_quantum_diagnostics"
+        applied = connection.execute(
+            text("SELECT id FROM schema_migrations WHERE id = :id"),
+            {"id": QUANTUM_DIAGNOSTICS_MIGRATION_ID},
+        ).fetchone()
+        if not applied:
+            logger.info("Applying migration 0012: quantum_diagnostics")
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS quantum_diagnostic_reports (
+                    id VARCHAR(36) PRIMARY KEY,
+                    experiment_id VARCHAR(36) NOT NULL,
+                    model_record_id VARCHAR(36) NOT NULL,
+                    model_type VARCHAR(64) NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'completed',
+                    model_configuration JSON,
+                    feature_encoding JSON,
+                    circuit_structure JSON,
+                    resource_profile JSON,
+                    optimizer_profile JSON,
+                    training_profile JSON,
+                    execution_profile JSON,
+                    stability_profile JSON,
+                    noise_profile JSON,
+                    warnings JSON,
+                    limitations JSON,
+                    configuration_fingerprint VARCHAR(255),
+                    provenance JSON,
+                    created_at DATETIME NOT NULL,
+                    FOREIGN KEY(experiment_id) REFERENCES experiments(id),
+                    FOREIGN KEY(model_record_id) REFERENCES models(id)
+                )
+            """))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_qdiag_exp_id ON quantum_diagnostic_reports(experiment_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_qdiag_model_id ON quantum_diagnostic_reports(model_record_id)"))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": QUANTUM_DIAGNOSTICS_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
