@@ -3,7 +3,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.metaestimators import available_if
 from sklearn.utils.validation import check_is_fitted
 from ..api.schemas import QuantumConfig
-from .backends import make_backend
+from .service import service
 from .circuits import build_circuits, circuit_description
 
 class QuantumClassifier(ClassifierMixin, BaseEstimator):
@@ -23,8 +23,8 @@ class QuantumClassifier(ClassifierMixin, BaseEstimator):
         if not np.array_equal(self.classes_, [0, 1]):
             raise ValueError("Quantum adapter requires encoded binary labels 0 and 1.")
         self.n_features_in_ = X.shape[1]
-        backend = make_backend(config, self.seed)
-        sampler, pm = backend.sampler(), backend.pass_manager()
+        runtime = service.prepare_model_runtime(config.provider_id, config.backend, config.model_dump(), self.seed)
+        sampler, pm = runtime.sampler, runtime.pass_manager
         fmap, ansatz = build_circuits(config)
         self.loss_curve_ = []
         if self.kind == "vqc":
@@ -83,7 +83,7 @@ class QuantumClassifier(ClassifierMixin, BaseEstimator):
         if self.kind in {"vqc", "qnn"}:
             self.model_.callback = None
         self.quantum_metadata_ = {
-            **backend.metadata(),
+            **runtime.metadata,
             "model_type": self.kind,
             "configuration": config.model_dump(),
             "circuit": circuit_description(config, self.kind, self.seed),

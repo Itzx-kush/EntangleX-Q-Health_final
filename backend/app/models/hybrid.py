@@ -31,6 +31,8 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
+        provider_id: str = "pennylane_local",
+        execution_mode: str = "local_simulator",
         qubits: int = 4,
         quantum_layers: int = 2,
         hidden_dimensions: tuple[int, ...] = (16, 8),
@@ -43,6 +45,8 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
         backend: str = "default.qubit",
         feature_map: str = "angle",
     ):
+        self.provider_id = provider_id
+        self.execution_mode = execution_mode
         self.qubits = qubits
         self.quantum_layers = quantum_layers
         self.hidden_dimensions = hidden_dimensions
@@ -64,6 +68,8 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
             raise ValueError("Hybrid hidden dimensions must contain one to three values between 2 and 128.")
         if self.activation not in {"relu", "tanh"} or self.optimizer not in {"adam", "sgd"}:
             raise ValueError("Unsupported hybrid activation or optimizer.")
+        if self.provider_id != "pennylane_local" or self.execution_mode != "local_simulator":
+            raise ValueError("This hybrid model supports the registered PennyLane local provider only.")
         if self.backend != "default.qubit" or self.feature_map != "angle":
             raise ValueError("This bounded implementation supports AngleEmbedding on default.qubit only.")
         if not 1 <= self.epochs <= 500 or not 1 <= self.batch_size <= 256 or not 0.00001 <= self.learning_rate <= 0.1:
@@ -79,7 +85,22 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
     def _build_runtime(self) -> None:
         qml, torch = require_hybrid_dependencies()
         self._seed(torch)
-        device = qml.device(self.backend, wires=self.qubits, shots=None)
+        from ..quantum.service import service
+        runtime = service.prepare_model_runtime(
+            self.provider_id,
+            self.backend,
+            {
+                "provider_id": self.provider_id,
+                "execution_mode": self.execution_mode,
+                "backend": self.backend,
+                "qubits": self.qubits,
+                "quantum_layers": self.quantum_layers,
+                "feature_map": self.feature_map,
+            },
+            self.deterministic_seed,
+        )
+        device = runtime.native_context
+        self._provider_metadata = dict(runtime.metadata)
 
         @qml.qnode(device, interface="torch", diff_method="backprop")
         def circuit(inputs, weights):
@@ -170,6 +191,7 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
         except Exception:
             pass
         return {
+            **self._provider_metadata,
             "framework": "PennyLane", "classical_framework": "PyTorch", "backend": self.backend,
             "execution_kind": "local PennyLane quantum simulation", "real_hardware": False,
             "qubits": self.qubits, "quantum_layers": self.quantum_layers, "feature_map": self.feature_map,
@@ -223,6 +245,10 @@ class PennyLaneTorchClassifier(ClassifierMixin, BaseEstimator):
     def __setstate__(self, state):
         weights = state.pop("_serialized_weights", None)
         self.__dict__.update(state)
+        # Historical artifacts predate explicit provider identity. Preserve their
+        # verified local execution path without mutating the stored artifact.
+        self.provider_id = getattr(self, "provider_id", "pennylane_local")
+        self.execution_mode = getattr(self, "execution_mode", "local_simulator")
         if weights is not None:
             self._build_runtime()
             _, torch = require_hybrid_dependencies()

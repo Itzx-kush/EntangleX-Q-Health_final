@@ -189,12 +189,17 @@ class TrainingManager:
                     session.add(experiment)
                     session.flush()
                 job_id = str(uuid4())
+                from ..quantum.service import service as quantum_execution_service
                 run = create_run(
                     session,
                     experiment=experiment,
                     config=config.model_dump(mode="json"),
                     operation_key=operation_key,
-                    execution_metadata={"executor": "single_process_thread_pool", "worker_count": 1},
+                    execution_metadata={
+                        "executor": "single_process_thread_pool",
+                        "worker_count": 1,
+                        "quantum_providers": quantum_execution_service.execution_plan(config.model_dump(mode="json")),
+                    },
                     reproducibility_metadata={
                         "dataset_hash": data.dataset_version.content_sha256 if data.dataset_version else data.dataset.sha256,
                         "split": data.split_metadata(),

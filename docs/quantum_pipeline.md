@@ -97,3 +97,7 @@ Qiskit VQC/QSVC/QNN configuration remains separate. A shared experiment containi
 Both paired models consume the same leakage-safe representation: raw inputs → imputation/categorical handling → scaling → feature selection → PCA → bounded/angle-scaled values. Random Forest consumes that PCA representation directly; the hybrid then applies the PennyLane transformation, expectation values, and PyTorch output head. For a controlled pair, PCA dimensionality must equal logical qubits. The sensitivity-first threshold is selected from out-of-fold training predictions and frozen before both models are evaluated on the untouched, identical holdout population.
 
 PennyLane `default.qubit` timing is measured local simulator/runtime timing. Logical depth, gate summaries, and parameter counts are not estimates of real-QPU wall-clock cost. Exact expectation execution has no fabricated shot count.
+
+## Provider abstraction
+
+Quantum execution providers, backend identity, capability semantics, preflight, provenance, and extension guidance are documented in [Quantum provider architecture](quantum_provider_architecture.md).

@@ -27,6 +27,8 @@ class PipelineConfig(Schema):
     angle_scaling: bool = True
 
 class QuantumConfig(Schema):
+    provider_id: Literal["qiskit_local"] = "qiskit_local"
+    execution_mode: Literal["local_simulator"] = "local_simulator"
     backend: Literal["statevector", "aer"] = "statevector"
     qubits: int = Field(default=4, ge=2, le=8)
     feature_map_reps: int = Field(default=1, ge=1, le=3)
@@ -44,6 +46,8 @@ class QuantumConfig(Schema):
 
 class HybridModelConfig(Schema):
     model_type: Literal["hybrid_pennylane_torch"] = "hybrid_pennylane_torch"
+    provider_id: Literal["pennylane_local"] = "pennylane_local"
+    execution_mode: Literal["local_simulator"] = "local_simulator"
     qubits: int = Field(default=4, ge=2, le=8)
     feature_map: Literal["angle"] = "angle"
     quantum_layers: int = Field(default=2, ge=1, le=6)
@@ -534,6 +538,13 @@ class CircuitOut(Schema):
     text: str
     gates: list[dict[str, Any]]
     limitation: str
+
+
+class ProviderPreflightRequest(Schema):
+    provider_id: str = Field(default="qiskit_local", min_length=1, max_length=80)
+    backend_id: str = Field(default="statevector", min_length=1, max_length=120)
+    requested_capabilities: list[str] = Field(default_factory=list, max_length=20)
+    configuration: dict[str, Any] = Field(default_factory=dict)
 
 class ResourceAdvisorRequest(Schema):
     model_type: Literal["vqc", "qsvc", "qnn"]

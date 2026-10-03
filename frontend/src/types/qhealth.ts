@@ -9,10 +9,13 @@ export interface PipelineConfig {
   pca_components:number|null; pca_whiten:boolean; angle_scaling:boolean;
 }
 export interface QuantumConfig {
+  provider_id?:'qiskit_local'; execution_mode?:'local_simulator';
   backend:'statevector'|'aer'; qubits:number; feature_map_reps:number; ansatz_reps:number;
   entanglement:'linear'|'full'; optimizer:'COBYLA'|'SPSA'; maxiter:number; shots:number; noise_probability:number;
 }
-export interface HybridModelConfig {model_type:'hybrid_pennylane_torch';qubits:number;feature_map:'angle';quantum_layers:number;classical_hidden_dimensions:number[];classical_activation:'relu'|'tanh';optimizer:'adam'|'sgd';learning_rate:number;epochs:number;batch_size:number;deterministic_seed:number;sample_cap:number;backend:'default.qubit'}
+export interface HybridModelConfig {model_type:'hybrid_pennylane_torch';provider_id?:'pennylane_local';execution_mode?:'local_simulator';qubits:number;feature_map:'angle';quantum_layers:number;classical_hidden_dimensions:number[];classical_activation:'relu'|'tanh';optimizer:'adam'|'sgd';learning_rate:number;epochs:number;batch_size:number;deterministic_seed:number;sample_cap:number;backend:'default.qubit'}
+export interface QuantumBackendDescriptor {backend_id:string;display_name:string;provider_id:string;backend_type:string;available:boolean;capabilities:Record<string,string|number|null>}
+export interface QuantumProviderDescriptor {provider_id:string;display_name:string;provider_type:'LOCAL_SIMULATOR'|'REMOTE_SIMULATOR'|'HARDWARE'|'CUSTOM';enabled:boolean;availability:string;backends:QuantumBackendDescriptor[]}
 export interface TrainingConfig {
   dataset_id:string; features:string[]|null; models:ModelKind[]; pipeline:PipelineConfig; quantum:QuantumConfig; hybrid:HybridModelConfig;
   parameters:{logistic_c:number;svm_c:number;svm_kernel:'rbf'|'linear';forest_trees:number;forest_max_depth:number|null;class_weight:'balanced'|null};
