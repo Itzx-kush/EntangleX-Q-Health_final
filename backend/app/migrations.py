@@ -12,7 +12,7 @@ import logging
 from sqlalchemy import inspect, text
 
 from .database import engine
-from .utils.serialization import utcnow
+from .utils.serialization import fingerprint, utcnow
 
 logger = logging.getLogger("qhealth.migrations")
 
@@ -35,6 +35,7 @@ PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
 SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
 DATASET_QUALITY_SCORECARD_MIGRATION_ID = "20261003_15_advanced_dataset_quality_scorecard"
+DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID = "20261003_17_dataset_version_signature_repair"
 BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_16_restore_biomedical_subgroup_analysis"
 
 
@@ -978,6 +979,61 @@ def apply_migrations() -> None:
                 {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
+
+        dataset_version_signature_repair_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID},
+        ).scalar()
+        if not dataset_version_signature_repair_applied:
+            dataset_version_columns = _columns(connection, "dataset_versions")
+            if "version_signature" not in dataset_version_columns:
+                connection.execute(
+                    text("ALTER TABLE dataset_versions ADD COLUMN version_signature VARCHAR(64)")
+                )
+
+            legacy_versions = connection.execute(text("""
+                SELECT id, dataset_id, content_sha256, schema_fingerprint,
+                       target, positive_label, negative_label
+                FROM dataset_versions
+                WHERE version_signature IS NULL
+            """)).mappings().all()
+            for row in legacy_versions:
+                signature = fingerprint({
+                    "content_sha256": row["content_sha256"],
+                    "schema_fingerprint": row["schema_fingerprint"],
+                    "target": row["target"],
+                    "positive_label": str(row["positive_label"]),
+                    "negative_label": str(row["negative_label"]),
+                })
+                connection.execute(
+                    text("UPDATE dataset_versions SET version_signature = :signature WHERE id = :id"),
+                    {"signature": signature, "id": row["id"]},
+                )
+
+            duplicate_signature = connection.execute(text("""
+                SELECT 1
+                FROM dataset_versions
+                GROUP BY dataset_id, version_signature
+                HAVING COUNT(*) > 1
+                LIMIT 1
+            """)).first()
+            if duplicate_signature is None:
+                connection.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_dataset_versions_signature_compat "
+                    "ON dataset_versions(dataset_id, version_signature)"
+                ))
+            else:
+                # Preserve historical rows if duplicate signatures already exist;
+                # application-level idempotency still resolves exact content before insert.
+                connection.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_dataset_versions_version_signature "
+                    "ON dataset_versions(dataset_id, version_signature)"
+                ))
+
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID, "applied_at": utcnow()},
+            )
         scorecard_applied = connection.execute(
             text("SELECT 1 FROM schema_migrations WHERE id = :id"),
             {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID},
