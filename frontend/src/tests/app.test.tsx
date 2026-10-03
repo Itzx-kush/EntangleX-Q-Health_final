@@ -10,6 +10,8 @@ import {Datasets} from '../pages/ResearchPagesCore';
 import {DemoCenter,LegacyDemoCenter,SettingsPage} from '../pages/ResearchPagesSystem';
 import {Comparison,PredictionPage,Quantum,Robustness,Training} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
+import {AiProvider} from '../contexts/AiContext';
+import type {Dataset} from '../types/qhealth';
 
 vi.mock('../lib/api',()=>({
   setSessionToken:vi.fn(),
@@ -47,7 +49,7 @@ vi.mock('../lib/api',()=>({
 
 function renderWithProviders(ui:React.ReactNode,initialEntries=['/']){
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
-  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries}><DraftProvider>{ui}</DraftProvider></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries}><DraftProvider><AiProvider>{ui}</AiProvider></DraftProvider></MemoryRouter></QueryClientProvider>);
 }
 
 beforeEach(()=>{
@@ -162,6 +164,50 @@ describe('medical dataset library',()=>{
     await waitFor(()=>expect(vi.mocked(qh.inspectDataset).mock.calls.length).toBeGreaterThan(1));
     const latest=vi.mocked(qh.inspectDataset).mock.calls.at(-1)?.[0];
     expect(latest?.get('target')).toBe('outcome');
+  });
+});
+
+describe('active dataset workflow context',()=>{
+  const activeDataset={
+    id:'dataset-active',
+    name:'Active raw dataset',
+    sha256:'a'.repeat(64),
+    created_at:'2026-10-03T00:00:00Z',
+    provenance:{
+      name:'Active raw dataset',domain:'biomedical',source:'Test',source_url:null,version:'v1',
+      target:'outcome',positive_label:'positive',negative_label:'negative',
+      features:['age','group'],numeric_features:['age'],categorical_features:['group'],
+      row_count:40,feature_count:2,class_distribution:{positive:20,negative:20},
+      target_classes:['negative','positive'],is_demo:false,dataset_hash:'a'.repeat(64),
+      license:'test',origin:'uploaded' as const,recommended_duplicate_policy:'reject' as const,
+    },
+    quality:{blockers:[],warnings:[],minority_fraction:.5,missing_values:{},infinite_values:{},duplicate_rows:0,duplicate_feature_rows:0,suspiciously_predictive_features:[],identifier_features:[],highly_correlated_pairs:[]},
+  } as unknown as Dataset;
+
+  it('preserves one active dataset across workflow route navigation',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:activeDataset.id}));
+    vi.mocked(qh.dataset).mockResolvedValue(activeDataset);
+    vi.mocked(qh.datasets).mockResolvedValue([activeDataset]);
+
+    renderWithProviders(<App/>,['/preprocessing']);
+    expect(await screen.findByRole('heading',{name:'Preprocessing'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link',{name:'Feature selection'}));
+    expect((await screen.findAllByRole('heading',{name:'Feature selection'})).length).toBeGreaterThan(0);
+    expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(activeDataset.id);
+  });
+
+  it('clears a stale persisted dataset only after the backend confirms it is missing',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:'dataset-stale'}));
+    vi.mocked(qh.dataset).mockRejectedValueOnce(Object.assign(new Error('The requested resource does not exist.'),{
+      status:404,
+      code:'not_found',
+    }));
+    vi.mocked(qh.datasets).mockResolvedValue([]);
+
+    renderWithProviders(<App/>,['/preprocessing']);
+
+    await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(''));
+    expect(await screen.findByText(/none is active/i)).toBeInTheDocument();
   });
 });
 

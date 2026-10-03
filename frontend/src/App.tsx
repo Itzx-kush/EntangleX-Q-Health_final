@@ -1,5 +1,6 @@
-import {lazy,Suspense} from 'react';
+import {lazy,Suspense,useEffect} from 'react';
 import {Navigate,Route,Routes,useLocation} from 'react-router-dom';
+import {useQuery} from '@tanstack/react-query';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
@@ -8,6 +9,8 @@ import {VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/Ver
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 import {AiProvider} from './contexts/AiContext';
 import {AiPopup} from './components/AiPopup';
+import {qh} from './lib/api';
+import {useDraft} from './hooks/useDraft';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -40,6 +43,7 @@ export default function App(){
 function WorkspaceRoutes(){
   const location=useLocation();
   return <div className="workspace-route-frame" key={location.pathname}>
+    <ActiveDatasetGuard/>
     <Suspense fallback={<Loading/>}><Routes location={location}>
       <Route path="/" element={<Overview/>}/>
       <Route path="/datasets" element={<DatasetsRoute/>}/>
@@ -63,6 +67,22 @@ function WorkspaceRoutes(){
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
   </div>;
+}
+
+function ActiveDatasetGuard(){
+  const {draft,clearDataset}=useDraft();
+  const activeId=draft.dataset_id;
+  const query=useQuery({
+    queryKey:['dataset',activeId],
+    queryFn:()=>qh.dataset(activeId),
+    enabled:Boolean(activeId),
+    retry:(failureCount,error)=>!(typeof error==='object'&&error!==null&&'status' in error&&(error as {status?:number}).status===404)&&failureCount<1,
+  });
+  useEffect(()=>{
+    const error=query.error as {status?:number;code?:string}|null;
+    if(activeId&&error?.status===404&&error.code==='not_found')clearDataset(activeId);
+  },[activeId,clearDataset,query.error]);
+  return null;
 }
 
 function DatasetsRoute(){ return <Datasets/>; }

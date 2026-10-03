@@ -181,7 +181,10 @@ export function DatasetQualityScorecardView({
           </div>
         </div>
 
-        <ErrorBanner error={(assessMutation.error as Error)?.message || (latestQuery.error as Error)?.message} />
+        <ErrorBanner error={(assessMutation.error as Error)?.message || (latestQuery.error as Error)?.message || (listQuery.error as Error)?.message} />
+        {latestQuery.isSuccess && scorecard === null && (
+          <Notice tone="blue">Not assessed yet. No quality scorecard exists for this dataset/version yet.</Notice>
+        )}
 
         {/* Preflight Drawer */}
         {showPreflight && (
@@ -197,6 +200,8 @@ export function DatasetQualityScorecardView({
                 onConfirm={() => assessMutation.mutate()}
                 isAssessing={assessMutation.isPending}
               />
+            ) : preflightQuery.error ? (
+              <ErrorBanner error={(preflightQuery.error as Error).message} />
             ) : (
               <Notice tone="amber">Could not retrieve preflight diagnostics.</Notice>
             )}

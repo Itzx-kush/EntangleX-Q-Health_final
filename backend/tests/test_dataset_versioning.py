@@ -5,7 +5,7 @@ def test_existing_dataset_version_contract_materializes_version_signature(regist
     assert all(len(version.version_signature) == 64 for version in versions)
     with session_scope() as session:
         columns = {
-            row[1]
+            row[0]
             for row in session.execute(select(text("name")).select_from(text("pragma_table_info('dataset_versions')")))
         }
         assert "version_signature" in columns
