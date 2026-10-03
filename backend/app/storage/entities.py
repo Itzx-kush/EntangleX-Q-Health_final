@@ -719,6 +719,31 @@ class ScientificAuditEvent(Base):
     metadata_payload: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
 
 
+class SubgroupAnalysisStudy(Base):
+    """First-class record of biomedical subgroup analysis and stratified evaluation."""
+    __tablename__ = "subgroup_analysis_studies"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    schema_version: Mapped[str] = mapped_column(String(32), default="subgroup_analysis_v1")
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    definition_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    subgroup_field: Mapped[str] = mapped_column(String(100), index=True)
+    configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    overall_population: Mapped[dict] = mapped_column(JSON, default=dict)
+    subgroups_results: Mapped[list] = mapped_column(JSON, default=list)
+    comparisons: Mapped[list] = mapped_column(JSON, default=list)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 class DatasetQualityScorecard(Base):
     """First-class reproducible assessment of dataset quality and readiness."""
 
