@@ -19,6 +19,7 @@ from ..storage.entities import (
     ExternalValidation,
     ModelRecord,
     MultiSeedStudy,
+    PipelineVersion,
     RobustnessRecord,
     Run,
     ThresholdAnalysisStudy,
@@ -408,6 +409,10 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     experiment = session.get(Experiment, model.experiment_id)
     dataset = require(session, Dataset, model.dataset_id)
     run = session.get(Run, model.run_id) if model.run_id else None
+    pipeline_version = (
+        session.get(PipelineVersion, experiment.pipeline_version_id)
+        if experiment and experiment.pipeline_version_id else None
+    )
     source_context_type = "live_run" if run else (
         "verified_demo_experiment"
         if (model.details or {}).get("experiment_kind") == "precomputed_verified_demo"
@@ -512,6 +517,12 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         "robustness": robust,
         "quantum": quantum,
         "controlled_comparison": controlled_comparison,
+        "pipeline": {
+            "status": "available" if pipeline_version else MISSING,
+            "pipeline_version_id": pipeline_version.id if pipeline_version else None,
+            "version": pipeline_version.version_label if pipeline_version else None,
+            "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
+        },
         "run_provenance": {
             "id": run.id,
             "configuration_fingerprint": run.configuration_fingerprint,
@@ -569,6 +580,8 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
                     run.configuration_fingerprint if run and run.configuration_fingerprint
                     else fingerprint(config) if config else MISSING
                 ),
+                "pipeline_version_id": pipeline_version.id if pipeline_version else None,
+                "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
                 "verified_demo": clean_json((experiment.summary or {}) if experiment and source_context_type == "verified_demo_experiment" else {}),
             },
             "model_artifact_hash": _value(model.artifact_sha256),
@@ -599,6 +612,8 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
             "configuration_fingerprint": _value(
                 run.configuration_fingerprint if run else fingerprint(config) if config else None
             ),
+            "pipeline_version_id": _value(pipeline_version.id if pipeline_version else None),
+            "pipeline_fingerprint": _value(pipeline_version.definition_fingerprint if pipeline_version else None),
             "run_id": _value(model.run_id), "experiment_id": model.experiment_id,
             "dataset_id": dataset.id, "dataset_version_id": _value(version.id if version else None),
             "dataset_hash": version.content_sha256 if version else dataset.sha256,

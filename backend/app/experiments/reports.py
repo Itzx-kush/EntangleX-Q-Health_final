@@ -6,7 +6,8 @@ from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
-from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, Run
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run
+from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
 from ..utils.serialization import utcnow
@@ -17,6 +18,11 @@ def report_data(identity: str) -> dict:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity)))
         explanations = list(session.scalars(select(ExplanationRecord).where(ExplanationRecord.model_id.in_([m.id for m in models])))) if models else []
+        pipeline = session.get(PipelineVersion, experiment.pipeline_version_id) if experiment.pipeline_version_id else None
+        pipeline_data = pipeline_payload(session, pipeline) if pipeline else {
+            "status": "LEGACY_UNRESOLVED",
+            "message": "No pipeline version was recorded for this experiment.",
+        }
     experiment_kind = experiment.summary.get("experiment_kind", "live_experiment")
     for model in models:
         verify_installed_model(model)
@@ -24,6 +30,7 @@ def report_data(identity: str) -> dict:
         "experiment_kind": experiment_kind, "experiment_label": "PRECOMPUTED VERIFIED DEMO EXPERIMENT" if experiment_kind == "precomputed_verified_demo" else "LIVE RESEARCH EXPERIMENT",
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
+        "pipeline_version": pipeline_data,
         "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": "PennyLane + PyTorch Hybrid" if m.model_type == "hybrid_pennylane_torch" else m.model_type} for m in models],
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
         "comparison": comparison(identity),
@@ -38,6 +45,7 @@ def html_report(identity: str) -> str:
     sections = ["<h1>EntangleX Q-Health</h1><p>" + escaped(data["experiment_label"]) + "</p>", "<aside>" + escaped(DISCLAIMER) + "</aside>",
         "<h2>Dataset and provenance</h2>" + pre(data["dataset"]),
         "<h2>Preprocessing and feature engineering</h2>" + pre(data["preprocessing"]),
+        "<h2>Pipeline version</h2>" + pre(data["pipeline_version"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
         "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
     for model in data["models"]:

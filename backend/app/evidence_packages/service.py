@@ -21,6 +21,7 @@ from ..storage.entities import (
     ExternalValidation,
     ModelRecord,
     MultiSeedStudy,
+    PipelineVersion,
     QuantumDiagnosticReport,
     ResearchEvidencePackage,
     RobustnessRecord,
@@ -417,6 +418,17 @@ def preflight_package(session, experiment_id: str) -> dict:
         *[str(item) for item in (experiment.summary or {}).get("limitations", [])],
         *[str(item) for category in inventory.values() for item in category.get("limitations", [])],
     })
+    pipeline_version = (
+        session.get(PipelineVersion, experiment.pipeline_version_id)
+        if experiment.pipeline_version_id else None
+    )
+    pipeline_identity = {
+        "status": "available" if pipeline_version else "unavailable",
+        "pipeline_version_id": pipeline_version.id if pipeline_version else None,
+        "version": pipeline_version.version_label if pipeline_version else None,
+        "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
+        "schema_version": pipeline_version.schema_version if pipeline_version else None,
+    }
     fingerprint_basis = {
         "schema_version": PACKAGE_SCHEMA_VERSION,
         "experiment": {
@@ -433,6 +445,7 @@ def preflight_package(session, experiment_id: str) -> dict:
         "evidence_inventory": inventory,
         "artifact_hashes": artifact_hashes,
         "source_context": source_context,
+        "pipeline": pipeline_identity,
     }
     package_fingerprint = fingerprint(fingerprint_basis)
     package_id = str(uuid5(NAMESPACE_URL, f"qhealth:evidence-package:{experiment.id}:{package_fingerprint}"))
@@ -446,7 +459,9 @@ def preflight_package(session, experiment_id: str) -> dict:
         "experiment": {
             "id": experiment.id, "name": experiment.name, "status": experiment.status,
             "configuration_fingerprint": governing_fingerprint,
+            "pipeline_version_id": experiment.pipeline_version_id,
         },
+        "pipeline": pipeline_identity,
         "dataset": {
             "dataset_id": dataset.id, "name": dataset.name,
             "dataset_version_id": version.id if version else None,

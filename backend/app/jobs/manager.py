@@ -17,6 +17,7 @@ from ..runs.service import create_run, transition
 from ..storage.entities import Experiment, Job, ModelRecord, Run
 from ..storage.files import atomic_bytes, safe_path, save_model
 from ..storage.repository import require
+from ..pipelines.service import ensure_pipeline_for_training_config
 from ..readiness.service import evaluate_condition_task_readiness
 from ..utils.errors import AppError, CancelledError
 from ..utils.serialization import clean_json, fingerprint, software_versions, utcnow
@@ -165,13 +166,40 @@ class TrainingManager:
                     f"training-request:{fingerprint({'key': idempotency_key})}"
                     if idempotency_key else f"training-job:{uuid4()}"
                 )
+                parent = require(session, Experiment, parent_id) if parent_id else None
+                existing_experiment_for_pipeline = (
+                    require(session, Experiment, experiment_id) if experiment_id else None
+                )
+                inherited_pipeline_id = (
+                    existing_experiment_for_pipeline.pipeline_version_id
+                    if existing_experiment_for_pipeline
+                    else parent.pipeline_version_id if parent else None
+                )
+                pipeline_version = ensure_pipeline_for_training_config(
+                    session,
+                    config,
+                    parent_pipeline_version_id=inherited_pipeline_id,
+                )
+                config = config.model_copy(update={"pipeline_version_id": pipeline_version.id})
                 existing_run = session.scalar(select(Run).where(Run.operation_key == operation_key))
                 if existing_run is not None:
                     existing_job = session.scalar(select(Job).where(Job.run_id == existing_run.id))
                     existing_experiment = require(session, Experiment, existing_run.experiment_id)
+                    requested_config = config.model_dump(mode="json")
+                    legacy_requested_config = {
+                        key: value for key, value in requested_config.items()
+                        if key != "pipeline_version_id"
+                    }
+                    config_matches = (
+                        existing_run.config == requested_config
+                        or (
+                            existing_run.pipeline_version_id is None
+                            and existing_run.config == legacy_requested_config
+                        )
+                    )
                     if (
                         existing_job is None
-                        or existing_run.config != config.model_dump(mode="json")
+                        or not config_matches
                         or (experiment_id is not None and existing_run.experiment_id != experiment_id)
                     ):
                         raise AppError("idempotency_conflict", "The operation key is not reusable for this training request.", 409)
@@ -179,12 +207,14 @@ class TrainingManager:
                 count = len(list(session.scalars(select(Job.id).where(Job.status.in_(ACTIVE)))))
                 if count >= get_settings().max_queued_jobs:
                     raise AppError("queue_full", "The bounded training queue is full.", 429)
-                if parent_id:
-                    require(session, Experiment, parent_id)
                 if experiment_id:
-                    experiment = require(session, Experiment, experiment_id)
+                    experiment = existing_experiment_for_pipeline
                     if experiment.dataset_id != str(config.dataset_id):
                         raise AppError("experiment_dataset_mismatch", "The experiment and run configuration must use the same dataset.", 409)
+                    if experiment.pipeline_version_id and experiment.pipeline_version_id != pipeline_version.id:
+                        raise AppError("experiment_pipeline_mismatch", "The experiment is already bound to another Pipeline Version.", 409)
+                    if experiment.pipeline_version_id is None:
+                        experiment.pipeline_version_id = pipeline_version.id
                 else:
                     sequence = session.scalar(
                         select(func.count()).select_from(Experiment).where(Experiment.dataset_id == str(config.dataset_id))
@@ -192,6 +222,7 @@ class TrainingManager:
                     dataset_name = " ".join(str(data.dataset.name).split())[:200] or "Dataset"
                     experiment_name = f"{dataset_name} · Training {sequence + 1:02d}"
                     experiment = Experiment(id=str(uuid4()), dataset_id=str(config.dataset_id), parent_id=parent_id,
+                        pipeline_version_id=pipeline_version.id,
                         name=experiment_name,
                         config=config.model_dump(mode="json"), summary={"dataset_provenance": data.provenance,
                         "split": data.split_metadata(), "software": software_versions(),

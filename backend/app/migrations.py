@@ -30,6 +30,7 @@ EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
 CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
 RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
 DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
+PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 
 
 
@@ -668,4 +669,84 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        pipeline_registry_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": PIPELINE_VERSION_REGISTRY_MIGRATION_ID},
+        ).scalar()
+        if not pipeline_registry_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS pipeline_definitions (
+                    id VARCHAR(36) PRIMARY KEY,
+                    name VARCHAR(160) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    source_context VARCHAR(48),
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_pipeline_definition_name UNIQUE(name)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS pipeline_versions (
+                    id VARCHAR(36) PRIMARY KEY,
+                    pipeline_definition_id VARCHAR(36) NOT NULL REFERENCES pipeline_definitions(id),
+                    version_number INTEGER NOT NULL,
+                    version_label VARCHAR(24) NOT NULL,
+                    schema_version VARCHAR(48) NOT NULL,
+                    status VARCHAR(24) NOT NULL DEFAULT 'DRAFT',
+                    description TEXT NOT NULL DEFAULT '',
+                    definition_fingerprint VARCHAR(64) NOT NULL,
+                    canonical_definition JSON NOT NULL,
+                    parent_pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
+                    controlled_comparison_protocol_id VARCHAR(36) REFERENCES controlled_comparison_protocols(id),
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    source_context VARCHAR(48),
+                    published_at DATETIME,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_pipeline_version_number UNIQUE(pipeline_definition_id, version_number),
+                    CONSTRAINT uq_pipeline_version_fingerprint UNIQUE(definition_fingerprint)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS pipeline_stages (
+                    id VARCHAR(36) PRIMARY KEY,
+                    pipeline_version_id VARCHAR(36) NOT NULL REFERENCES pipeline_versions(id),
+                    stage_order INTEGER NOT NULL,
+                    stage_type VARCHAR(48) NOT NULL,
+                    stage_name VARCHAR(120) NOT NULL,
+                    configuration JSON NOT NULL,
+                    component_version VARCHAR(64),
+                    stage_fingerprint VARCHAR(64) NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_pipeline_stage_order UNIQUE(pipeline_version_id, stage_order)
+                )
+            """))
+            if "pipeline_version_id" not in _columns(connection, "experiments"):
+                connection.execute(text(
+                    "ALTER TABLE experiments ADD COLUMN pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id)"
+                ))
+            if "pipeline_version_id" not in _columns(connection, "runs"):
+                connection.execute(text(
+                    "ALTER TABLE runs ADD COLUMN pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id)"
+                ))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_definitions_name ON pipeline_definitions(name)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_definitions_created_at ON pipeline_definitions(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_pipeline_definition_id ON pipeline_versions(pipeline_definition_id)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_status ON pipeline_versions(status)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_definition_fingerprint ON pipeline_versions(definition_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_parent_pipeline_version_id ON pipeline_versions(parent_pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_controlled_comparison_protocol_id ON pipeline_versions(controlled_comparison_protocol_id)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_artifact_id ON pipeline_versions(artifact_id)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_versions_created_at ON pipeline_versions(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_stages_pipeline_version_id ON pipeline_stages(pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_stages_stage_type ON pipeline_stages(stage_type)",
+                "CREATE INDEX IF NOT EXISTS ix_pipeline_stages_stage_fingerprint ON pipeline_stages(stage_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_pipeline_version_id ON experiments(pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_runs_pipeline_version_id ON runs(pipeline_version_id)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": PIPELINE_VERSION_REGISTRY_MIGRATION_ID, "applied_at": utcnow()},
             )

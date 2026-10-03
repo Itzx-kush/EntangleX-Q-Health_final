@@ -74,6 +74,40 @@ export function Experiments(){
 
 const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
 
+export function PipelineVersionPanel({experimentId}:{experimentId:string}){
+  const pipeline=useQuery({queryKey:['experiment-pipeline',experimentId],queryFn:()=>qh.experimentPipeline(experimentId),retry:false});
+  const versions=useQuery({queryKey:['pipelines'],queryFn:qh.pipelines,enabled:pipeline.data?.status==='AVAILABLE'});
+  const [compareTo,setCompareTo]=useState('');
+  const current=pipeline.data?.status==='AVAILABLE'?pipeline.data.pipeline_version:null;
+  const diff=useQuery({
+    queryKey:['pipeline-diff',current?.pipeline_version_id,compareTo],
+    queryFn:()=>qh.pipelineDiff(current!.pipeline_version_id,compareTo),
+    enabled:Boolean(current&&compareTo),
+    retry:false,
+  });
+  return <Card className="mt-5" title="Pipeline Version" description="The immutable computational definition recorded for this experiment.">
+    <ErrorBanner error={(pipeline.error as Error)?.message||(versions.error as Error)?.message||(diff.error as Error)?.message}/>
+    {pipeline.isLoading?<Loading/>:pipeline.data?.status==='LEGACY_UNRESOLVED'?<EmptyState title="Pipeline version unavailable">{pipeline.data.reason} Historical configuration remains accessible, but no version is fabricated.</EmptyState>:current?<>
+      <div className="flex flex-wrap items-center gap-2"><StatusBadge value={current.status}/><Badge tone="purple">{current.version}</Badge><span className="text-sm font-semibold">{current.pipeline_name}</span><span className="mono text-[10px] muted" title={current.definition_fingerprint}>{current.definition_fingerprint.slice(0,20)}…</span></div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div><span className="metric-label">VERSION ID</span><strong className="mono block break-all text-[10px]">{current.pipeline_version_id}</strong></div>
+        <div><span className="metric-label">SCHEMA</span><strong className="block text-xs">{current.schema_version}</strong></div>
+        <div><span className="metric-label">USED BY</span><strong className="block text-xs">{current.usage_count} experiment{current.usage_count===1?'':'s'}</strong></div>
+        <div><span className="metric-label">PUBLISHED</span><strong className="block text-xs">{current.published_at?dateTime(current.published_at):'Draft'}</strong></div>
+      </div>
+      <ol className="mt-4 grid gap-2 md:grid-cols-2">{current.stages.map(stage=><li className="rounded-xl border p-3" key={stage.stage_id}><div className="flex items-center justify-between gap-2"><strong className="text-sm">{stage.stage_order}. {stage.stage_name}</strong><Badge tone="blue">{stage.stage_type.replaceAll('_',' ')}</Badge></div><span className="mono mt-1 block truncate text-[10px] muted" title={stage.fingerprint}>{stage.fingerprint.slice(0,18)}…</span><JsonDisclosure label="Inspect stage configuration" value={stage.configuration}/></li>)}</ol>
+      <JsonDisclosure label="Open canonical pipeline definition" value={current.canonical_definition}/>
+      {(versions.data?.filter(item=>item.pipeline_version_id!==current.pipeline_version_id).length||0)>0&&<div className="mt-4 rounded-xl border p-4">
+        <div className="metric-label">COMPARE VERSION</div>
+        <Select className="mt-2" value={compareTo} onChange={event=>setCompareTo(event.target.value)}><option value="">Select a Pipeline Version</option>{versions.data?.filter(item=>item.pipeline_version_id!==current.pipeline_version_id).map(item=><option key={item.pipeline_version_id} value={item.pipeline_version_id}>{item.pipeline_name} · {item.version}</option>)}</Select>
+        {diff.isLoading&&<Loading/>}
+        {diff.data&&<div className="mt-3"><div className="flex flex-wrap gap-2">{diff.data.stage_summaries.map(item=><Badge key={item.stage} tone={item.status==='Unchanged'?'green':item.status==='Removed'?'amber':'blue'}>{item.stage.replaceAll('_',' ')} · {item.status}</Badge>)}</div>{diff.data.changes.length?<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{diff.data.changes.map((change,index)=><div className="border-b pb-2 text-xs last:border-0" key={`${change.stage}-${change.field}-${index}`}><strong>{change.change_type}: {change.stage.replaceAll('_',' ')}{change.field?` · ${change.field}`:''}</strong><div className="mono mt-1 break-all text-[10px] muted">{JSON.stringify(change.before)} → {JSON.stringify(change.after)}</div></div>)}</div>:<p className="mt-2 text-xs muted">No computational changes.</p>}<p className="mt-2 text-xs muted">{diff.data.interpretation}</p></div>}
+      </div>}
+      <div className="mt-4 text-xs muted">{current.scientific_boundary}</div>
+    </>:<EmptyState title="Pipeline version unavailable">No pipeline registry response is available.</EmptyState>}
+  </Card>
+}
+
 export function ExperimentLineagePanel({experimentId}:{experimentId:string}){
   const [depth,setDepth]=useState('3');
   const [direction,setDirection]=useState<'ancestors'|'descendants'|'both'>('both');
@@ -147,7 +181,6 @@ export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <div><span className="metric-label">PACKAGE ID</span><strong className="mono block text-xs">{value.package_id}</strong></div>
         <div><span className="metric-label">FINGERPRINT</span><strong className="mono block text-xs" title={value.package_fingerprint}>{value.package_fingerprint.slice(0,20)}…</strong></div>
-        <div><span className="metric-label">SOURCE</span><strong className="block text-sm">{value.source_context.type.replaceAll('_',' ')}</strong></div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{categories.map(([name,entry])=><div className="rounded-xl border p-3" key={name}><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{name.replaceAll('_',' ')}</span><StatusBadge value={entry.status}/></div><small className="muted">{entry.record_count} persisted record{entry.record_count===1?'':'s'}</small></div>)}</div>
       {value.evidence_gaps.length>0&&<Notice tone="amber">{value.evidence_gaps.length} evidence categor{value.evidence_gaps.length===1?'y is':'ies are'} unavailable, incomplete, or limited. This is an evidence state, not a quality score.</Notice>}
@@ -182,6 +215,7 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>
     <div className="mt-5"><Card title="Measured model records" description="Only measurements returned by the backend are displayed.">

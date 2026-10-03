@@ -42,6 +42,7 @@ def create_run(
         experiment_id=experiment.id,
         dataset_id=experiment.dataset_id,
         dataset_version_id=dataset_version_id,
+        pipeline_version_id=experiment.pipeline_version_id,
         status="created",
         operation_key=operation_key,
         config=config,

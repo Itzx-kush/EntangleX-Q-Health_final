@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,Health,Job,LineageSnapshot,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -81,6 +81,13 @@ export const qh={
   cancelJob:(id:string)=>api.post<Job>(`/jobs/${id}/cancel`),
   experiments:()=>api.get<Experiment[]>('/experiments'),
   experiment:(id:string)=>api.get<ExperimentDetail>(`/experiments/${id}`),
+  experimentPipeline:(id:string)=>api.get<ExperimentPipelineResponse>(`/experiments/${id}/pipeline`),
+  pipelines:()=>api.get<PipelineVersion[]>('/pipelines'),
+  pipeline:(id:string)=>api.get<PipelineVersion>(`/pipelines/${id}`),
+  createPipeline:(body:unknown)=>api.post<PipelineVersion>('/pipelines',body),
+  pipelinePreflight:(body:unknown)=>api.post<PipelinePreflight>('/pipelines/preflight',body),
+  publishPipeline:(id:string)=>api.post<PipelineVersion>(`/pipelines/${id}/publish`),
+  pipelineDiff:(fromId:string,toId:string)=>api.get<PipelineDiff>(`/pipelines/${fromId}/diff/${toId}`),
   deleteExperiment:(id:string)=>api.remove<{id:string;status:'archived';deleted_at:string;already_deleted:boolean;preserved_records:Record<string,number>}>(`/experiments/${id}`),
   comparison:(id:string)=>api.get<Comparison>(`/experiments/${id}/comparison`),
   controlledComparisonPreflight:(id:string)=>api.post<ControlledComparisonProtocol&{preflight:true}>(`/experiments/${id}/controlled-comparison/preflight`,{}),

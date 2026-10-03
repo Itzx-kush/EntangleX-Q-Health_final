@@ -7,13 +7,14 @@ from copy import deepcopy
 from uuid import uuid4
 
 from sqlalchemy import select
+from sqlalchemy.orm import object_session
 
 from .. import __version__
 from ..api.schemas import TrainingConfig
 from ..data.splitting import PreparedData
 from ..database import session_scope
 from ..evaluation.metrics import METRIC_NAMES
-from ..storage.entities import Artifact, Dataset, DatasetVersion, Experiment, Job, ModelRecord, Run
+from ..storage.entities import Artifact, Dataset, DatasetVersion, Experiment, Job, ModelRecord, PipelineVersion, Run
 from ..storage.repository import require
 from ..utils.errors import AppError
 from ..utils.serialization import canonical_json_bytes, fingerprint, software_versions, utcnow
@@ -121,6 +122,13 @@ def build_manifest(
     provenance = data.dataset_version.provenance if data.dataset_version else data.dataset.provenance
     pipeline = config.pipeline
     packages = software_versions()
+    bound_session = object_session(run)
+    pipeline_version_id = run.pipeline_version_id or experiment.pipeline_version_id
+    pipeline_version = (
+        bound_session.get(PipelineVersion, pipeline_version_id)
+        if bound_session is not None and pipeline_version_id
+        else None
+    )
     schema_fingerprint = fingerprint({
         "features": data.features,
         "numeric": data.numeric,
@@ -145,6 +153,8 @@ def build_manifest(
             "configuration_fingerprint": "",
             "parent_run_id": None,
             "parent_experiment_id": experiment.parent_id,
+            "pipeline_version_id": pipeline_version_id,
+            "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
         },
         "dataset": {
             "dataset_id": data.dataset.id,
@@ -410,6 +420,11 @@ def get_manifest(run_id: str) -> tuple[Run, Artifact, dict]:
 def provenance_graph(run_id: str) -> dict:
     with session_scope() as session:
         run = require(session, Run, run_id)
+        pipeline_version = (
+            session.get(PipelineVersion, run.pipeline_version_id)
+            if run.pipeline_version_id
+            else None
+        )
         artifacts = list(session.scalars(select(Artifact).where(Artifact.run_id == run.id).order_by(Artifact.created_at)))
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.run_id == run.id)))
         job = session.scalar(select(Job).where(Job.run_id == run.id))
@@ -418,6 +433,8 @@ def provenance_graph(run_id: str) -> dict:
         "dataset_version_id": run.dataset_version_id,
         "manifest_artifact_id": run.manifest_artifact_id,
         "configuration_fingerprint": run.configuration_fingerprint,
+        "pipeline_version_id": run.pipeline_version_id,
+        "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
         "reproducibility_status": run.reproducibility_status or INCOMPLETE,
         "job_id": job.id if job else None,
         "model_ids": [model.id for model in models],
