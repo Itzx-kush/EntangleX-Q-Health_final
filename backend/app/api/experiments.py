@@ -203,8 +203,9 @@ def rerun(identity: UUID):
 @router.get("/{identity}/report")
 def export_report(identity: UUID, format: Literal["html", "json"] = "html"):
     import json
+    from ..utils.serialization import clean_json
     if format == "json":
-        content, media_type, suffix = json.dumps(report_data(str(identity)), indent=2), "application/json", "json"
+        content, media_type, suffix = json.dumps(clean_json(report_data(str(identity))), indent=2), "application/json", "json"
     else:
         content, media_type, suffix = html_report(str(identity)), "text/html", "html"
     return Response(content, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="qhealth-{identity}.{suffix}"', "Cache-Control": "no-store"})

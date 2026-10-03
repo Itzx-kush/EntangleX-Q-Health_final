@@ -22,6 +22,7 @@ from ..data_quality.service import _to_scorecard_out
 from ..database import session_scope
 from ..storage.entities import DatasetQualityScorecard, Experiment
 from ..storage.repository import require
+from ..utils.errors import AppError
 
 router = APIRouter(tags=["data-quality"])
 
@@ -72,7 +73,11 @@ def api_get_latest_scorecard(
     with session_scope() as session:
         sc = get_latest_scorecard(session, dataset_id, dataset_version_id)
         if not sc:
-            raise HTTPException(status_code=404, detail="No quality scorecard found for this dataset/version.")
+            raise AppError(
+                "quality_scorecard_not_found",
+                "No quality scorecard found for this dataset/version.",
+                404,
+            )
         return _to_scorecard_out(sc)
 
 

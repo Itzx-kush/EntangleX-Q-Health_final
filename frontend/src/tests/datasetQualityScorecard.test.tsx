@@ -188,6 +188,28 @@ describe('Dataset Quality Scorecard UI', () => {
     expect(screen.getByText('Safe Schema Snapshot & Feature Distribution')).toBeInTheDocument();
   });
 
+  it('renders the first-assessment empty state without a request-failed banner', async () => {
+    vi.mocked(qh.latestDatasetQualityScorecard).mockResolvedValue(null);
+    vi.mocked(qh.datasetQualityScorecards).mockResolvedValue([]);
+
+    renderScorecardView();
+
+    expect(await screen.findByText(/Not assessed yet\. No quality scorecard exists/i)).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:/Run Quality Assessment/i})).toBeEnabled();
+    expect(screen.queryByText(/Request failed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Failed to fetch/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps a real connection failure visible instead of treating it as not assessed', async () => {
+    vi.mocked(qh.latestDatasetQualityScorecard).mockRejectedValue(new Error('Unable to reach the Q-Health backend.'));
+    vi.mocked(qh.datasetQualityScorecards).mockResolvedValue([]);
+
+    renderScorecardView();
+
+    expect(await screen.findByText('Unable to reach the Q-Health backend.')).toBeInTheDocument();
+    expect(screen.queryByText(/No quality scorecard exists/i)).not.toBeInTheDocument();
+  });
+
   it('toggles and displays preflight check diagnostics', async () => {
     vi.mocked(qh.latestDatasetQualityScorecard).mockResolvedValue(mockScorecard);
     vi.mocked(qh.datasetQualityScorecards).mockResolvedValue([mockScorecard]);

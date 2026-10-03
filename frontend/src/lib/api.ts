@@ -22,14 +22,59 @@ const base=apiBase;
 let token='';
 export function setSessionToken(value:string){token=value.trim();}
 
+type ApiErrorBody={
+  error?:{code?:string;message?:string;request_id?:string;fields?:unknown};
+  detail?:string|{message?:string};
+  message?:string;
+};
+
+export class ApiError extends Error{
+  status:number;
+  code:string;
+  requestId?:string;
+  details?:unknown;
+  constructor(message:string,{status,code='http_error',requestId,details}:{status:number;code?:string;requestId?:string;details?:unknown}){
+    super(message);
+    this.name='ApiError';
+    this.status=status;
+    this.code=code;
+    this.requestId=requestId;
+    this.details=details;
+  }
+}
+
+export class ApiTransportError extends Error{
+  constructor(message='Unable to reach the Q-Health backend. Check the connection and try again.',options?:ErrorOptions){
+    super(message,options);
+    this.name='ApiTransportError';
+  }
+}
+
+export function isApiError(error:unknown):error is ApiError{
+  return error instanceof ApiError;
+}
+
 async function request(path:string,options:RequestInit={}){
   const headers=new Headers(options.headers);
   if(token) headers.set('Authorization',`Bearer ${token}`);
   if(options.body && !(options.body instanceof FormData)) headers.set('Content-Type','application/json');
-  const response=await fetch(`${base}${path}`,{...options,headers,credentials:'omit',cache:'no-store'});
+  let response:Response;
+  try{
+    response=await fetch(`${base}${path}`,{...options,headers,credentials:'omit',cache:'no-store'});
+  }catch(error){
+    throw new ApiTransportError(undefined,{cause:error});
+  }
   if(!response.ok){
-    const body=await response.json().catch(()=>({})) as {error?:{message?:string;request_id?:string}};
-    throw new Error(body.error?.request_id ? `${body.error?.message||'Request failed'} · ${body.error.request_id}` : body.error?.message||`Request failed (${response.status})`);
+    const body=await response.json().catch(()=>({})) as ApiErrorBody;
+    const detail=typeof body.detail==='string'?body.detail:body.detail?.message;
+    const requestId=body.error?.request_id||response.headers.get('X-Request-ID')||undefined;
+    const message=body.error?.message||detail||body.message||`Request failed (${response.status})`;
+    throw new ApiError(requestId?`${message} · Request ID: ${requestId}`:message,{
+      status:response.status,
+      code:body.error?.code,
+      requestId,
+      details:body.error?.fields??body.detail,
+    });
   }
   return response;
 }
@@ -161,9 +206,15 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
   assessDatasetQuality:(datasetId:string,body?:{thresholds?:Record<string,unknown>;dataset_version_id?:string;experiment_id?:string;protocol_version_id?:string;pipeline_version_id?:string;reference_dataset_version_id?:string;subgroup_field?:string;target_column?:string;positive_label?:string;operation_key?:string})=>
     api.post<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard`,body||{}),
   datasetQualityScorecards:(datasetId:string,versionId?:string)=>
-    api.get<DatasetQualityScorecard[]>(`/datasets/${datasetId}/quality-scorecard${versionId ? `?version_id=${versionId}` : ''}`),
-  latestDatasetQualityScorecard:(datasetId:string,versionId?:string)=>
-    api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/latest${versionId ? `?version_id=${versionId}` : ''}`),
+    api.get<DatasetQualityScorecard[]>(`/datasets/${datasetId}/quality-scorecard${versionId ? `?dataset_version_id=${encodeURIComponent(versionId)}` : ''}`),
+  latestDatasetQualityScorecard:async(datasetId:string,versionId?:string)=>{
+    try{
+      return await api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/latest${versionId ? `?dataset_version_id=${encodeURIComponent(versionId)}` : ''}`);
+    }catch(error){
+      if(isApiError(error)&&error.status===404&&error.code==='quality_scorecard_not_found')return null;
+      throw error;
+    }
+  },
   datasetQualityScorecard:(datasetId:string,scorecardId:string)=>
     api.get<DatasetQualityScorecard>(`/datasets/${datasetId}/quality-scorecard/${scorecardId}`),
   compareDatasetQualityScorecards:(datasetId:string,baseId:string,targetId:string)=>

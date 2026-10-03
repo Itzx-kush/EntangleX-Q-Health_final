@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import inspect, select
+from sqlalchemy import create_engine, inspect, select, text
 
 from app.api.schemas import DatasetUploadMetadata, TrainingConfig
 from app.audit.service import get_events
@@ -24,8 +24,9 @@ from app.data_quality import (
     preflight_dataset_quality,
 )
 from app.data_quality.schemas import DatasetQualityRequest
-from app.database import engine, session_scope
+from app.database import Base, engine, session_scope
 from app.main import app
+from app.migrations import _repair_dataset_quality_scorecard_schema
 from app.protocols.service import create_protocol_version, publish_protocol_version
 from app.storage.entities import (
     Artifact,
@@ -85,6 +86,48 @@ def test_scorecard_schema_and_indexes_exist():
     assert "ix_scorecard_dataset_id" in indexes
     assert "ix_scorecard_fingerprint" in indexes
     assert "ix_scorecard_status" in indexes
+
+
+def test_partial_legacy_scorecard_schema_is_repaired_without_losing_rows(tmp_path):
+    legacy_engine = create_engine(f"sqlite:///{tmp_path / 'legacy-quality.sqlite3'}")
+    Base.metadata.create_all(legacy_engine)
+    with legacy_engine.begin() as connection:
+        connection.execute(text("DROP TABLE dataset_quality_scorecards"))
+        connection.execute(text("""
+            CREATE TABLE dataset_quality_scorecards (
+                id VARCHAR(36) PRIMARY KEY,
+                dataset_id VARCHAR(36),
+                operation_key VARCHAR(128),
+                summary JSON
+            )
+        """))
+        connection.execute(
+            text("INSERT INTO dataset_quality_scorecards (id, dataset_id, operation_key, summary) "
+                 "VALUES ('legacy-scorecard', 'legacy-dataset', 'legacy-operation', '{}')")
+        )
+        _repair_dataset_quality_scorecard_schema(connection)
+
+    inspector = inspect(legacy_engine)
+    columns = {column["name"] for column in inspector.get_columns("dataset_quality_scorecards")}
+    assert {
+        "schema_version", "dataset_version_id", "experiment_id", "protocol_version_id",
+        "pipeline_version_id", "status", "assessment_fingerprint", "configuration",
+        "domains", "schema_snapshot", "limitations", "provenance", "artifact_id",
+        "created_at", "completed_at",
+    } <= columns
+    with legacy_engine.connect() as connection:
+        preserved = connection.execute(text(
+            "SELECT id, operation_key FROM dataset_quality_scorecards WHERE id = 'legacy-scorecard'"
+        )).one()
+    assert preserved == ("legacy-scorecard", "legacy-operation")
+
+
+def test_latest_scorecard_missing_response_has_typed_empty_state_code(client, registered):
+    response = client.get(f"/api/datasets/{registered.id}/quality-scorecard/latest")
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "quality_scorecard_not_found"
+    assert response.json()["error"]["message"] == "No quality scorecard found for this dataset/version."
+    assert response.json()["error"]["request_id"]
 
 
 def test_assess_clean_dataset_quality_passes():

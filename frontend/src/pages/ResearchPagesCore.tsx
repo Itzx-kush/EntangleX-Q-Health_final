@@ -114,15 +114,10 @@ export function Datasets(){
  const [confirmed,setConfirmed]=useState(false);
  const [form,setForm]=useState({name:'',domain:'biomedical',source:'User-provided',source_url:'',version:'unspecified',target:'',positive_label:''});
  const choose=(dataset:Dataset)=>{
-  const slug=dataset.provenance.library_slug;
-  const verifiedItem=library.data?.find(item=>item.slug===slug);
-  const verifiedReady=verifiedItem?.demo_readiness.status==='ready'&&verifiedItem.demo_readiness.instant_demo_available&&Boolean(verifiedItem.demo_readiness.experiment_id);
   selectDataset(dataset.id,dataset.provenance.recommended_duplicate_policy);
-  if(verifiedReady){
-   demo.activate(verifiedItem.demo_readiness.experiment_id as string,dataset.id);
-  }else{
-   demo.deactivate();
-  }
+  // "Use Dataset" and registry selection always enter the live workflow.
+  // The precomputed SIH experience remains available only through Demo Center.
+  demo.deactivate();
   setSelected(dataset);
 };
  const builtIn=useMutation({
@@ -210,7 +205,16 @@ export function Datasets(){
  </div>;
 }
 
-function ActiveDataset({children}:{children:(d:Dataset)=>React.ReactNode}){const {draft}=useDraft();const q=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});if(q.isLoading)return <Loading/>;if(!q.data)return <EmptyState title="Select a dataset">Choose an input in Data Lab first.</EmptyState>;return <>{children(q.data)}{q.error&&<ErrorBanner error={(q.error as Error).message}/>}</>}
+function DatasetSelectionRequired(){
+ const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets});
+ const count=datasets.data?.length;
+ return <EmptyState title="Select a dataset">
+  <span>{count===undefined?'Choose an input in Data Lab first.':`${count} registered dataset${count===1?' is':'s are'} available, but none is active.`}</span>
+  <Link className="btn btn-primary mt-3" to="/datasets">Open Data Lab <ArrowRight size={13}/></Link>
+ </EmptyState>;
+}
+
+function ActiveDataset({children}:{children:(d:Dataset)=>React.ReactNode}){const {draft}=useDraft();const q=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});if(q.isLoading)return <Loading/>;if(!q.data)return q.error?<ErrorBanner error={(q.error as Error).message}/>:<DatasetSelectionRequired/>;return <>{children(q.data)}</>}
 
 export function Quality(){const demo=useVerifiedDemo();return demo.active?<VerifiedQuality/>:<LiveQuality/>}
 function LiveQuality(){
@@ -231,7 +235,7 @@ function LiveQuality(){
     }/>
     <StageNav current="/quality"/>
     {!draft.dataset_id ? (
-      <EmptyState title="Select a research dataset">Choose an active dataset in Data Lab first to assess dataset quality and readiness.</EmptyState>
+      <DatasetSelectionRequired/>
     ) : tab === 'scorecard' ? (
       <div className="mt-5">
         <DatasetQualityScorecardView datasetId={draft.dataset_id} />
@@ -279,7 +283,7 @@ function LivePipelineStage({endpoint,title,eyebrow,description}:{endpoint:string
    {label:'Reduce',detail:stage==='pca'?`${draft.pipeline.pca_components??'No'} components`:'Optional PCA',status:stage==='pca'?'current':'waiting'},
    {label:'Preview',detail:'Backend-measured output',status:preview?'complete':'waiting'}
   ]}/>
-  {datasetQuery.isLoading?<div className="mt-5"><Loading/></div>:!dataset?<div className="mt-5"><EmptyState title="Select a dataset">Choose an input in Data Lab first.</EmptyState></div>:<div className="mt-5">
+  {datasetQuery.isLoading?<div className="mt-5"><Loading/></div>:!dataset?<div className="mt-5">{datasetQuery.error?<ErrorBanner error={(datasetQuery.error as Error).message}/>:<DatasetSelectionRequired/>}</div>:<div className="mt-5">
    <Card title="Research input" description="The selected dataset and feature representation remain shared across the downstream Q‑Health workflow.">
     <div className="grid gap-4 md:grid-cols-3"><MetricCard label="SAMPLES" value={dataset.provenance.row_count.toLocaleString()} detail="Registered rows"/><MetricCard label="FEATURES" value={dataset.provenance.feature_count} detail="Source dimensions"/><MetricCard label="TARGET" value={dataset.provenance.target} detail={'Positive: '+dataset.provenance.positive_label}/></div>
     {stage!=='pca'&&<label className="field mt-5"><span>Selected input features</span><select multiple size={8} className="select min-h-[180px]" value={selected} onChange={e=>update({features:Array.from(e.target.selectedOptions,o=>o.value)})}>{sourceFeatures.map(f=><option key={f} value={f}>{f}</option>)}</select><small>Target column is excluded by the backend. Review Data Quality before narrowing this list.</small></label>}
