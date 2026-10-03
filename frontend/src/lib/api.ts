@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,Health,Job,LineageSnapshot,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -94,6 +94,14 @@ export const qh={
     `/experiments/${id}/evidence-package/${packageId}/download`,
     `qhealth-evidence-package-${packageId}.json`
   ),
+  lineage:(id:string,options:{depth:string;direction:'ancestors'|'descendants'|'both';include_artifacts:boolean;include_evidence:boolean})=>{
+    const query=new URLSearchParams({
+      depth:options.depth,direction:options.direction,
+      include_artifacts:String(options.include_artifacts),
+      include_evidence:String(options.include_evidence),
+    });
+    return api.get<LineageSnapshot>(`/experiments/${id}/lineage?${query}`);
+  },
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),
   rerun:(id:string)=>api.post<{job:Job;experiment:Experiment}>(`/experiments/${id}/rerun`),

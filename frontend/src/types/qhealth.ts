@@ -90,6 +90,35 @@ export interface EvidencePackagePreflight {
   missing_evidence:ResearchEvidencePackage['evidence_gaps'];core_missing_evidence:string[];
   manifest:ResearchEvidencePackage;
 }
+export type LineageNodeType='dataset'|'dataset_version'|'experiment'|'run'|'job'|'job_checkpoint'|'job_execution_unit'|'model_record'|'artifact'|'multi_seed_study'|'study_run'|'external_validation'|'distribution_shift_analysis'|'calibration_study'|'threshold_analysis_study'|'robustness_record'|'ablation_study'|'quantum_diagnostic_report'|'controlled_comparison_protocol'|'explanation_record'|'research_evidence_package';
+export interface LineageNode {
+  id:string;object_type:LineageNodeType;object_id:string;label:string;
+  status:string|null;version:string|null;fingerprint:string|null;created_at:string|null;
+  exists:boolean;depth:number;metadata:Record<string,unknown>;
+}
+export interface LineageEdge {
+  id:string;source_node_id:string;target_node_id:string;relationship_type:string;
+  schema_version:string;relationship_fingerprint:string;recorded_at:string|null;
+  metadata:Record<string,unknown>;capture_state:'recorded'|'legacy_reconstructed';
+}
+export interface LineageIntegrity {
+  missing_references:{node_id:string;object_type:string;object_id:string}[];
+  orphaned_edges:{edge_id:string;source_node_id:string;target_node_id:string}[];
+  invalid_edges:{edge_id:string;relationship_type:string;reason:string}[];
+  duplicate_relationships:{source_node_id:string;target_node_id:string;relationship_type:string;count:number}[];
+  fingerprint_mismatches:{node_id:string;object_type:string;object_id:string;recorded_fingerprint:string;current_fingerprint:string}[];
+  cycles:string[][];legacy_reconstructed_edges:string[];truncated:boolean;
+}
+export interface LineageSummary {
+  node_count:number;edge_count:number;root_count:number;max_depth:number;
+  requested_depth:number|'all'|string;direction:'ancestors'|'descendants'|'both';
+}
+export interface LineageSnapshot {
+  experiment_id:string;lineage_schema_version:'deep_experiment_lineage_v1';
+  status:'COMPLETE'|'PARTIAL'|'LEGACY_UNRESOLVED'|'INTEGRITY_REVIEW';
+  lineage_fingerprint:string;roots:string[];nodes:LineageNode[];edges:LineageEdge[];
+  summary:LineageSummary;integrity:LineageIntegrity;limitations:string[];
+}
 export interface Preview {train_count:number;test_count:number;input_features:string[];selected_features:string[];output_features:string[];selection_scores:{feature:string;score:number|null;selected:boolean}[];pca_explained_variance:number[];pca_loadings:number[][];split_hash:string;stages:string[];warnings:string[]}
 export interface Circuit {model_type:string;execution_kind:string;backend:string;qubits:number;logical_depth:number|null;parameter_count:number;gate_counts:Record<string,number>;text:string;gates:{name:string;qubits:number[];parameters:string[]}[];limitation:string}
 export interface ResourceAdvisorChange {field:string;from:number;to:number;reason:string}

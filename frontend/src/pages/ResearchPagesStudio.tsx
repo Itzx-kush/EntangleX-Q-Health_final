@@ -1,7 +1,7 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft,Copy,Download,ExternalLink,RotateCcw,Trash2} from 'lucide-react';
+import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,RotateCcw,Trash2} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
 import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
 import {StageNav} from './ResearchPagesCore';
@@ -12,7 +12,7 @@ import { CalibrationLaboratory } from './CalibrationLaboratory';
 import { ThresholdAnalysis } from './ThresholdAnalysis';
 import { QuantumDiagnostics } from './QuantumDiagnostics';
 import { AblationLaboratory } from './AblationLaboratory';
-import type {Experiment} from '../types/qhealth';
+import type {Experiment,LineageNode} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
 import {ModelCardPanel} from '../components/ModelCardPanel';
@@ -70,6 +70,57 @@ export function Experiments(){
     </Card>}
     {selected&&<div className="mt-5 two-grid"><Card title={selected.name||`Experiment ${shortId(selected.id)}`} description="Registry detail"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="muted">Status</span><StatusBadge value={selected.status}/></div><div className="flex justify-between"><span className="muted">Dataset</span><span className="mono text-xs">{selected.dataset_id}</span></div><div className="flex justify-between"><span className="muted">Created</span><span>{dateTime(selected.created_at)}</span></div><div><span className="muted">Models</span><div className="mt-2 flex flex-wrap gap-1">{selected.config.models.map(m=><Badge key={m}>{modelLabels[m]}</Badge>)}</div></div></div></Card><Card title="Exact configuration"><JsonDisclosure label="Open JSON configuration" value={selected.config}/><Link className="btn btn-outline mt-3" to={'/experiments/'+selected.id}>Open full evidence <ExternalLink size={13}/></Link></Card></div>}
   </div>
+}
+
+const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
+
+export function ExperimentLineagePanel({experimentId}:{experimentId:string}){
+  const [depth,setDepth]=useState('3');
+  const [direction,setDirection]=useState<'ancestors'|'descendants'|'both'>('both');
+  const [includeArtifacts,setIncludeArtifacts]=useState(true);
+  const [includeEvidence,setIncludeEvidence]=useState(true);
+  const [selected,setSelected]=useState<LineageNode|null>(null);
+  const [showAll,setShowAll]=useState(false);
+  const lineage=useQuery({
+    queryKey:['experiment-lineage',experimentId,depth,direction,includeArtifacts,includeEvidence],
+    queryFn:()=>qh.lineage(experimentId,{depth,direction,include_artifacts:includeArtifacts,include_evidence:includeEvidence}),
+    retry:false,
+  });
+  const value=lineage.data;
+  const issueCount=value?value.integrity.missing_references.length+value.integrity.orphaned_edges.length+value.integrity.invalid_edges.length+value.integrity.fingerprint_mismatches.length+value.integrity.cycles.length:0;
+  const visibleNodes=value?.nodes.slice(0,showAll?value.nodes.length:60)||[];
+  const layers=Array.from(new Set(visibleNodes.map(node=>node.depth))).sort((a,b)=>a-b);
+  return <Card className="mt-5" title="Lineage / Provenance" description="Trace explicit persisted relationships from datasets and parent experiments through executions, models, evidence, and packages.">
+    <ErrorBanner error={(lineage.error as Error)?.message}/>
+    <div className="controls mb-4">
+      <label className="field"><span>Depth</span><Select value={depth} onChange={event=>setDepth(event.target.value)}><option value="1">1</option><option value="3">3</option><option value="6">6</option><option value="all">All (bounded)</option></Select></label>
+      <label className="field"><span>Direction</span><Select value={direction} onChange={event=>setDirection(event.target.value as typeof direction)}><option value="both">Origins + descendants</option><option value="ancestors">Origins only</option><option value="descendants">Descendants only</option></Select></label>
+      <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={includeEvidence} onChange={event=>setIncludeEvidence(event.target.checked)}/>Evidence</label>
+      <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={includeArtifacts} onChange={event=>setIncludeArtifacts(event.target.checked)}/>Artifacts</label>
+    </div>
+    {lineage.isLoading?<Loading/>:!value?<EmptyState title="Lineage not available for this experiment">No provenance snapshot could be loaded.</EmptyState>:<>
+      <div className="flex flex-wrap items-center gap-2"><StatusBadge value={value.status}/><Badge tone="blue">{value.summary.node_count} NODES</Badge><Badge tone="blue">{value.summary.edge_count} EDGES</Badge><span className="mono text-[10px] muted" title={value.lineage_fingerprint}>{value.lineage_fingerprint.slice(0,20)}…</span></div>
+      {value.status==='PARTIAL'&&<Notice tone="amber">Partial provenance — some historical relationships were reconstructed from explicit persisted identifiers.</Notice>}
+      {value.status==='LEGACY_UNRESOLVED'&&<Notice tone="amber">Partial provenance — some historical references are unavailable. This is not a model failure.</Notice>}
+      {(value.status==='INTEGRITY_REVIEW'||issueCount>0)&&<Notice tone="amber">Provenance integrity requires review. {issueCount} structured issue{issueCount===1?'':'s'} detected.</Notice>}
+      {value.nodes.length<=1?<EmptyState title="Lineage not available for this experiment">No supported persisted relationships are available yet.</EmptyState>:<div className="mt-4 overflow-x-auto">
+        <div className="flex min-w-max items-start gap-4 pb-2">{layers.map((layer,index)=><div className="w-56" key={layer}>
+          <div className="mb-2 flex items-center gap-2"><span className="metric-label">{index===0?'ORIGIN':'DEPTH '+layer}</span>{index>0&&<span className="muted">→</span>}</div>
+          <div className="space-y-2">{visibleNodes.filter(node=>node.depth===layer).map(node=><button key={node.id} onClick={()=>setSelected(node)} className={`w-full rounded-xl border p-3 text-left transition ${selected?.id===node.id?'border-primary bg-primary/5':'hover:border-primary/40'}`}>
+            <div className="flex items-center justify-between gap-2"><Badge tone={lineageTone(node.object_type)}>{node.object_type.replaceAll('_',' ')}</Badge>{!node.exists&&<Badge tone="amber">unresolved</Badge>}</div>
+            <strong className="mt-2 block truncate text-xs">{node.label}</strong><span className="mono mt-1 block truncate text-[10px] muted">{node.object_id}</span>
+          </button>)}</div>
+        </div>)}</div>
+      </div>}
+      {value.nodes.length>60&&<Button variant="outline" className="mt-3" onClick={()=>setShowAll(current=>!current)}>{showAll?'Show bounded view':`Show all ${value.nodes.length} nodes`}</Button>}
+      <div className="mt-4 two-grid">
+        <div className="rounded-xl border p-4"><div className="metric-label">RELATIONSHIPS</div><div className="mt-2 max-h-56 space-y-2 overflow-y-auto">{value.edges.slice(0,80).map(edge=><div className="border-b pb-2 text-xs last:border-0" key={edge.id}><div className="flex justify-between gap-2"><strong>{edge.relationship_type.replaceAll('_',' ')}</strong><span className="muted">{edge.capture_state.replaceAll('_',' ')}</span></div><span className="mono text-[10px] muted">{edge.source_node_id.slice(0,8)} → {edge.target_node_id.slice(0,8)}</span></div>)}</div></div>
+        <div className="rounded-xl border p-4"><div className="metric-label">SELECTED NODE</div>{selected?<div className="mt-2 space-y-2 text-xs"><div><strong>{selected.object_type.replaceAll('_',' ')}</strong><span className="mono block break-all text-[10px]">{selected.object_id}</span></div><div className="flex justify-between"><span className="muted">Status</span><span>{selected.status||'not recorded'}</span></div><div className="flex justify-between"><span className="muted">Version</span><span>{selected.version||'not recorded'}</span></div><div><span className="muted">Fingerprint</span><span className="mono block break-all text-[10px]">{selected.fingerprint||'not recorded'}</span></div><div className="flex justify-between"><span className="muted">Recorded</span><span>{selected.created_at?dateTime(selected.created_at):'not recorded'}</span></div></div>:<p className="mt-2 text-xs muted">Select a node to inspect its identity, version, fingerprint, and status.</p>}</div>
+      </div>
+      <div className="mt-4 flex items-center gap-2 text-xs muted"><GitBranch size={14}/>Lineage records traceability metadata; it does not establish causality, scientific validity, or model quality.</div>
+      <JsonDisclosure label="Open lineage integrity and machine-readable graph" value={{summary:value.summary,integrity:value.integrity,roots:value.roots,nodes:value.nodes,edges:value.edges}}/>
+    </>}
+  </Card>
 }
 
 export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string}){
@@ -131,6 +182,7 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>
     <div className="mt-5"><Card title="Measured model records" description="Only measurements returned by the backend are displayed.">
       {detail.models.length?detail.models.map(model=><GlareHover key={model.id} className="border-b py-5 last:border-b-0"><article className="py-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h3 className="font-semibold">{modelLabels[model.model_type]}</h3><StatusBadge value={model.status}/></div><small className="muted">Model {shortId(model.id)} · {dateTime(model.created_at)}</small></div><button className="btn btn-ghost" onClick={()=>setExpanded(expanded===model.id?null:model.id)}>{expanded===model.id?'Collapse':'Inspect'}</button></div>{model.model_type==='hybrid_pennylane_torch'&&model.details.quantum&&<div className="mt-4 rounded-xl border p-4"><div className="metric-label">HYBRID EXECUTION EVIDENCE</div><div className="mt-3 grid gap-3 md:grid-cols-3"><div><span className="metric-label">FRAMEWORKS</span><strong className="block">{model.details.quantum.framework} + {model.details.quantum.classical_framework}</strong></div><div><span className="metric-label">EXECUTION</span><strong className="block">{model.details.quantum.execution_kind}</strong></div><div><span className="metric-label">BACKEND</span><strong className="block">{model.details.quantum.backend}</strong></div><div><span className="metric-label">QUBITS / LAYERS</span><strong className="block">{model.details.quantum.qubits} / {model.details.quantum.quantum_layers}</strong></div><div><span className="metric-label">PROBABILITY</span><strong className="block">Measured positive-class output</strong></div><div><span className="metric-label">HARDWARE</span><strong className="block">Not implemented</strong></div></div><Notice tone="amber">Quantum advantage: not established. Operating threshold is selected from out-of-fold validation evidence.</Notice></div>}{model.metrics.test&&<div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]"><div className="rounded-xl border p-4"><div className="metric-label">HELD-OUT METRICS</div><div className="mt-3 space-y-1">{(['sensitivity','specificity','roc_auc','f1','accuracy','precision','recall'] as const).map(k=><div className="flex justify-between border-b py-1.5 last:border-0" key={k}><span className="text-xs muted">{k}</span><strong className="mono text-xs">{metric(model.metrics.test?.[k],k!=='roc_auc')}</strong></div>)}</div></div><div className="rounded-xl border p-4"><div className="metric-label">RUNTIME</div><div className="mt-3 space-y-1 text-xs">{[['Final training',seconds(model.metrics.timing?.final_training_seconds)],['CV total',seconds(model.metrics.timing?.cv_total_seconds)],['Test inference',seconds(model.metrics.timing?.test_inference_seconds_per_sample)+'/sample']].map(x=><div className="flex justify-between border-b py-1.5 last:border-0" key={String(x[0])}><span className="muted">{x[0]}</span><strong>{x[1]}</strong></div>)}</div></div></div>}{expanded===model.id&&<><ModelCardPanel model={model}/><CalibrationLaboratory model={model} />

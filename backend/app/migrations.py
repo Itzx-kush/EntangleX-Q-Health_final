@@ -29,6 +29,7 @@ RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
 EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
 CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
 RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
+DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 
 
 
@@ -618,4 +619,53 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        lineage_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID},
+        ).scalar()
+        if not lineage_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS lineage_nodes (
+                    id VARCHAR(36) PRIMARY KEY,
+                    object_type VARCHAR(48) NOT NULL,
+                    object_id VARCHAR(64) NOT NULL,
+                    schema_version VARCHAR(40) NOT NULL,
+                    reference_fingerprint VARCHAR(64),
+                    reference_metadata JSON NOT NULL DEFAULT '{}',
+                    recorded_at DATETIME NOT NULL,
+                    CONSTRAINT uq_lineage_node_object UNIQUE(object_type, object_id)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS lineage_edges (
+                    id VARCHAR(36) PRIMARY KEY,
+                    source_node_id VARCHAR(36) NOT NULL REFERENCES lineage_nodes(id),
+                    target_node_id VARCHAR(36) NOT NULL REFERENCES lineage_nodes(id),
+                    relationship_type VARCHAR(48) NOT NULL,
+                    schema_version VARCHAR(40) NOT NULL,
+                    relationship_fingerprint VARCHAR(64) NOT NULL,
+                    relationship_metadata JSON NOT NULL DEFAULT '{}',
+                    immutable BOOLEAN NOT NULL DEFAULT 1,
+                    recorded_at DATETIME NOT NULL,
+                    CONSTRAINT uq_lineage_edge_relationship
+                        UNIQUE(source_node_id, target_node_id, relationship_type)
+                )
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_lineage_nodes_object_type ON lineage_nodes(object_type)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_nodes_object_id ON lineage_nodes(object_id)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_nodes_reference_fingerprint ON lineage_nodes(reference_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_nodes_recorded_at ON lineage_nodes(recorded_at)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_edges_source_node_id ON lineage_edges(source_node_id)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_edges_target_node_id ON lineage_edges(target_node_id)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_edges_relationship_type ON lineage_edges(relationship_type)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_edges_relationship_fingerprint ON lineage_edges(relationship_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_lineage_edges_recorded_at ON lineage_edges(recorded_at)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID, "applied_at": utcnow()},
             )
