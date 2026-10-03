@@ -7,10 +7,13 @@ rename, or rewrite historical rows.
 
 from __future__ import annotations
 
+import logging
 from sqlalchemy import inspect, text
 
 from .database import engine
 from .utils.serialization import utcnow
+
+logger = logging.getLogger("qhealth.migrations")
 
 
 MIGRATION_ID = "20261002_01_experiment_run_artifact"
@@ -22,6 +25,7 @@ DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
 CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
 TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
 EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
+RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
 
 
 
@@ -433,3 +437,89 @@ def apply_migrations() -> None:
                 {"id": QUANTUM_DIAGNOSTICS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
+        resumable_jobs_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": RESUMABLE_JOBS_MIGRATION_ID},
+        ).scalar()
+        if not resumable_jobs_applied:
+            job_columns = _columns(connection, "jobs")
+            additions = {
+                "job_type": "ALTER TABLE jobs ADD COLUMN job_type VARCHAR(48) NOT NULL DEFAULT 'training'",
+                "priority": "ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0",
+                "total_units": "ALTER TABLE jobs ADD COLUMN total_units INTEGER",
+                "completed_units": "ALTER TABLE jobs ADD COLUMN completed_units INTEGER NOT NULL DEFAULT 0",
+                "failed_units": "ALTER TABLE jobs ADD COLUMN failed_units INTEGER NOT NULL DEFAULT 0",
+                "skipped_units": "ALTER TABLE jobs ADD COLUMN skipped_units INTEGER NOT NULL DEFAULT 0",
+                "active_unit": "ALTER TABLE jobs ADD COLUMN active_unit VARCHAR(160)",
+                "current_phase": "ALTER TABLE jobs ADD COLUMN current_phase VARCHAR(80)",
+                "attempt_count": "ALTER TABLE jobs ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0",
+                "resume_count": "ALTER TABLE jobs ADD COLUMN resume_count INTEGER NOT NULL DEFAULT 0",
+                "worker_id": "ALTER TABLE jobs ADD COLUMN worker_id VARCHAR(80)",
+                "lease_id": "ALTER TABLE jobs ADD COLUMN lease_id VARCHAR(36)",
+                "leased_at": "ALTER TABLE jobs ADD COLUMN leased_at DATETIME",
+                "lease_expires_at": "ALTER TABLE jobs ADD COLUMN lease_expires_at DATETIME",
+                "last_heartbeat_at": "ALTER TABLE jobs ADD COLUMN last_heartbeat_at DATETIME",
+                "current_checkpoint_id": "ALTER TABLE jobs ADD COLUMN current_checkpoint_id VARCHAR(36) REFERENCES job_checkpoints(id)",
+                "configuration_fingerprint": "ALTER TABLE jobs ADD COLUMN configuration_fingerprint VARCHAR(64)",
+                "input_fingerprint": "ALTER TABLE jobs ADD COLUMN input_fingerprint VARCHAR(64)",
+                "output_artifact_id": "ALTER TABLE jobs ADD COLUMN output_artifact_id VARCHAR(36) REFERENCES artifacts(id)",
+                "failure_category": "ALTER TABLE jobs ADD COLUMN failure_category VARCHAR(48)",
+                "error_code": "ALTER TABLE jobs ADD COLUMN error_code VARCHAR(80)",
+                "error_message": "ALTER TABLE jobs ADD COLUMN error_message VARCHAR(240)",
+                "requested_at": "ALTER TABLE jobs ADD COLUMN requested_at DATETIME",
+                "started_at": "ALTER TABLE jobs ADD COLUMN started_at DATETIME",
+                "completed_at": "ALTER TABLE jobs ADD COLUMN completed_at DATETIME",
+                "cancelled_at": "ALTER TABLE jobs ADD COLUMN cancelled_at DATETIME",
+            }
+            for column, statement in additions.items():
+                if column not in job_columns:
+                    connection.execute(text(statement))
+            connection.execute(text("UPDATE jobs SET requested_at = COALESCE(requested_at, created_at)"))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS job_checkpoints (
+                    id VARCHAR(36) PRIMARY KEY, job_id VARCHAR(36) NOT NULL REFERENCES jobs(id),
+                    sequence_number INTEGER NOT NULL, checkpoint_type VARCHAR(32) NOT NULL DEFAULT 'unit_completion',
+                    status VARCHAR(24) NOT NULL DEFAULT 'pending', logical_unit VARCHAR(160),
+                    completed_units INTEGER NOT NULL DEFAULT 0, checkpoint_state JSON NOT NULL DEFAULT '{}',
+                    state_fingerprint VARCHAR(64) NOT NULL, input_fingerprint VARCHAR(64),
+                    configuration_fingerprint VARCHAR(64), artifact_references JSON NOT NULL DEFAULT '[]',
+                    created_at DATETIME NOT NULL, validated_at DATETIME, invalidated_at DATETIME,
+                    CONSTRAINT uq_job_checkpoints_sequence UNIQUE(job_id, sequence_number))
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS job_execution_units (
+                    id VARCHAR(36) PRIMARY KEY, job_id VARCHAR(36) NOT NULL REFERENCES jobs(id),
+                    logical_key VARCHAR(200) NOT NULL, phase VARCHAR(80), unit_index INTEGER,
+                    status VARCHAR(24) NOT NULL DEFAULT 'running', result_reference VARCHAR(320),
+                    result_fingerprint VARCHAR(64), started_at DATETIME NOT NULL, completed_at DATETIME,
+                    CONSTRAINT uq_job_execution_units_logical_key UNIQUE(job_id, logical_key))
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS job_events (
+                    id VARCHAR(36) PRIMARY KEY, job_id VARCHAR(36) NOT NULL REFERENCES jobs(id),
+                    event_type VARCHAR(48) NOT NULL, from_status VARCHAR(24), to_status VARCHAR(24),
+                    checkpoint_id VARCHAR(36) REFERENCES job_checkpoints(id), worker_id VARCHAR(80),
+                    details JSON NOT NULL DEFAULT '{}', created_at DATETIME NOT NULL)
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_jobs_job_type ON jobs(job_type)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_worker_id ON jobs(worker_id)",
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_jobs_lease_id ON jobs(lease_id) WHERE lease_id IS NOT NULL",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_lease_expires_at ON jobs(lease_expires_at)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_last_heartbeat_at ON jobs(last_heartbeat_at)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_current_checkpoint_id ON jobs(current_checkpoint_id)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_configuration_fingerprint ON jobs(configuration_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_input_fingerprint ON jobs(input_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_failure_category ON jobs(failure_category)",
+                "CREATE INDEX IF NOT EXISTS ix_job_checkpoints_job_id ON job_checkpoints(job_id)",
+                "CREATE INDEX IF NOT EXISTS ix_job_checkpoints_status ON job_checkpoints(status)",
+                "CREATE INDEX IF NOT EXISTS ix_job_execution_units_job_id ON job_execution_units(job_id)",
+                "CREATE INDEX IF NOT EXISTS ix_job_execution_units_status ON job_execution_units(status)",
+                "CREATE INDEX IF NOT EXISTS ix_job_events_job_id ON job_events(job_id)",
+                "CREATE INDEX IF NOT EXISTS ix_job_events_event_type ON job_events(event_type)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": RESUMABLE_JOBS_MIGRATION_ID, "applied_at": utcnow()},
+            )
