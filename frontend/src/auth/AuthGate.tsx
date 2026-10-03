@@ -7,6 +7,7 @@ import {LogoIntro} from '../components/LogoIntro';
 import {PublicExperience} from '../components/PublicExperience';
 import {QuantumNetworkBackground} from '../components/QuantumNetworkBackground';
 import {usePointerMotion} from '../components/motion/usePointerMotion';
+import {DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,SplitReveal} from '../components/reactbits';
 import './auth.css';
 
 function applyStoredTheme(){
@@ -85,6 +86,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
   return <main ref={sceneRef} className="auth-entry">
     <QuantumNetworkBackground/>
     <div className="auth-atmosphere" aria-hidden="true">
+      <OuterAurora/>
       <div className="auth-grid"/>
       <span className="auth-depth-glow auth-depth-glow-a" data-motion-depth="back"/>
       <span className="auth-depth-glow auth-depth-glow-b" data-motion-depth="mid"/>
@@ -98,7 +100,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
         <span>Q-HEALTH</span>
       </div>
       <p className="auth-eyebrow">Research access</p>
-      <h1 id="auth-title">Enter your research workspace.</h1>
+      <h1 id="auth-title"><SplitReveal text="Enter your research workspace."/></h1>
       <p className="auth-intro">Continue with your account or enter as a guest. The existing datasets, experiments and verified research workflows remain ready.</p>
 
       <div className="auth-capabilities" aria-label="Platform capabilities">
@@ -108,34 +110,34 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       <p className="auth-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
     </section>
 
-    <section className="auth-panel" data-motion-depth="front" aria-label="Choose how to continue">
+    <OuterSpotlight className="auth-panel-stage"><section className="auth-panel" data-motion-depth="front" aria-label="Choose how to continue">
       <div className="auth-panel-index" aria-hidden="true"><span>ACCESS</span><strong>03</strong></div>
       <div className="auth-panel-heading">
-        <span className="auth-step">ENTANGLEX Q-HEALTH</span>
-        <h2>{preservingGuestWork?'Save this research to your workspace':'Enter your research workspace'}</h2>
+        <span className="auth-step"><DecryptedText text="ENTANGLEX Q-HEALTH"/></span>
+        <h2><SplitReveal text={preservingGuestWork?'Save this research to your workspace':'Enter your research workspace'}/></h2>
         <p>{preservingGuestWork?'Your current guest session will remain available during sign-in.':'Choose how you would like to continue.'}</p>
       </div>
 
       <div className="auth-oauth-actions">
-        <button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='google'} onClick={()=>void beginOAuth('google')}>
+        <OuterMagnet><button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='google'} onClick={()=>void beginOAuth('google')}>
           <GoogleMark/>
           <span>{authenticating==='google'?'Connecting to Google…':'Continue with Google'}</span>
           {authenticating==='google'?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
-        </button>
-        <button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='github'} onClick={()=>void beginOAuth('github')}>
+        </button></OuterMagnet>
+        <OuterMagnet><button className="auth-oauth-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={authenticating==='github'} onClick={()=>void beginOAuth('github')}>
           <Github className="auth-github-mark" aria-hidden="true"/>
           <span>{authenticating==='github'?'Connecting to GitHub…':'Continue with GitHub'}</span>
           {authenticating==='github'?<i className="auth-button-progress" aria-hidden="true"/>:<ArrowRight size={17} aria-hidden="true"/>}
-        </button>
+        </button></OuterMagnet>
       </div>
       <p className="auth-action-copy">{preservingGuestWork?'Continue with Google or GitHub to add eligible research metadata to My Research.':'Sign in to keep research activity in your private workspace.'}</p>
 
       <div className="auth-divider"><span>or</span></div>
 
-      <button className="auth-guest-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={enteringGuest} onClick={beginGuest}>
+      <OuterMagnet className="auth-guest-magnet"><button className="auth-guest-button" type="button" disabled={Boolean(authenticating)||enteringGuest} aria-busy={enteringGuest} onClick={beginGuest}>
         <span>{enteringGuest?'Entering research workspace…':preservingGuestWork?'Return to guest research':'Continue as Guest'}</span>
         {!enteringGuest&&<ArrowRight size={16} aria-hidden="true"/>}
-      </button>
+      </button></OuterMagnet>
       <p className="auth-action-copy">{preservingGuestWork?'Nothing will be removed from this guest session.':'Explore the research prototype without signing in.'}</p>
 
       {!isConfigured&&!error&&<div className="auth-notice" role="status">
@@ -148,7 +150,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       </div>}
 
       <p className="auth-footnote">Secure account access · guest exploration remains available</p>
-    </section>
+    </section></OuterSpotlight>
     {enteringGuest&&<AccessTransition guest/>}
   </main>;
 }

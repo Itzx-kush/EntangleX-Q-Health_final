@@ -3,6 +3,7 @@ import {ArrowDown,ArrowRight,ArrowUpRight,Atom,BrainCircuit,Database,Menu,Shield
 import {InteractiveQuantumField} from './InteractiveQuantumField';
 import {ParticleText} from './ParticleText';
 import {usePointerMotion} from './motion/usePointerMotion';
+import {DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,PixelTrail,SplitReveal} from './reactbits';
 
 type PublicExperienceProps={
   onRequestAccess:(destination?:string)=>void;
@@ -74,6 +75,7 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
   return <div ref={sceneRef} className={'public-experience '+(exiting?'is-exiting':'')}>
     <div className="public-access-portal" aria-hidden="true"><i/><i/><i/></div>
     <div className="public-background" aria-hidden="true">
+      <OuterAurora/>
       <span className="public-glow public-glow-a" data-motion-depth="back"/>
       <span className="public-glow public-glow-b" data-motion-depth="back"/>
       <span className="public-background-node node-a" data-motion-depth="mid"/>
@@ -92,9 +94,9 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
         <a href="#demonstration">Demonstration</a>
         <a href="#about">About</a>
       </nav>
-      <button className="public-header-cta" type="button" onClick={()=>requestAccess('/')}>
+      <OuterMagnet className="public-header-magnet"><button className="public-header-cta" type="button" onClick={()=>requestAccess('/')}>
         Sign in <ArrowUpRight size={14}/>
-      </button>
+      </button></OuterMagnet>
       <button
         className="public-menu-toggle"
         type="button"
@@ -117,17 +119,18 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
     <main id="top">
       <section className="public-hero public-shell" aria-labelledby="public-hero-title">
         <InteractiveQuantumField/>
+        <PixelTrail/>
         <div className="public-hero-copy" data-public-reveal="hero" data-motion-depth="front">
-          <p className="public-eyebrow"><span>ENTANGLEX</span> Biomedical research platform</p>
+          <p className="public-eyebrow"><span><DecryptedText text="ENTANGLEX"/></span> Biomedical research platform</p>
           <ParticleText id="public-hero-title" text="Hybrid quantum–classical intelligence for biomedical research."/>
           <p className="public-hero-intro">A research prototype for moving from traceable biomedical data to measured model evidence, interpretation and reproducible experimentation.</p>
           <div className="public-hero-actions">
-            <button className="public-button is-primary" type="button" onClick={()=>requestAccess('/')}>
+            <OuterMagnet><button className="public-button is-primary" type="button" onClick={()=>requestAccess('/')}>
               Explore the Research Workspace <ArrowRight size={16}/>
-            </button>
-            <button className="public-button is-secondary" type="button" onClick={()=>requestAccess('/')}>
+            </button></OuterMagnet>
+            <OuterMagnet><button className="public-button is-secondary" type="button" onClick={()=>requestAccess('/')}>
               Sign in
-            </button>
+            </button></OuterMagnet>
           </div>
           <p className="public-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
         </div>
@@ -176,21 +179,21 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       <section className="public-section public-shell">
         <SectionHeading number="03" label="Hybrid intelligence" title="Two model families. One controlled research workflow." copy="Classical and quantum approaches are evaluated as research methods under shared evidence boundaries—not as unsupported claims of advantage."/>
         <div className="public-hybrid-grid" data-public-reveal>
-          <article className="public-model-panel">
+          <OuterSpotlight className="public-model-spotlight"><article className="public-model-panel">
             <div className="public-model-panel-head"><Database size={18}/><span>CLASSICAL ML</span></div>
             <h3>Established research baselines</h3>
             <div className="public-model-list"><span>Logistic Regression</span><span>SVM</span><span>Random Forest</span></div>
-          </article>
+          </article></OuterSpotlight>
           <div className="public-hybrid-bridge" aria-hidden="true">
             <span/>
             <strong>+</strong>
             <span/>
           </div>
-          <article className="public-model-panel is-quantum">
+          <OuterSpotlight className="public-model-spotlight"><article className="public-model-panel is-quantum">
             <div className="public-model-panel-head"><Atom size={18}/><span>QUANTUM ML</span></div>
             <h3>Simulator-based quantum research</h3>
             <div className="public-model-list"><span>VQC</span><span>QSVC</span><span>QNN</span><span>PennyLane + PyTorch Hybrid</span></div>
-          </article>
+          </article></OuterSpotlight>
         </div>
       </section>
 
@@ -210,22 +213,22 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       </section>
 
       <section id="demonstration" className="public-section public-shell">
-        <div className="public-demo" data-public-reveal>
+        <OuterSpotlight className="public-demo-spotlight"><div className="public-demo" data-public-reveal>
           <div className="public-demo-copy">
             <p className="public-eyebrow"><span>05</span> Verified demonstration</p>
             <h2>Early Stage Diabetes Risk Prediction</h2>
             <p>Explore the existing flagship research package across provenance, preprocessing, controlled model comparison, robustness, quantum evidence, explainability and representative research predictions.</p>
             <div className="public-demo-tags"><span>Precomputed evidence</span><span>Research benchmark</span><span>Not clinical diagnosis</span></div>
-            <button className="public-button is-primary" type="button" onClick={()=>requestAccess('/demo')}>
+            <OuterMagnet><button className="public-button is-primary" type="button" onClick={()=>requestAccess('/demo')}>
               Explore the Verified Demonstration <ArrowRight size={16}/>
-            </button>
+            </button></OuterMagnet>
           </div>
           <div className="public-demo-art" aria-label="Verified demonstration research pathway">
             <span className="public-demo-index">SIH / 26139</span>
             <div className="public-demo-rings" aria-hidden="true"><i/><i/><i/></div>
             <div className="public-demo-mark"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/><span>VERIFIED<br/>RESEARCH<br/>PATHWAY</span></div>
           </div>
-        </div>
+        </div></OuterSpotlight>
       </section>
 
       <section className="public-section public-shell">
@@ -246,8 +249,8 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
           <p>Explore the existing research environment, authenticated workspace features and verified workflows.</p>
         </div>
         <div className="public-final-actions">
-          <button className="public-button is-primary" type="button" onClick={()=>requestAccess('/')}>Enter Workspace <ArrowRight size={16}/></button>
-          <button className="public-button is-secondary" type="button" onClick={()=>requestAccess('/')}>Sign in</button>
+          <OuterMagnet><button className="public-button is-primary" type="button" onClick={()=>requestAccess('/')}>Enter Workspace <ArrowRight size={16}/></button></OuterMagnet>
+          <OuterMagnet><button className="public-button is-secondary" type="button" onClick={()=>requestAccess('/')}>Sign in</button></OuterMagnet>
         </div>
       </section>
     </main>
@@ -263,6 +266,6 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
 function SectionHeading({number,label,title,copy}:{number:string;label:string;title:string;copy:string}){
   return <div className="public-section-heading" data-public-reveal>
     <p className="public-eyebrow"><span>{number}</span> {label}</p>
-    <div><h2>{title}</h2><p>{copy}</p></div>
+    <div><h2><SplitReveal text={title}/></h2><p>{copy}</p></div>
   </div>;
 }

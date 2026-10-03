@@ -1,0 +1,132 @@
+/* React Bits visual layer — intentionally scoped to the two outer experiences. */
+.public-experience .outer-rb-aurora,
+.auth-entry .outer-rb-aurora{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.public-experience .outer-rb-aurora-ribbon,
+.auth-entry .outer-rb-aurora-ribbon{
+  position:absolute;display:block;width:72%;height:38%;border-radius:50%;
+  filter:blur(74px);opacity:.12;mix-blend-mode:screen;
+  animation:outer-rb-aurora 22s ease-in-out infinite alternate;will-change:transform;
+}
+.public-experience .outer-rb-aurora-ribbon{background:linear-gradient(90deg,transparent,var(--public-violet),var(--public-cyan),transparent)}
+.auth-entry .outer-rb-aurora-ribbon{background:linear-gradient(90deg,transparent,var(--auth-violet),rgba(103,185,207,.72),transparent)}
+.public-experience .outer-rb-aurora .ribbon-a,
+.auth-entry .outer-rb-aurora .ribbon-a{left:-25%;top:-7%;transform:rotate(-12deg)}
+.public-experience .outer-rb-aurora .ribbon-b,
+.auth-entry .outer-rb-aurora .ribbon-b{right:-29%;top:29%;opacity:.075;transform:rotate(18deg);animation-delay:-8s;animation-duration:27s}
+.public-experience .outer-rb-aurora .ribbon-c,
+.auth-entry .outer-rb-aurora .ribbon-c{left:14%;bottom:-24%;opacity:.055;transform:rotate(-5deg);animation-delay:-15s;animation-duration:31s}
+.public-experience .outer-rb-noise,
+.auth-entry .outer-rb-noise{
+  position:absolute;inset:0;opacity:.13;
+  background-image:radial-gradient(rgba(255,255,255,.34) .55px,transparent .7px);
+  background-size:7px 7px;mask-image:linear-gradient(to bottom,#000,transparent 82%);
+}
+
+.public-experience .outer-rb-decrypted,
+.auth-entry .outer-rb-decrypted{position:relative;display:inline-block;white-space:nowrap}
+.public-experience .outer-rb-decrypted-measure,
+.auth-entry .outer-rb-decrypted-measure{visibility:hidden}
+.public-experience .outer-rb-decrypted-value,
+.auth-entry .outer-rb-decrypted-value{position:absolute;inset:0}
+.public-experience .outer-rb-split,
+.auth-entry .outer-rb-split{display:inline}
+.public-experience .outer-rb-split>span,
+.auth-entry .outer-rb-split>span{display:inline-block;margin-right:.24em}
+.public-experience .public-section-heading .outer-rb-split>span{opacity:0;transform:translateY(18px) rotateX(-22deg);filter:blur(7px)}
+.public-experience .public-section-heading.is-visible .outer-rb-split>span{
+  animation:outer-rb-word 720ms cubic-bezier(.16,1,.3,1) calc(var(--word-index)*54ms + 80ms) forwards;
+}
+.auth-entry .outer-rb-split>span{
+  opacity:0;animation:outer-rb-word 760ms cubic-bezier(.16,1,.3,1) calc(var(--word-index)*65ms + 220ms) forwards;
+}
+
+.public-experience .outer-rb-magnet,
+.auth-entry .outer-rb-magnet{
+  position:relative;display:inline-flex;translate:var(--magnet-x,0) var(--magnet-y,0);
+  transition:translate 120ms ease-out;will-change:translate;
+}
+.public-experience .outer-rb-magnet::after,
+.auth-entry .outer-rb-magnet::after{
+  content:"";position:absolute;left:var(--spark-x,50%);top:var(--spark-y,50%);z-index:6;
+  width:10px;height:10px;border:1px solid currentColor;border-radius:50%;opacity:0;
+  pointer-events:none;transform:translate(-50%,-50%) scale(.3);
+}
+.public-experience .outer-rb-magnet.is-sparking::after,
+.auth-entry .outer-rb-magnet.is-sparking::after{animation:outer-rb-spark 480ms cubic-bezier(.16,1,.3,1)}
+.public-experience .public-header-magnet{justify-self:end}
+.public-experience .public-hero-actions .outer-rb-magnet,
+.public-experience .public-final-actions .outer-rb-magnet{color:var(--public-violet)}
+
+.public-experience .outer-rb-spotlight,
+.auth-entry .outer-rb-spotlight{position:relative;isolation:isolate}
+.public-experience .outer-rb-spotlight::before,
+.auth-entry .outer-rb-spotlight::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;
+  background:radial-gradient(360px circle at var(--spotlight-x,50%) var(--spotlight-y,50%),rgba(155,135,255,.14),transparent 64%);
+  transition:opacity 320ms ease;
+}
+.public-experience .outer-rb-spotlight:hover::before,
+.auth-entry .outer-rb-spotlight:hover::before{opacity:1}
+.public-experience .outer-rb-spotlight>*,
+.auth-entry .outer-rb-spotlight>*{position:relative;z-index:1}
+.public-experience .public-model-spotlight{min-width:0}
+.public-experience .public-model-spotlight .public-model-panel{height:100%}
+.public-experience .public-demo-spotlight{border-radius:2px}
+.public-experience .public-demo-spotlight::after,
+.auth-entry .auth-panel-stage::after{
+  content:"";position:absolute;inset:-1px;z-index:2;border-radius:inherit;padding:1px;pointer-events:none;opacity:.5;
+  background:conic-gradient(from var(--border-angle,0deg),transparent 0 38%,rgba(155,135,255,.55) 47%,rgba(113,190,210,.24) 53%,transparent 62%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  animation:outer-rb-border 12s linear infinite;
+}
+.public-experience .public-demo-spotlight::after{opacity:.34}
+
+.public-experience .outer-rb-pixel-trail{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+.public-experience .outer-rb-pixel-trail i{
+  position:absolute;left:0;top:0;width:3px;height:3px;border-radius:1px;
+  background:var(--public-violet);opacity:calc((8 - var(--trail-index))*.055);
+  box-shadow:0 0 9px rgba(155,135,255,.5);
+  transform:translate3d(-40px,-40px,0) scale(0);
+  transition:transform 90ms ease-out,opacity 260ms ease;
+}
+.public-experience .outer-rb-pixel-trail i:nth-child(3n){background:var(--public-cyan);box-shadow:0 0 9px rgba(113,190,210,.45)}
+
+.auth-entry .auth-panel-stage{width:min(440px,100%);justify-self:end;border-radius:18px}
+.auth-entry .auth-panel-stage::before{border-radius:18px;background:radial-gradient(340px circle at var(--spotlight-x,50%) var(--spotlight-y,50%),rgba(183,167,255,.12),transparent 64%)}
+.auth-entry .auth-panel-stage::after{border-radius:18px;opacity:.62;animation-duration:9s}
+.auth-entry .auth-panel-stage .auth-panel{width:100%}
+.auth-entry .auth-panel .outer-rb-magnet{display:block;width:100%;color:var(--auth-violet)}
+.auth-entry .auth-panel .outer-rb-magnet>button{position:relative;z-index:1}
+.auth-entry .auth-guest-magnet+.auth-action-copy{animation-delay:490ms}
+
+@property --border-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes outer-rb-word{to{opacity:1;transform:none;filter:none}}
+@keyframes outer-rb-aurora{to{transform:translate3d(13%,9%,0) rotate(7deg) scale(1.08)}}
+@keyframes outer-rb-spark{0%{opacity:.7}to{opacity:0;transform:translate(-50%,-50%) scale(5.2)}}
+@keyframes outer-rb-border{to{--border-angle:360deg}}
+
+@media(max-width:780px){
+  .auth-entry .auth-panel-stage{width:min(540px,100%);justify-self:center}
+  .public-experience .outer-rb-aurora-ribbon,.auth-entry .outer-rb-aurora-ribbon{filter:blur(60px);opacity:.075}
+}
+@media(max-width:560px){
+  .public-experience .public-hero-actions .outer-rb-magnet,
+  .public-experience .public-final-actions .outer-rb-magnet{display:flex;width:100%}
+  .public-experience .public-hero-actions .outer-rb-magnet .public-button,
+  .public-experience .public-final-actions .outer-rb-magnet .public-button{width:100%}
+  .public-experience .outer-rb-pixel-trail{display:none}
+}
+@media(pointer:coarse){
+  .public-experience .outer-rb-magnet,.auth-entry .outer-rb-magnet{translate:none!important}
+  .public-experience .outer-rb-spotlight::before,.auth-entry .outer-rb-spotlight::before{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .public-experience .outer-rb-aurora-ribbon,.auth-entry .outer-rb-aurora-ribbon,
+  .public-experience .public-demo-spotlight::after,.auth-entry .auth-panel-stage::after,
+  .public-experience .public-section-heading.is-visible .outer-rb-split>span,.auth-entry .outer-rb-split>span{animation:none!important}
+  .public-experience .outer-rb-aurora-ribbon,.auth-entry .outer-rb-aurora-ribbon{transform:none!important}
+  .public-experience .outer-rb-split>span,.auth-entry .outer-rb-split>span{opacity:1!important;transform:none!important;filter:none!important}
+  .public-experience .outer-rb-pixel-trail{display:none}
+  .public-experience .outer-rb-magnet,.auth-entry .outer-rb-magnet{translate:none!important;transition:none!important}
+}

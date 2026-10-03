@@ -14,6 +14,7 @@ import './tokens.css';
 import './styles/reference-theme.css';
 import './styles/logo-system.css';
 import './styles/public-experience.css';
+import './styles/outer-reactbits.css';
 import './sidebar-layout-fix.css';
 import './responsive-adaptation.css';
 import './styles/tremor.css';
