@@ -78,6 +78,7 @@ class ModelParameters(Schema):
 class TrainingConfig(Schema):
     dataset_id: UUID
     dataset_version_id: UUID | None = None
+    condition_task_id: UUID | None = None
     features: list[str] | None = Field(default=None, max_length=200)
     models: list[Literal["logistic_regression", "svm", "random_forest", "vqc", "qsvc", "qnn", "hybrid_pennylane_torch"]] = Field(
         default_factory=lambda: ["logistic_regression", "svm", "random_forest"], min_length=1, max_length=7
@@ -787,6 +788,7 @@ class ExternalValidationRequest(Schema):
     model_id: UUID
     external_dataset_id: UUID
     external_dataset_version_id: UUID | None = None
+    condition_task_id: UUID | None = None
     label_mapping: dict[str, str] | None = None
     notes: str | None = None
 
@@ -915,6 +917,7 @@ class DistributionShiftRequest(Schema):
     reference_dataset_id: UUID
     comparison_dataset_id: UUID
     reference_dataset_version_id: UUID | None = None
+    condition_task_id: UUID | None = None
     comparison_dataset_version_id: UUID | None = None
     model_id: UUID | None = None
     external_validation_id: UUID | None = None
@@ -1094,4 +1097,3 @@ class DistributionShiftOut(Schema):
     execution_time_seconds: float = 0.0
     created_at: datetime
     completed_at: datetime | None = None
-

@@ -323,3 +323,26 @@ class DistributionShiftAnalysis(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+
+class ConditionTask(Base):
+    __tablename__ = "condition_tasks"
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    condition_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    task_type: Mapped[str] = mapped_column(String(100), nullable=False, default="binary_classification")
+    target_column: Mapped[str] = mapped_column(String(200), nullable=False)
+    positive_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    negative_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    dataset_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    dataset_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    
+    metadata_: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
+    
+    readiness_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    readiness_report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    readiness_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
