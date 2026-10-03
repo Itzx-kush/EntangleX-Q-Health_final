@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import func, select
-from .api import ablation, ai, alignment, audit, controlled_comparison, data_quality, datasets, experiments, jobs, model_cards, models, pipeline, pipelines, protocols, quantum, runs, shift, studies, training, validation, threshold, condition_tasks, quantum_diagnostics
+from .api import ablation, ai, alignment, audit, controlled_comparison, data_quality, datasets, experiments, jobs, model_cards, models, pipeline, pipelines, protocols, quantum, runs, shift, studies, subgroups, training, validation, threshold, condition_tasks, quantum_diagnostics
 
 from .api.middleware import BodyLimitMiddleware
 from .api.security import authorize
@@ -99,7 +99,7 @@ def health():
 
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
 from .api import calibration, threshold
-for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, audit.router, data_quality.router]:
+for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, audit.router, data_quality.router, subgroups.router]:
     api.include_router(router)
 
 

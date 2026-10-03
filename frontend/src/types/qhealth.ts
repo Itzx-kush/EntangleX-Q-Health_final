@@ -360,14 +360,6 @@ export interface SubgroupAnalysisRequest{model_id?:string|null;dataset_id?:strin
 export interface SubgroupStudy{id:string;schema_version:string;experiment_id:string;model_id:string;model_type:string;run_id?:string|null;dataset_id:string;dataset_version_id?:string|null;status:string;operation_key:string;definition_fingerprint:string;subgroup_field:string;configuration:Record<string,unknown>;overall_population:{n:number;positive_n:number;negative_n:number;prevalence:number;missing_n:number;metrics:Record<string,SubgroupMetricValue>};subgroups:SubgroupResult[];subgroups_results?:SubgroupResult[];comparisons:SubgroupComparison[];limitations:string[];provenance:Record<string,unknown>;artifact_id?:string|null;created_at:string;completed_at?:string|null}
 export interface SubgroupPreflightResponse{feasible:boolean;subgroup_field:string;field_data_type:string;unique_values_count:number;missing_values_count:number;suggested_rules:SubgroupRule[];eligible_samples:number;blockers:string[];warnings:string[];limitations:string[];configuration_fingerprint:string}
 
-
-explainability:{evidence_type:'explainability';model_ids:string[];model_id:string;method:string;output_path:string;local:HybridLocalExplanation&{case_id:string};global_summary:{feature:string;mean_absolute_shap:number;mean_signed_shap:number}[]};
-    predictions:{evidence_type:'predictions';model_ids:string[];model_id:string;cases:VerifiedPredictionCase[]};
-    preprocessing:{evidence_type:'preprocessing';model_ids:string[];configuration:TrainingConfig;fitted_preprocessing:Record<string,unknown>;representation:Record<string,unknown>;split:Record<string,unknown>};
-    provenance:{evidence_type:'provenance';model_ids:string[];dataset:Provenance};
-  };
-}
-
 export type QualityCheckStatus = 'PASS' | 'WARN' | 'FAIL' | 'UNVERIFIABLE' | 'NOT_APPLICABLE';
 export type QualityCheckSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 

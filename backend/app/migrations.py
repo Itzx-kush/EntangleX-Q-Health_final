@@ -35,6 +35,7 @@ PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
 SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
 DATASET_QUALITY_SCORECARD_MIGRATION_ID = "20261003_15_advanced_dataset_quality_scorecard"
+BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_16_restore_biomedical_subgroup_analysis"
 
 
 
@@ -930,6 +931,51 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        subgroup_analysis_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID},
+        ).scalar()
+        if not subgroup_analysis_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS subgroup_analysis_studies (
+                    id VARCHAR(36) PRIMARY KEY,
+                    schema_version VARCHAR(32) NOT NULL,
+                    experiment_id VARCHAR(36) NOT NULL REFERENCES experiments(id),
+                    model_id VARCHAR(36) NOT NULL REFERENCES models(id),
+                    run_id VARCHAR(36) REFERENCES runs(id),
+                    dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    status VARCHAR(24) NOT NULL,
+                    operation_key VARCHAR(128) NOT NULL UNIQUE,
+                    definition_fingerprint VARCHAR(64) NOT NULL,
+                    subgroup_field VARCHAR(100) NOT NULL,
+                    configuration JSON NOT NULL,
+                    overall_population JSON NOT NULL,
+                    subgroups_results JSON NOT NULL,
+                    comparisons JSON NOT NULL,
+                    limitations JSON NOT NULL,
+                    provenance JSON NOT NULL,
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    failure JSON,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME
+                )
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_experiment_id ON subgroup_analysis_studies(experiment_id)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_model_id ON subgroup_analysis_studies(model_id)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_dataset_id ON subgroup_analysis_studies(dataset_id)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_field ON subgroup_analysis_studies(subgroup_field)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_operation_key ON subgroup_analysis_studies(operation_key)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_fingerprint ON subgroup_analysis_studies(definition_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_created_at ON subgroup_analysis_studies(created_at)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
         scorecard_applied = connection.execute(
