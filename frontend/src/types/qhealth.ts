@@ -406,3 +406,77 @@ export interface VerifiedEvidencePackage {
     provenance:{evidence_type:'provenance';model_ids:string[];dataset:Provenance};
   };
 }
+
+export type AuditEventCategory =
+  | 'EXPERIMENT'
+  | 'DATASET'
+  | 'PIPELINE'
+  | 'PROTOCOL'
+  | 'RUN'
+  | 'JOB'
+  | 'MODEL'
+  | 'EVIDENCE'
+  | 'ARTIFACT'
+  | 'CONFIGURATION'
+  | 'SYSTEM';
+
+export interface ScientificAuditEvent {
+  id:string;
+  schema_version:string;
+  event_type:string;
+  event_category:AuditEventCategory|string;
+  occurred_at:string;
+  recorded_at:string;
+  actor_type:string;
+  actor_reference:string|null;
+  source_component:string;
+  operation_key:string|null;
+  object_type:string;
+  object_id:string;
+  parent_object_type:string|null;
+  parent_object_id:string|null;
+  before_fingerprint:string|null;
+  after_fingerprint:string|null;
+  previous_event_fingerprint:string|null;
+  event_fingerprint:string;
+  metadata:Record<string,unknown>;
+}
+
+export interface AuditIntegrityIssue {
+  event_id:string|null;
+  issue_type:string;
+  message:string;
+  details:Record<string,unknown>;
+}
+
+export interface AuditIntegrity {
+  valid:boolean;
+  total_events:number;
+  issues:AuditIntegrityIssue[];
+  interpretation:string;
+}
+
+export interface AuditTimeline {
+  object_type:string;
+  object_id:string;
+  total_events:number;
+  events:ScientificAuditEvent[];
+  categories_present:string[];
+  integrity_status:'VERIFIED'|'INTEGRITY_WARNING'|'NOT_VERIFIED';
+  legacy_disclaimer:string|null;
+  scientific_boundary:string;
+}
+
+export interface AuditFilterParams {
+  event_type?:string;
+  event_category?:string;
+  object_type?:string;
+  object_id?:string;
+  parent_object_id?:string;
+  source_component?:string;
+  actor_type?:string;
+  start_time?:string;
+  end_time?:string;
+  limit?:number;
+  offset?:number;
+}

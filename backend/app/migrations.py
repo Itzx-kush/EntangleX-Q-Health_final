@@ -4,13 +4,19 @@ The project historically initialized tables with ``create_all``.  Migrations
 therefore remain deliberately dependency-free and additive: they never drop,
 rename, or rewrite historical rows.
 """
+
 from __future__ import annotations
+
 import json
 import logging
 from sqlalchemy import inspect, text
+
 from .database import engine
 from .utils.serialization import utcnow
+
 logger = logging.getLogger("qhealth.migrations")
+
+
 MIGRATION_ID = "20261002_01_experiment_run_artifact"
 MANIFEST_MIGRATION_ID = "20261002_02_immutable_run_manifest"
 DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
@@ -27,107 +33,7 @@ RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages
 DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
-def _columns(connection, table: str) -> set[str]:
-    return {column["name"] for column in inspect(connection).get_columns(table)}
-def apply_migrations() -> None:
-    with engine.begin() as connection:
-        connection.execute(text(
-            "CREATE TABLE IF NOT EXISTS schema_migrations ("
-            "id VARCHAR(100) PRIMARY KEY, applied_at DATETIME NOT NULL)"
-        ))
-        applied = connection.execute(
-            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
-            {"id": MIGRATION_ID},
-        ).scalar()
-        if not applied:
-            additions = {
-                "jobs": "ALTER TABLE jobs ADD COLUMN run_id VARCHAR(36) REFERENCES runs(id)",
-                "models": "ALTER TABLE models ADD COLUMN run_id VARCHAR(36) REFERENCES runs(id)",
-                "explanations": "ALTER TABLE explanations ADD COLUMN run_id VARCHAR(36) REFERENCES runs(id)",
-            }
-            for table, statement in additions.items():
-                if "run_id" not in _columns(connection, table):
-                    connection.execute(text(statement))
-            # These access paths are used by run detail and lineage queries.  The
-            # partial unique index permits any number of honest legacy NULL rows.
-            connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_jobs_run_id ON jobs(run_id) WHERE run_id IS NOT NULL"))
-            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_models_run_id ON models(run_id)"))
-            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_explanations_run_id ON explanations(run_id)"))
-            connection.execute(
-                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
-                {"id": MIGRATION_ID, "applied_at": utcnow()},
-            )
-        execution_tracking_applied = connection.execute(
-            {"id": TRAINING_EXECUTION_MIGRATION_ID},
-        if not execution_tracking_applied:
-            if "name" not in _columns(connection, "experiments"):
-                connection.execute(text("ALTER TABLE experiments ADD COLUMN name VARCHAR(240)"))
-            if "progress" not in _columns(connection, "models"):
-                connection.execute(text("ALTER TABLE models ADD COLUMN progress INTEGER"))
-            connection.execute(text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_experiments_dataset_name "
-                "ON experiments(dataset_id, name) WHERE name IS NOT NULL"
-            ))
-                {"id": TRAINING_EXECUTION_MIGRATION_ID, "applied_at": utcnow()},
-        experiment_lifecycle_applied = connection.execute(
-            {"id": EXPERIMENT_LIFECYCLE_MIGRATION_ID},
-        if not experiment_lifecycle_applied:
-            if "deleted_at" not in _columns(connection, "experiments"):
-                connection.execute(text("ALTER TABLE experiments ADD COLUMN deleted_at DATETIME"))
-                "CREATE INDEX IF NOT EXISTS ix_experiments_deleted_at ON experiments(deleted_at)"
-                {"id": EXPERIMENT_LIFECYCLE_MIGRATION_ID, "applied_at": utcnow()},
-        manifest_applied = connection.execute(
-            {"id": MANIFEST_MIGRATION_ID},
-        if not manifest_applied:
-            run_columns = _columns(connection, "runs")
-            manifest_additions = {
-                "manifest_artifact_id": "ALTER TABLE runs ADD COLUMN manifest_artifact_id VARCHAR(36) REFERENCES artifacts(id)",
-                "configuration_fingerprint": "ALTER TABLE runs ADD COLUMN configuration_fingerprint VARCHAR(64)",
-                "reproducibility_status": "ALTER TABLE runs ADD COLUMN reproducibility_status VARCHAR(40)",
-                "manifest_locked_at": "ALTER TABLE runs ADD COLUMN manifest_locked_at DATETIME",
-            for column, statement in manifest_additions.items():
-                if column not in run_columns:
-            connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_runs_manifest_artifact_id ON runs(manifest_artifact_id) WHERE manifest_artifact_id IS NOT NULL"))
-            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_runs_configuration_fingerprint ON runs(configuration_fingerprint)"))
-            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_runs_reproducibility_status ON runs(reproducibility_status)"))
-                {"id": MANIFEST_MIGRATION_ID, "applied_at": utcnow()},
-        dataset_version_applied = connection.execute(
-            {"id": DATASET_VERSION_MIGRATION_ID},
-        if not dataset_version_applied:
 SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
-"""Small, explicit SQLite migrations for the existing local research registry.
-
-The project historically initialized tables with ``create_all``.  Migrations
-therefore remain deliberately dependency-free and additive: they never drop,
-rename, or rewrite historical rows.
-"""
-
-from __future__ import annotations
-
-import logging
-from sqlalchemy import inspect, text
-
-from .database import engine
-from .utils.serialization import utcnow
-
-logger = logging.getLogger("qhealth.migrations")
-
-
-MIGRATION_ID = "20261002_01_experiment_run_artifact"
-MANIFEST_MIGRATION_ID = "20261002_02_immutable_run_manifest"
-DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
-MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
-EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
-DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
-CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
-TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
-EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
-RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
-EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
-CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
-RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
-DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
-PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 
 
 
@@ -846,4 +752,181 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": PIPELINE_VERSION_REGISTRY_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        protocols_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID},
+        ).scalar()
+        if not protocols_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS protocol_templates (
+                    id VARCHAR(36) PRIMARY KEY,
+                    name VARCHAR(160) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    version VARCHAR(24) NOT NULL DEFAULT 'v1',
+                    status VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+                    task_type VARCHAR(64) NOT NULL DEFAULT 'binary_classification',
+                    canonical_definition JSON NOT NULL,
+                    parameters_schema JSON NOT NULL DEFAULT '{}',
+                    template_fingerprint VARCHAR(64) NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_protocol_template_name UNIQUE(name)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS experiment_protocols (
+                    id VARCHAR(36) PRIMARY KEY,
+                    name VARCHAR(160) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    template_id VARCHAR(36) REFERENCES protocol_templates(id),
+                    source_context VARCHAR(48),
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_experiment_protocol_name UNIQUE(name)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS experiment_protocol_versions (
+                    id VARCHAR(36) PRIMARY KEY,
+                    protocol_id VARCHAR(36) NOT NULL REFERENCES experiment_protocols(id),
+                    version_number INTEGER NOT NULL,
+                    version_label VARCHAR(24) NOT NULL,
+                    schema_version VARCHAR(48) NOT NULL,
+                    status VARCHAR(24) NOT NULL DEFAULT 'DRAFT',
+                    description TEXT NOT NULL DEFAULT '',
+                    definition_fingerprint VARCHAR(64) NOT NULL,
+                    canonical_definition JSON NOT NULL,
+                    parent_protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id),
+                    template_id VARCHAR(36) REFERENCES protocol_templates(id),
+                    pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
+                    controlled_comparison_protocol_id VARCHAR(36) REFERENCES controlled_comparison_protocols(id),
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    source_context VARCHAR(48),
+                    published_at DATETIME,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_experiment_protocol_version_number UNIQUE(protocol_id, version_number),
+                    CONSTRAINT uq_experiment_protocol_version_fingerprint UNIQUE(definition_fingerprint)
+                )
+            """))
+            if "protocol_version_id" not in _columns(connection, "experiments"):
+                connection.execute(text(
+                    "ALTER TABLE experiments ADD COLUMN protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id)"
+                ))
+            if "protocol_fingerprint" not in _columns(connection, "experiments"):
+                connection.execute(text(
+                    "ALTER TABLE experiments ADD COLUMN protocol_fingerprint VARCHAR(64)"
+                ))
+            if "protocol_version_id" not in _columns(connection, "runs"):
+                connection.execute(text(
+                    "ALTER TABLE runs ADD COLUMN protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id)"
+                ))
+            if "protocol_fingerprint" not in _columns(connection, "runs"):
+                connection.execute(text(
+                    "ALTER TABLE runs ADD COLUMN protocol_fingerprint VARCHAR(64)"
+                ))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_name ON protocol_templates(name)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_status ON protocol_templates(status)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_fingerprint ON protocol_templates(template_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_created_at ON protocol_templates(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_name ON experiment_protocols(name)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_template_id ON experiment_protocols(template_id)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_created_at ON experiment_protocols(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_protocol_id ON experiment_protocol_versions(protocol_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_status ON experiment_protocol_versions(status)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_fingerprint ON experiment_protocol_versions(definition_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_parent_id ON experiment_protocol_versions(parent_protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_template_id ON experiment_protocol_versions(template_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_pipeline_ver_id ON experiment_protocol_versions(pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_controlled_id ON experiment_protocol_versions(controlled_comparison_protocol_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_artifact_id ON experiment_protocol_versions(artifact_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_created_at ON experiment_protocol_versions(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_protocol_version_id ON experiments(protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_protocol_fingerprint ON experiments(protocol_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_runs_protocol_version_id ON runs(protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_runs_protocol_fingerprint ON runs(protocol_fingerprint)",
+            ]:
+                connection.execute(text(statement))
+
+            # Seed default templates
+            from .protocols.templates import BUILTIN_TEMPLATES, _template_id
+            from .protocols.service import canonicalize_definition, definition_fingerprint
+            for tpl in BUILTIN_TEMPLATES:
+                canonical = canonicalize_definition(tpl["definition"])
+                t_fingerprint = definition_fingerprint(canonical)
+                t_id = _template_id(tpl["name"])
+                connection.execute(
+                    text("""
+                        INSERT OR IGNORE INTO protocol_templates (
+                            id, name, description, version, status, task_type,
+                            canonical_definition, parameters_schema, template_fingerprint, created_at
+                        ) VALUES (
+                            :id, :name, :description, :version, :status, :task_type,
+                            :canonical_definition, :parameters_schema, :template_fingerprint, :created_at
+                        )
+                    """),
+                    {
+                        "id": t_id,
+                        "name": tpl["name"],
+                        "description": tpl["description"],
+                        "version": tpl["version"],
+                        "status": "ACTIVE",
+                        "task_type": tpl["task_type"],
+                        "canonical_definition": json.dumps(canonical),
+                        "parameters_schema": json.dumps(tpl["parameters_schema"]),
+                        "template_fingerprint": t_fingerprint,
+                        "created_at": utcnow(),
+                    },
+                )
+
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        audit_timeline_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID},
+        ).scalar()
+        if not audit_timeline_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS scientific_audit_events (
+                    id VARCHAR(36) PRIMARY KEY,
+                    schema_version VARCHAR(32) NOT NULL,
+                    event_type VARCHAR(64) NOT NULL,
+                    event_category VARCHAR(32) NOT NULL,
+                    occurred_at DATETIME NOT NULL,
+                    recorded_at DATETIME NOT NULL,
+                    actor_type VARCHAR(24) NOT NULL,
+                    actor_reference VARCHAR(120),
+                    source_component VARCHAR(64) NOT NULL,
+                    operation_key VARCHAR(240),
+                    object_type VARCHAR(48) NOT NULL,
+                    object_id VARCHAR(64) NOT NULL,
+                    parent_object_type VARCHAR(48),
+                    parent_object_id VARCHAR(64),
+                    before_fingerprint VARCHAR(64),
+                    after_fingerprint VARCHAR(64),
+                    previous_event_fingerprint VARCHAR(64),
+                    event_fingerprint VARCHAR(64) NOT NULL,
+                    metadata JSON NOT NULL,
+                    CONSTRAINT uq_audit_operation_event UNIQUE(operation_key, event_type)
+                )
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_type ON scientific_audit_events(event_type)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_category ON scientific_audit_events(event_category)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_occurred_at ON scientific_audit_events(occurred_at)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_recorded_at ON scientific_audit_events(recorded_at)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_object_type_id ON scientific_audit_events(object_type, object_id)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_parent_object_id ON scientific_audit_events(parent_object_type, parent_object_id)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_occurred_at_id ON scientific_audit_events(occurred_at, id)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_source_component ON scientific_audit_events(source_component)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_operation_key ON scientific_audit_events(operation_key)",
+                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_fingerprint ON scientific_audit_events(event_fingerprint)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()},
             )

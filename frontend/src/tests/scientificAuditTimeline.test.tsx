@@ -7,6 +7,7 @@ import type {AuditTimeline,ScientificAuditEvent} from '../types/qhealth';
 
 vi.mock('../lib/api',()=>({qh:{
   experimentAudit:vi.fn(),
+  auditIntegrity:vi.fn(),
   experimentAuditExport:vi.fn(),
 }}));
 
@@ -60,13 +61,11 @@ const sampleTimeline:AuditTimeline={
   object_type:'experiment',
   object_id:experimentId,
   events:[sampleEvent1,sampleEvent2],
-  integrity:{
-    verified:true,
-    total_events:2,
-    issues:[],
-    checked_at:'2026-10-03T10:05:00Z',
-  },
-  disclaimer:'Audit history is recorded from platform upgrade (2026-10-03). Earlier platform activity was not captured.',
+  total_events:2,
+  categories_present:['EXPERIMENT','RUN'],
+  integrity_status:'VERIFIED',
+  legacy_disclaimer:null,
+  scientific_boundary:'The Scientific Audit Timeline records platform events and persisted state transitions. It does not establish scientific validity, causal relationships, model quality, or performance.',
 };
 
 function renderPanel(){
@@ -82,19 +81,21 @@ describe('Scientific Audit Timeline panel',()=>{
 
   it('loads and renders timeline events, badges, and integrity status',async()=>{
     vi.mocked(qh.experimentAudit).mockResolvedValue(sampleTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:true,total_events:2,issues:[],interpretation:'Audit integrity verified across 2 event(s).'});
     renderPanel();
 
     expect(await screen.findByText('INTEGRITY VERIFIED')).toBeInTheDocument();
     expect(screen.getByText('2 RECORDED EVENTS')).toBeInTheDocument();
     expect(screen.getByText('EXPERIMENT CREATED')).toBeInTheDocument();
     expect(screen.getByText('RUN STARTED')).toBeInTheDocument();
-    expect(screen.getByText(/Audit history is recorded from platform upgrade/i)).toBeInTheDocument();
     expect(screen.getByText(/The Scientific Audit Timeline records platform events and persisted state transitions/i)).toBeInTheDocument();
     expect(qh.experimentAudit).toHaveBeenCalledWith(experimentId,'all');
+    expect(qh.auditIntegrity).toHaveBeenCalledWith('experiment',experimentId);
   });
 
   it('supports interactive event detail expansion for fingerprints and metadata',async()=>{
     vi.mocked(qh.experimentAudit).mockResolvedValue(sampleTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:true,total_events:2,issues:[],interpretation:'Audit integrity verified across 2 event(s).'});
     renderPanel();
 
     expect(await screen.findByText('EXPERIMENT CREATED')).toBeInTheDocument();
@@ -116,6 +117,7 @@ describe('Scientific Audit Timeline panel',()=>{
 
   it('triggers category filter on select change',async()=>{
     vi.mocked(qh.experimentAudit).mockResolvedValue(sampleTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:true,total_events:2,issues:[],interpretation:'Audit integrity verified across 2 event(s).'});
     renderPanel();
 
     expect(await screen.findByText('Filter Category')).toBeInTheDocument();
@@ -130,14 +132,10 @@ describe('Scientific Audit Timeline panel',()=>{
   it('displays integrity warnings when verification fails',async()=>{
     const warningTimeline:AuditTimeline={
       ...sampleTimeline,
-      integrity:{
-        verified:false,
-        total_events:2,
-        issues:[{event_id:'evt-2',issue_type:'fingerprint_mismatch',description:'Computed hash does not match'}],
-        checked_at:'2026-10-03T10:05:00Z',
-      },
+      integrity_status:'INTEGRITY_WARNING',
     };
     vi.mocked(qh.experimentAudit).mockResolvedValue(warningTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:false,total_events:2,issues:[{event_id:'evt-2',issue_type:'fingerprint_mismatch',message:'Computed hash does not match',details:{}}],interpretation:'Integrity scan detected 1 structured issue(s) across 2 event(s).'});
     renderPanel();
 
     expect(await screen.findByText('INTEGRITY WARNING')).toBeInTheDocument();
@@ -146,6 +144,7 @@ describe('Scientific Audit Timeline panel',()=>{
 
   it('invokes export API on button click',async()=>{
     vi.mocked(qh.experimentAudit).mockResolvedValue(sampleTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:true,total_events:2,issues:[],interpretation:'Audit integrity verified across 2 event(s).'});
     renderPanel();
 
     const exportButton=await screen.findByRole('button',{name:/Export Audit JSON/i});
@@ -159,6 +158,7 @@ describe('Scientific Audit Timeline panel',()=>{
       events:[],
     };
     vi.mocked(qh.experimentAudit).mockResolvedValue(emptyTimeline);
+    vi.mocked(qh.auditIntegrity).mockResolvedValue({valid:true,total_events:0,issues:[],interpretation:'Audit integrity verified across 0 event(s).'});
     renderPanel();
 
     expect(await screen.findByText('No audit events found')).toBeInTheDocument();

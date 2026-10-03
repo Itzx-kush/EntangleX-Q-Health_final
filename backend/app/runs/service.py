@@ -1,32 +1,6 @@
 from __future__ import annotations
 
 from uuid import uuid4
-from sqlalchemy import select
-from ..database import session_scope
-from ..storage.entities import Experiment, Run
-from ..storage.repository import require
-from ..utils.errors import AppError
-from ..utils.serialization import utcnow
-TERMINAL = {"completed", "failed", "cancelled"}
-TRANSITIONS = {
-    "created": {"queued", "failed", "cancelled"},
-    "queued": {"running", "failed", "cancelled"},
-    "running": {"completed", "failed", "cancelled"},
-    "completed": set(),
-    "failed": set(),
-    "cancelled": set(),
-}
-def create_run(
-    session,
-    *,
-    experiment: Experiment,
-    config: dict,
-    operation_key: str,
-    execution_metadata: dict,
-    reproducibility_metadata: dict,
-from __future__ import annotations
-
-from uuid import uuid4
 
 from sqlalchemy import select
 
@@ -69,6 +43,8 @@ def create_run(
         dataset_id=experiment.dataset_id,
         dataset_version_id=dataset_version_id,
         pipeline_version_id=experiment.pipeline_version_id,
+        protocol_version_id=experiment.protocol_version_id,
+        protocol_fingerprint=experiment.protocol_fingerprint,
         status="created",
         operation_key=operation_key,
         config=config,
@@ -77,6 +53,19 @@ def create_run(
     )
     session.add(run)
     session.flush()
+    from ..audit.service import record_event
+    record_event(
+        session,
+        event_type="RUN_CREATED",
+        event_category="RUN",
+        object_type="run",
+        object_id=run.id,
+        parent_object_type="experiment",
+        parent_object_id=experiment.id,
+        source_component="run_service",
+        operation_key=f"run-created:{run.id}",
+        metadata={"dataset_id": run.dataset_id, "pipeline_version_id": run.pipeline_version_id},
+    )
     return run
 
 
@@ -112,6 +101,24 @@ def transition(
     elif status == "cancelled":
         run.cancelled_at = now
         run.failure = failure or {"code": "cancelled", "message": "Scientific execution was cancelled."}
+    from ..audit.service import record_event
+    event_type = (
+        "RUN_STARTED" if status == "running"
+        else f"RUN_{status.upper()}" if status in ("completed", "failed", "cancelled")
+        else None
+    )
+    if event_type:
+        record_event(
+            session,
+            event_type=event_type,
+            event_category="RUN",
+            object_type="run",
+            object_id=run.id,
+            parent_object_type="experiment",
+            parent_object_id=run.experiment_id,
+            source_component="run_service",
+            metadata={"status": status},
+        )
     return run
 
 
