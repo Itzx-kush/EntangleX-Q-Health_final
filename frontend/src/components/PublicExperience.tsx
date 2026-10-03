@@ -1,10 +1,12 @@
-import {useEffect,useState,type CSSProperties} from 'react';
+import {useEffect,useRef,useState,type CSSProperties} from 'react';
 import {ArrowDown,ArrowRight,ArrowUpRight,Atom,BrainCircuit,Database,Menu,ShieldCheck,X} from 'lucide-react';
 import {InteractiveQuantumField} from './InteractiveQuantumField';
 import {ParticleText} from './ParticleText';
+import {usePointerMotion} from './motion/usePointerMotion';
 
 type PublicExperienceProps={
   onRequestAccess:(destination?:string)=>void;
+  exiting?:boolean;
 };
 
 const researchSteps=[
@@ -34,8 +36,10 @@ const platformFlow=[
   'Research decision support',
 ] as const;
 
-export function PublicExperience({onRequestAccess}:PublicExperienceProps){
+export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienceProps){
   const [menuOpen,setMenuOpen]=useState(false);
+  const sceneRef=useRef<HTMLDivElement|null>(null);
+  usePointerMotion(sceneRef);
 
   useEffect(()=>{
     const elements=Array.from(document.querySelectorAll<HTMLElement>('[data-public-reveal]'));
@@ -67,13 +71,14 @@ export function PublicExperience({onRequestAccess}:PublicExperienceProps){
     onRequestAccess(destination);
   };
 
-  return <div className="public-experience">
+  return <div ref={sceneRef} className={'public-experience '+(exiting?'is-exiting':'')}>
+    <div className="public-access-portal" aria-hidden="true"><i/><i/><i/></div>
     <div className="public-background" aria-hidden="true">
-      <span className="public-glow public-glow-a"/>
-      <span className="public-glow public-glow-b"/>
-      <span className="public-background-node node-a"/>
-      <span className="public-background-node node-b"/>
-      <span className="public-background-node node-c"/>
+      <span className="public-glow public-glow-a" data-motion-depth="back"/>
+      <span className="public-glow public-glow-b" data-motion-depth="back"/>
+      <span className="public-background-node node-a" data-motion-depth="mid"/>
+      <span className="public-background-node node-b" data-motion-depth="back"/>
+      <span className="public-background-node node-c" data-motion-depth="mid"/>
     </div>
 
     <header className="public-header">
@@ -112,7 +117,7 @@ export function PublicExperience({onRequestAccess}:PublicExperienceProps){
     <main id="top">
       <section className="public-hero public-shell" aria-labelledby="public-hero-title">
         <InteractiveQuantumField/>
-        <div className="public-hero-copy" data-public-reveal>
+        <div className="public-hero-copy" data-public-reveal="hero" data-motion-depth="front">
           <p className="public-eyebrow"><span>ENTANGLEX</span> Biomedical research platform</p>
           <ParticleText id="public-hero-title" text="Hybrid quantum–classical intelligence for biomedical research."/>
           <p className="public-hero-intro">A research prototype for moving from traceable biomedical data to measured model evidence, interpretation and reproducible experimentation.</p>
@@ -127,7 +132,7 @@ export function PublicExperience({onRequestAccess}:PublicExperienceProps){
           <p className="public-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
         </div>
 
-        <div className="public-hero-system" data-public-reveal aria-label="Conceptual hybrid intelligence system">
+        <div className="public-hero-system" data-public-reveal="hero-system" data-motion-depth="mid" aria-label="Conceptual hybrid intelligence system">
           <div className="public-system-grid" aria-hidden="true"/>
           <div className="public-system-orbit orbit-one" aria-hidden="true"/>
           <div className="public-system-orbit orbit-two" aria-hidden="true"/>

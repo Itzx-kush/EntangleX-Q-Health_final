@@ -23,7 +23,7 @@ export function ParticleText({text,id}:{text:string;id:string}){
     let top=0;
     let frame=0;
     let last=performance.now();
-    const pointer={x:-999,y:-999,active:false};
+    const pointer={x:-999,y:-999,active:false,energy:0};
 
     const build=()=>{
       host.classList.remove('is-particle-ready');
@@ -87,6 +87,10 @@ export function ParticleText({text,id}:{text:string;id:string}){
       const step=Math.min(2,(time-last)/16.667);
       last=time;
       context.clearRect(0,0,width,height);
+      pointer.energy+=((pointer.active?1:0)-pointer.energy)*Math.min(1,.11*step);
+      host.style.setProperty('--particle-x',`${pointer.x}px`);
+      host.style.setProperty('--particle-y',`${pointer.y}px`);
+      host.style.setProperty('--particle-energy',pointer.energy.toFixed(3));
       points.forEach(point=>{
         if(pointer.active){
           const dx=point.x-pointer.x;
@@ -95,7 +99,7 @@ export function ParticleText({text,id}:{text:string;id:string}){
           const radius=105;
           if(distance<radius){
             const influence=1-distance/radius;
-            const force=influence*influence*1.7*step;
+            const force=influence*influence*1.7*pointer.energy*step;
             point.vx+=dx/distance*force;
             point.vy+=dy/distance*force;
           }
