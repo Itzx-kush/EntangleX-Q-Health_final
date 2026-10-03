@@ -3,6 +3,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Iterable
 from uuid import NAMESPACE_URL, uuid5
+from sqlalchemy import select
+from ..artifacts.service import register_metadata
+from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
+from ..storage.entities import (
+    AblationStudy,
+    Artifact,
+    CalibrationStudy,
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Iterable
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import select
 
@@ -27,6 +40,7 @@ from ..storage.entities import (
     ResearchEvidencePackage,
     RobustnessRecord,
     Run,
+    SubgroupAnalysisStudy,
     ThresholdAnalysisStudy,
 )
 from ..storage.repository import require
@@ -258,12 +272,17 @@ def _load_evidence(session, experiment: Experiment) -> dict:
     explanations = list(session.scalars(select(ExplanationRecord).where(
         ExplanationRecord.model_id.in_(model_ids) if model_ids else False
     )))
+    subgroup_studies = list(session.scalars(select(SubgroupAnalysisStudy).where(
+        SubgroupAnalysisStudy.experiment_id == experiment.id
+    )))
     return {
         "models": models, "runs": runs, "artifacts": artifacts,
         "multi_seed": multi_seed, "external_validation": external,
         "distribution_shift": shift, "calibration": calibration,
         "threshold": threshold, "robustness": robustness, "ablation": ablation,
         "quantum_diagnostics": diagnostics, "controlled_comparison": protocols,
+        "explainability": explanations, "subgroup_analysis": subgroup_studies,
+    }
         "explainability": explanations,
     }
 
@@ -579,20 +598,6 @@ def create_package(session, experiment_id: str) -> tuple[ResearchEvidencePackage
     )
     session.add(package)
     session.flush()
-    from ..audit.service import record_event
-    record_event(
-        session,
-        event_type="EVIDENCE_PACKAGE_CREATED",
-        event_category="EVIDENCE",
-        object_type="evidence_package",
-        object_id=package.id,
-        parent_object_type="experiment",
-        parent_object_id=experiment_id,
-        source_component="evidence_package_service",
-        operation_key=f"evidence-package-created:{package.id}",
-        after_fingerprint=package.package_fingerprint,
-        metadata={"package_id": package.id, "package_status": package.status},
-    )
     return package, True
 
 
