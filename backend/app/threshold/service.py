@@ -3,7 +3,7 @@ from uuid import uuid4
 from datetime import datetime
 
 from ..database import session_scope
-from ..storage.entities import ThresholdAnalysisStudy, ModelRecord, Run, Dataset
+from ..storage.entities import ThresholdAnalysisStudy
 from ..storage.files import load_model
 from ..api.schemas import TrainingConfig
 from ..data.splitting import prepare_data
@@ -12,6 +12,7 @@ from ..utils.serialization import fingerprint, utcnow
 from ..utils.errors import AppError
 from .schemas import ThresholdAnalysisRequest, ThresholdPreflightResponse
 from .metrics import calculate_threshold_metrics, select_threshold
+from ..evaluation.context import resolve_model_evaluation_context
 
 from sklearn.model_selection import GroupShuffleSplit, train_test_split, cross_val_predict
 
@@ -53,16 +54,11 @@ def get_predictions_for_threshold(req: ThresholdAnalysisRequest, data, estimator
 
 def preflight(req: ThresholdAnalysisRequest) -> ThresholdPreflightResponse:
     with session_scope() as session:
-        model = session.get(ModelRecord, str(req.model_id))
-        if not model or model.status != "ready":
-            raise AppError("model_unavailable", "The requested model is not available.")
-            
-        run = session.get(Run, model.run_id)
-        dataset = session.get(Dataset, str(req.dataset_id))
-        if not run or not dataset:
-            raise AppError("missing_entity", "Run or dataset missing.")
-            
-        base_config = TrainingConfig.model_validate(run.config)
+        context = resolve_model_evaluation_context(
+            session, str(req.model_id), str(req.dataset_id),
+            str(req.dataset_version_id) if req.dataset_version_id else None,
+        )
+        base_config = context.training_config
         
     limitations = []
     feasible = True
@@ -79,7 +75,11 @@ def preflight(req: ThresholdAnalysisRequest) -> ThresholdPreflightResponse:
         data = prepare_data(config)
     except Exception as exc:
         limitations.append(f"Data preparation failed: {exc}")
-        return ThresholdPreflightResponse(feasible=False, limitations=limitations, method_support={}, configuration_fingerprint="")
+        return ThresholdPreflightResponse(
+            feasible=False, limitations=limitations, method_support={},
+            configuration_fingerprint=context.configuration_fingerprint,
+            source_context_type=context.source_context_type,
+        )
         
     if len(data.test) < 10:
         limitations.append("Insufficient evaluation samples.")
@@ -93,7 +93,8 @@ def preflight(req: ThresholdAnalysisRequest) -> ThresholdPreflightResponse:
         feasible=feasible,
         limitations=limitations,
         method_support={"dedicated_split": True},
-        configuration_fingerprint=fingerprint(req.model_dump(mode="json"))
+        configuration_fingerprint=context.configuration_fingerprint,
+        source_context_type=context.source_context_type,
     )
 
 def execute_threshold_study(study_id: str):
@@ -103,9 +104,12 @@ def execute_threshold_study(study_id: str):
         study.status = "running"
         req = ThresholdAnalysisRequest.model_validate(study.configuration)
         
-        model = session.get(ModelRecord, study.model_id)
-        run = session.get(Run, model.run_id)
-        base_config = TrainingConfig.model_validate(run.config)
+        context = resolve_model_evaluation_context(
+            session, study.model_id, study.dataset_id, study.dataset_version_id
+        )
+        model = context.model
+        base_config = context.training_config
+        study.provenance = context.source_context()
         
         config = base_config.model_copy(update={
             "dataset_id": req.dataset_id,
@@ -194,6 +198,18 @@ def execute_threshold_study(study_id: str):
                 "negative_events": int(len(y_eval) - np.sum(y_eval)),
                 "prevalence": float(np.sum(y_eval) / len(y_eval)) if len(y_eval) > 0 else 0
             }
+            study.provenance = context.source_context()
+            study.provenance["threshold_protocol"] = {
+                "selection_protocol": req.selection_protocol,
+                "selection_method": req.selection_method,
+                "selection_population": "dedicated selection subset",
+                "evaluation_population": "separate frozen evaluation subset",
+                "threshold_frozen_before_evaluation": True,
+            }
+            if context.source_context_type == "verified_demo_experiment":
+                study.limitations = list(study.limitations or []) + [
+                    "Derived from the immutable verified precomputed demo model context; no live training Run is claimed."
+                ]
             study.completed_at = datetime.utcnow()
             
     except Exception as exc:

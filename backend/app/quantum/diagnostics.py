@@ -2,8 +2,43 @@ from typing import Dict, Any, List, Optional
 from uuid import uuid4
 import json
 import hashlib
+from sqlalchemy import select
 from backend.app.storage.entities import QuantumDiagnosticReport, Experiment, ModelRecord
 from backend.app.quantum.schemas import QuantumPreflightRequest, QuantumDiagnosticReportOut, QuantumDiagnosticFinding, QuantumDiagnosticPreflightResponse
+from backend.app.evaluation.context import resolve_model_evaluation_context
+from backend.app.utils.errors import AppError
+
+
+def _diagnostic_source_context(session, exp: Experiment, model: ModelRecord) -> dict:
+    """Resolve full evaluation provenance, preserving honest legacy diagnostics.
+
+    Older quantum records could be created before Runs existed. They remain
+    diagnosable from their own experiment/model configuration, but are labeled
+    explicitly rather than being represented as live or verified-demo Runs.
+    """
+    try:
+        return resolve_model_evaluation_context(
+            session, model.id, model.dataset_id
+        ).source_context()
+    except AppError:
+        if model.run_id or (model.details or {}).get("experiment_kind") == "precomputed_verified_demo":
+            raise
+        if exp.id != model.experiment_id or exp.dataset_id != model.dataset_id:
+            raise
+        return {
+            "type": "legacy_experiment_model",
+            "model_id": model.id,
+            "experiment_id": exp.id,
+            "run_id": None,
+            "dataset_id": model.dataset_id,
+            "model_artifact_sha256": model.artifact_sha256,
+            "configuration_fingerprint": hashlib.sha256(
+                json.dumps(exp.config or {}, sort_keys=True).encode("utf-8")
+            ).hexdigest(),
+            "provenance": {
+                "limitation": "Legacy record has no persisted Run or verified-demo package identity."
+            },
+        }
 
 def compute_circuit_fingerprint(model_type: str, quantum_config: Dict[str, Any]) -> str:
     """Computes a deterministic fingerprint of the circuit configuration."""
@@ -34,6 +69,7 @@ def preflight_quantum_diagnostics(session, experiment_id: str, model_record_id: 
             warnings=["Model is not a supported quantum model type."],
             limitations=["Classical models do not support quantum diagnostics."]
         )
+    _diagnostic_source_context(session, exp, model)
         
     return QuantumDiagnosticPreflightResponse(
         feasible=True,
@@ -44,11 +80,12 @@ def preflight_quantum_diagnostics(session, experiment_id: str, model_record_id: 
 
 def generate_quantum_diagnostics(session, experiment_id: str, model_record_id: str) -> QuantumDiagnosticReport:
     exp = session.query(Experiment).filter_by(id=experiment_id).first()
-    model = session.query(ModelRecord).filter_by(id=model_record_id).first()
+    model = session.query(ModelRecord).filter_by(id=model_record_id, experiment_id=experiment_id).first()
     
     if not exp or not model:
         raise ValueError("Invalid experiment or model record")
         
+    source_context = _diagnostic_source_context(session, exp, model)
     quantum_config = exp.config.get("quantum", {})
     if model.model_type == "hybrid_pennylane_torch":
         quantum_config = exp.config.get("hybrid", {})
@@ -76,7 +113,7 @@ def generate_quantum_diagnostics(session, experiment_id: str, model_record_id: s
     }
     
     # Circuit Structure
-    reps = quantum_config.get("reps", 2)
+    reps = quantum_config.get("ansatz_reps", quantum_config.get("quantum_layers", quantum_config.get("reps", 2)))
     entanglement = quantum_config.get("entanglement", "linear")
     ansatz = quantum_config.get("ansatz", "RealAmplitudes")
     
@@ -99,19 +136,27 @@ def generate_quantum_diagnostics(session, experiment_id: str, model_record_id: s
         "iterations": quantum_config.get("maxiter", 100)
     }
     
+    execution_evidence = (model.details or {}).get("quantum") or {}
     execution_profile = {
         "backend": quantum_config.get("backend", "statevector_simulator"),
-        "execution_mode": "local_simulator",
-        "shots": quantum_config.get("shots", 1024),
-        "runtime_seconds": model.metrics.get("timing", {}).get("final_training_seconds", 0)
+        "execution_mode": quantum_config.get(
+            "execution_mode",
+            execution_evidence.get("execution_mode", "local_simulator"),
+        ),
+        "real_hardware": execution_evidence.get("real_hardware", False),
     }
+    if quantum_config.get("shots") is not None:
+        execution_profile["shots"] = quantum_config["shots"]
+    measured_runtime = (model.metrics or {}).get("timing", {}).get("final_training_seconds")
+    if measured_runtime is not None:
+        execution_profile["runtime_seconds"] = measured_runtime
     
     resource_profile = {
         "qubits_configured": qubits,
         "qubits_observed": qubits,
         "circuit_depth": depth,
         "parameter_count": parameterized_gates,
-        "shots_configured": quantum_config.get("shots", 1024)
+        "shots_configured": quantum_config.get("shots")
     }
     
     noise_profile = {
@@ -120,13 +165,32 @@ def generate_quantum_diagnostics(session, experiment_id: str, model_record_id: s
     }
     
     provenance = {
-        "experiment_id": exp.id,
+        **source_context,
         "model_record_id": model.id,
-        "seed": exp.config.get("seed", "SEED_UNSPECIFIED")
+        "model_type": model.model_type,
+        "seed": exp.config.get("seed", "SEED_UNSPECIFIED"),
+        "diagnostic_basis": "persisted configuration and model provenance",
     }
     
     fingerprint = compute_circuit_fingerprint(model.model_type, quantum_config)
     
+    existing = session.scalar(
+        select(QuantumDiagnosticReport).where(
+            QuantumDiagnosticReport.experiment_id == exp.id,
+            QuantumDiagnosticReport.model_record_id == model.id,
+            QuantumDiagnosticReport.configuration_fingerprint == fingerprint,
+            QuantumDiagnosticReport.status == "completed",
+        ).order_by(QuantumDiagnosticReport.created_at.desc())
+    )
+    if existing is not None:
+        return existing
+
+    limitations = [
+        "Loss curve history unavailable when the persisted estimator does not expose it.",
+        "Gradient magnitudes unavailable.",
+        "Local simulation evidence does not represent real quantum hardware timing.",
+        "This diagnostic report does not establish quantum advantage.",
+    ]
     report = QuantumDiagnosticReport(
         id=str(uuid4()),
         experiment_id=exp.id,
@@ -138,12 +202,12 @@ def generate_quantum_diagnostics(session, experiment_id: str, model_record_id: s
         circuit_structure=circuit_structure,
         resource_profile=resource_profile,
         optimizer_profile=optimizer_profile,
-        training_profile={}, # Populated from metrics if available
+        training_profile={"loss_history_status": "not_available"},
         execution_profile=execution_profile,
         stability_profile={}, # Could be populated for multi-seed
         noise_profile=noise_profile,
         warnings=warnings,
-        limitations=["Loss curve history unavailable", "Gradient magnitudes unavailable"],
+        limitations=limitations,
         configuration_fingerprint=fingerprint,
         provenance=provenance
     )

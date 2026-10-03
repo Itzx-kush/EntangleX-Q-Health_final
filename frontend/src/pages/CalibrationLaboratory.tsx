@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Select } from '../components/ui';
 import { Loading, ErrorBanner, JsonDisclosure, Notice } from '../components/Shared';
@@ -9,6 +9,22 @@ export function CalibrationLaboratory({ model }: { model: any }) {
     const queryClient = useQueryClient();
     const [method, setMethod] = useState<'none' | 'sigmoid' | 'isotonic' | 'temperature_scaling'>('none');
     const [studyId, setStudyId] = useState<string | null>(null);
+    const request = {
+        model_id: model.id,
+        dataset_id: model.dataset_id,
+        calibration_method: method,
+        calibration_protocol: "dedicated_split",
+        sampling_unit: "independent_samples",
+        split_seed: 42,
+        test_size: 0.2,
+        calibration_size: 0.2,
+        cv_folds: 3,
+        bins: 10
+    };
+    const preflightQuery = useQuery({
+        queryKey: ['calibration-preflight', model.id, method],
+        queryFn: () => qh.calibration_preflight(request),
+    });
 
     // Fetch the calibration study if we have an ID
     const studyQuery = useQuery({
@@ -21,23 +37,11 @@ export function CalibrationLaboratory({ model }: { model: any }) {
     // Mutation to start preflight and create
     const createMutation = useMutation({
         mutationFn: async () => {
-            const req = {
-                model_id: model.id,
-                dataset_id: model.dataset_id,
-                calibration_method: method,
-                calibration_protocol: "dedicated_split",
-                sampling_unit: "independent_samples", // simplified for UI demo
-                split_seed: 42,
-                test_size: 0.2,
-                calibration_size: 0.2,
-                cv_folds: 3,
-                bins: 10
-            };
-            const preflight = await qh.calibration_preflight(req);
+            const preflight = await qh.calibration_preflight(request);
             if (!preflight.feasible) {
                 throw new Error("Calibration is not feasible: " + preflight.limitations.join("; "));
             }
-            return await qh.create_calibration_study(req);
+            return await qh.create_calibration_study(request);
         },
         onSuccess: (data) => {
             setStudyId(data.id);
@@ -45,6 +49,11 @@ export function CalibrationLaboratory({ model }: { model: any }) {
     });
 
     const s = studyQuery.data;
+    useEffect(() => {
+        if (s?.status === 'completed') {
+            queryClient.invalidateQueries({queryKey: ['model-card', model.id]});
+        }
+    }, [s?.status, queryClient, model.id]);
 
     return (
         <div className="mt-4 rounded-xl border p-4 bg-muted/5">
@@ -52,12 +61,12 @@ export function CalibrationLaboratory({ model }: { model: any }) {
                 <h3 className="font-semibold text-lg">Calibration Laboratory</h3>
                 <div className="flex gap-2">
                     <Select value={method} onChange={(e: any) => setMethod(e.target.value)}>
-                        <option value="none">Uncalibrated Baseline</option>
-                        <option value="sigmoid">Sigmoid (Platt)</option>
-                        <option value="isotonic">Isotonic Regression</option>
-                        <option value="temperature_scaling">Temperature Scaling</option>
+                        <option value="none" disabled={preflightQuery.data?.method_support?.none === false}>Uncalibrated Baseline</option>
+                        <option value="sigmoid" disabled={preflightQuery.data?.method_support?.sigmoid === false}>Sigmoid (Platt)</option>
+                        <option value="isotonic" disabled={preflightQuery.data?.method_support?.isotonic === false}>Isotonic Regression</option>
+                        <option value="temperature_scaling" disabled={preflightQuery.data?.method_support?.temperature_scaling === false}>Temperature Scaling</option>
                     </Select>
-                    <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+                    <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || preflightQuery.isLoading || preflightQuery.data?.feasible === false}>
                         Evaluate
                     </Button>
                 </div>
@@ -65,6 +74,12 @@ export function CalibrationLaboratory({ model }: { model: any }) {
 
             {createMutation.error && (
                 <ErrorBanner error={(createMutation.error as Error).message} />
+            )}
+            {preflightQuery.error && <ErrorBanner error={(preflightQuery.error as Error).message} />}
+            {preflightQuery.data?.feasible === false && (
+                <Notice tone="amber">
+                    Calibration is not applicable or feasible: {preflightQuery.data.limitations.join("; ")}
+                </Notice>
             )}
 
             {studyQuery.isLoading && <Loading />}

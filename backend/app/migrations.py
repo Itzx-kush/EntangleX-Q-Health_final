@@ -26,6 +26,7 @@ CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
 TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
 EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
 RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
+EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
 
 
 
@@ -396,6 +397,21 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": THRESHOLD_STUDIES_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        evaluation_context_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": EVALUATION_CONTEXT_MIGRATION_ID},
+        ).scalar()
+        if not evaluation_context_applied:
+            if "provenance" not in _columns(connection, "threshold_analysis_studies"):
+                connection.execute(text(
+                    "ALTER TABLE threshold_analysis_studies "
+                    "ADD COLUMN provenance JSON NOT NULL DEFAULT '{}'"
+                ))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": EVALUATION_CONTEXT_MIGRATION_ID, "applied_at": utcnow()},
             )
 
         QUANTUM_DIAGNOSTICS_MIGRATION_ID = "0012_quantum_diagnostics"

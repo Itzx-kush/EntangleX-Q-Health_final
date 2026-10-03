@@ -40,6 +40,7 @@ class QuantumDiagnosticReportOut(BaseModel):
 
 class QuantumDiagnosticPreflightResponse(BaseModel):
     feasible: bool
-    unsupported_fields: List[str] = []
-    warnings: List[str] = []
-    limitations: List[str] = []
+    blockers: List[str] = Field(default_factory=list)
+    unsupported_fields: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)

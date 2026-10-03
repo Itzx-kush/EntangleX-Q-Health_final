@@ -21,6 +21,7 @@ from ..storage.entities import (
     RobustnessRecord,
     Run,
     ThresholdAnalysisStudy,
+    QuantumDiagnosticReport,
 )
 from ..storage.repository import require
 from ..utils.serialization import clean_json, fingerprint
@@ -268,9 +269,10 @@ def _calibration(studies: list[CalibrationStudy]) -> dict:
         "protocol": (item.configuration or {}).get("calibration_protocol", "not_recorded"),
         "dataset_id": item.dataset_id, "dataset_version_id": _value(item.dataset_version_id),
         "metrics": clean_json(item.metrics), "summary": clean_json(item.summary),
-        "limitations": clean_json(item.limitations), "artifact_id": _value(item.artifact_id),
+        "limitations": clean_json(item.limitations), "provenance": clean_json(item.provenance),
+        "artifact_id": _value(item.artifact_id),
     } for item in studies]
-    return {"status": "available" if rows else MISSING, "studies": rows}
+    return {"status": "available" if any(item.status == "completed" for item in studies) else MISSING, "studies": rows}
 
 
 def _threshold(studies: list[ThresholdAnalysisStudy]) -> dict:
@@ -286,8 +288,9 @@ def _threshold(studies: list[ThresholdAnalysisStudy]) -> dict:
             "selection_operating_point": clean_json(results.get("selection_operating_point", "not_yet_evaluated")),
             "summary": clean_json(item.summary or {}),
             "limitations": clean_json(item.limitations or []),
+            "provenance": clean_json(item.provenance or {}),
         })
-    return {"status": "available" if rows else MISSING, "studies": rows}
+    return {"status": "available" if any(item.status == "completed" for item in studies) else MISSING, "studies": rows}
 
 
 def _external(studies: list[ExternalValidation]) -> dict:
@@ -353,7 +356,7 @@ def _robustness(records: list[RobustnessRecord]) -> dict:
     return {"status": "available" if rows else MISSING, "records": rows}
 
 
-def _quantum(model: ModelRecord, run: Run | None, config: dict) -> dict:
+def _quantum(model: ModelRecord, run: Run | None, config: dict, reports: list[QuantumDiagnosticReport]) -> dict:
     family = _family(model.model_type)
     if family == "classical":
         return {"status": "not_applicable"}
@@ -363,8 +366,14 @@ def _quantum(model: ModelRecord, run: Run | None, config: dict) -> dict:
         persisted_plan = (run.execution_metadata or {}).get("quantum_providers", [])
     matching = [plan for plan in persisted_plan if plan.get("provider_id") == model_config.get("provider_id")]
     execution = model.details.get("quantum") or {}
+    compatible = [
+        report for report in reports
+        if report.status == "completed" and report.model_type == model.model_type
+    ]
     return {
-        "status": "available" if model_config or execution or matching else MISSING,
+        "status": "available" if compatible else MISSING,
+        "configuration_provenance_status": "available" if model_config or execution or matching else MISSING,
+        "diagnostic_report_ids": [report.id for report in compatible],
         "provider_id": model_config.get("provider_id", execution.get("provider_id", "not_recorded")),
         "provider_display_name": execution.get("provider_display_name", "not_recorded"),
         "execution_mode": model_config.get("execution_mode", execution.get("execution_mode", "not_recorded")),
@@ -376,10 +385,10 @@ def _quantum(model: ModelRecord, run: Run | None, config: dict) -> dict:
     }
 
 
-def _gaps(*, task, run, version, multi, calibration, threshold, external, shift, group, robustness, quantum) -> list[dict]:
+def _gaps(*, task, run, source_context_type, version, multi, calibration, threshold, external, shift, group, robustness, quantum) -> list[dict]:
     candidates = [
         ("condition_task", task.get("condition_task_status") != "configured", "No ConditionTask is associated with this model."),
-        ("run", run is None, "No Run record is associated with this model."),
+        ("run", run is None and source_context_type != "verified_demo_experiment", "No Run record is associated with this model."),
         ("dataset_version", version is None, "No immutable DatasetVersion is associated with this model."),
         ("multi_seed", multi["status"] == MISSING, "No multi-seed stability study is associated with this model."),
         ("calibration", calibration["status"] == MISSING, "No calibration study is associated with this model; probabilities must not be described as calibrated."),
@@ -398,6 +407,11 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     experiment = session.get(Experiment, model.experiment_id)
     dataset = require(session, Dataset, model.dataset_id)
     run = session.get(Run, model.run_id) if model.run_id else None
+    source_context_type = "live_run" if run else (
+        "verified_demo_experiment"
+        if (model.details or {}).get("experiment_kind") == "precomputed_verified_demo"
+        else "unresolved"
+    )
     config = clean_json((run.config if run else (experiment.config if experiment else {})) or {})
     version_id = run.dataset_version_id if run else config.get("dataset_version_id")
     version = session.get(DatasetVersion, version_id) if version_id else None
@@ -410,6 +424,11 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     shifts = list(session.scalars(select(DistributionShiftAnalysis).where(DistributionShiftAnalysis.model_id == model.id).order_by(DistributionShiftAnalysis.created_at)))
     robustness_records = list(session.scalars(select(RobustnessRecord).where(RobustnessRecord.model_id == model.id).order_by(RobustnessRecord.created_at)))
     studies = list(session.scalars(select(MultiSeedStudy).where(MultiSeedStudy.base_experiment_id == model.experiment_id).order_by(MultiSeedStudy.created_at)))
+    diagnostic_reports = list(session.scalars(
+        select(QuantumDiagnosticReport)
+        .where(QuantumDiagnosticReport.model_record_id == model.id)
+        .order_by(QuantumDiagnosticReport.created_at)
+    ))
     studies = [study for study in studies if not study.model_identities or model.id in clean_json(study.model_identities) or model.model_type in clean_json(study.model_identities)]
 
     condition = _condition(task)
@@ -420,17 +439,21 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     shift = _shift(shifts)
     group = _group(run, config)
     robust = _robustness(robustness_records)
-    quantum = _quantum(model, run, config)
+    quantum = _quantum(model, run, config, diagnostic_reports)
     data_section = _dataset(dataset, version)
     training_section = _training(config)
     model_section = _model_details(model, config)
     evaluation_section = _evaluation(model)
-    gaps = _gaps(task=condition, run=run, version=version, multi=multi, calibration=calibration, threshold=threshold, external=external, shift=shift, group=group, robustness=robust, quantum=quantum)
+    gaps = _gaps(task=condition, run=run, source_context_type=source_context_type, version=version, multi=multi, calibration=calibration, threshold=threshold, external=external, shift=shift, group=group, robustness=robust, quantum=quantum)
 
-    records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records]
+    records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports]
     if run:
         records.append(run)
-    card_status = "INCOMPLETE_EVIDENCE" if not run or not experiment else ("COMPLETE_WITH_LIMITATIONS" if gaps else "COMPLETE")
+    card_status = (
+        "INCOMPLETE_EVIDENCE"
+        if not experiment or source_context_type == "unresolved"
+        else ("COMPLETE_WITH_LIMITATIONS" if gaps else "COMPLETE")
+    )
     limitations = [
         {"category": gap["category"], "description": gap["description"], "source": "evidence_availability"}
         for gap in gaps
@@ -450,6 +473,12 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
             "id": model.id, "type": model.model_type, "status": model.status,
             "artifact_sha256": model.artifact_sha256, "created_at": _time(model.created_at),
         },
+        "experiment_identity": {
+            "id": experiment.id if experiment else model.experiment_id,
+            "name": experiment.name if experiment else "not_available",
+            "status": experiment.status if experiment else "not_available",
+        },
+        "source_context_type": source_context_type,
         "condition": condition,
         "data": data_section,
         "training": training_section,
@@ -489,7 +518,9 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
             "run_id": _value(model.run_id), "dataset_id": model.dataset_id,
             "dataset_version_id": _value(version.id if version else None),
             "created_at": _time(model.created_at), "artifact_integrity_hash": _value(model.artifact_sha256),
-            "configuration_fingerprint": _value(run.configuration_fingerprint if run else None),
+            "configuration_fingerprint": _value(
+                run.configuration_fingerprint if run else fingerprint(config) if config else None
+            ),
             "provider_identity": quantum.get("provider_id", "not_applicable"),
         },
         "task": condition,
@@ -507,6 +538,18 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         "quantum": quantum,
         "provenance": {
             "source_fingerprint": source_fingerprint,
+            "source_context": {
+                "type": source_context_type,
+                "experiment_id": model.experiment_id,
+                "model_id": model.id,
+                "dataset_id": dataset.id,
+                "dataset_hash": version.content_sha256 if version else dataset.sha256,
+                "configuration_fingerprint": (
+                    run.configuration_fingerprint if run and run.configuration_fingerprint
+                    else fingerprint(config) if config else MISSING
+                ),
+                "verified_demo": clean_json((experiment.summary or {}) if experiment and source_context_type == "verified_demo_experiment" else {}),
+            },
             "model_artifact_hash": _value(model.artifact_sha256),
             "manifest_artifact_id": _value(run.manifest_artifact_id if run else None),
             "evidence_sources": {
@@ -519,13 +562,21 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
                 "distribution_shift_ids": [item.id for item in shifts],
                 "robustness_record_ids": [item.id for item in robustness_records],
                 "multi_seed_study_ids": [item.id for item in studies],
+                "quantum_diagnostic_report_ids": [item.id for item in diagnostic_reports if item.status == "completed"],
             },
         },
         "limitations": limitations,
         "evidence_gaps": gaps,
         "reproducibility": {
-            "status": _value(run.reproducibility_status if run else None, "incomplete"),
-            "configuration_fingerprint": _value(run.configuration_fingerprint if run else None),
+            "status": (
+                _value(run.reproducibility_status, "incomplete") if run
+                else "verified_precomputed_package" if source_context_type == "verified_demo_experiment"
+                else "incomplete"
+            ),
+            "source_context_type": source_context_type,
+            "configuration_fingerprint": _value(
+                run.configuration_fingerprint if run else fingerprint(config) if config else None
+            ),
             "run_id": _value(model.run_id), "experiment_id": model.experiment_id,
             "dataset_id": dataset.id, "dataset_version_id": _value(version.id if version else None),
             "dataset_hash": version.content_sha256 if version else dataset.sha256,

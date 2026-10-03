@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 
 from ..database import session_scope
-from ..storage.entities import CalibrationStudy, ModelRecord, Run, Dataset, Artifact
+from ..storage.entities import CalibrationStudy
 from ..data.splitting import prepare_data
 from ..api.schemas import TrainingConfig
 from .schemas import CalibrationRequest, CalibrationPreflightResponse
@@ -15,6 +15,9 @@ from ..evaluation.calibration import base_pipeline
 from .methods import fit_calibrator
 from .metrics import calculate_calibration_metrics
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
+from ..evaluation.context import resolve_model_evaluation_context
+
+CLASSICAL_MODELS = {"logistic_regression", "svm", "random_forest"}
 
 def _get_evaluation_data(req: CalibrationRequest, base_config: TrainingConfig):
     # Determine the test evaluation subset
@@ -30,34 +33,40 @@ def _get_evaluation_data(req: CalibrationRequest, base_config: TrainingConfig):
 
 def preflight(req: CalibrationRequest) -> CalibrationPreflightResponse:
     with session_scope() as session:
-        model = session.get(ModelRecord, str(req.model_id))
-        if not model or model.status != "ready":
-            raise AppError("model_unavailable", "The requested model is not available.")
-        
-        run = session.get(Run, model.run_id)
-        if not run:
-            raise AppError("run_missing", "Source run missing.")
-            
-        dataset = session.get(Dataset, str(req.dataset_id))
-        if not dataset:
-            raise AppError("dataset_missing", "Evaluation dataset missing.")
-            
-        base_config = TrainingConfig.model_validate(run.config)
+        context = resolve_model_evaluation_context(
+            session, str(req.model_id), str(req.dataset_id),
+            str(req.dataset_version_id) if req.dataset_version_id else None,
+        )
+        model = context.model
+        base_config = context.training_config
     
     limitations = []
     feasible = True
     method_support = {
-        "sigmoid": True,
-        "isotonic": True,
-        "temperature_scaling": True,
-        "none": True
+        "sigmoid": model.model_type in CLASSICAL_MODELS,
+        "isotonic": model.model_type in CLASSICAL_MODELS,
+        "temperature_scaling": model.model_type in CLASSICAL_MODELS,
+        "none": model.model_type in CLASSICAL_MODELS,
     }
+    if model.model_type not in CLASSICAL_MODELS:
+        return CalibrationPreflightResponse(
+            feasible=False,
+            limitations=["Calibration is not applicable to quantum-family models under the current research protocol."],
+            method_support=method_support,
+            configuration_fingerprint=context.configuration_fingerprint,
+            source_context_type=context.source_context_type,
+            model_family="quantum",
+        )
     
     try:
         data = _get_evaluation_data(req, base_config)
     except Exception as exc:
         limitations.append(f"Data preparation failed: {exc}")
-        return CalibrationPreflightResponse(feasible=False, limitations=limitations, method_support=method_support, configuration_fingerprint="")
+        return CalibrationPreflightResponse(
+            feasible=False, limitations=limitations, method_support=method_support,
+            configuration_fingerprint=context.configuration_fingerprint,
+            source_context_type=context.source_context_type, model_family="classical",
+        )
 
     if len(data.test) < 10:
         limitations.append("Insufficient evaluation samples.")
@@ -69,15 +78,13 @@ def preflight(req: CalibrationRequest) -> CalibrationPreflightResponse:
         if req.calibration_method == "isotonic":
             feasible = False
             
-    if req.calibration_protocol == "out_of_fold" and req.dataset_id != model.dataset_id:
-        limitations.append("Out-of-fold calibration is only valid on the internal training dataset.")
-        feasible = False
-
     return CalibrationPreflightResponse(
         feasible=feasible,
         limitations=limitations,
         method_support=method_support,
-        configuration_fingerprint=fingerprint(req.model_dump(mode="json"))
+        configuration_fingerprint=context.configuration_fingerprint,
+        source_context_type=context.source_context_type,
+        model_family="classical",
     )
 
 def execute_calibration_study(study_id: str):
@@ -87,10 +94,12 @@ def execute_calibration_study(study_id: str):
         study.status = "running"
         req = CalibrationRequest.model_validate(study.configuration)
         
-        model = session.get(ModelRecord, study.model_id)
-        run = session.get(Run, model.run_id)
-        base_config = TrainingConfig.model_validate(run.config)
-        
+        context = resolve_model_evaluation_context(
+            session, study.model_id, study.dataset_id, study.dataset_version_id
+        )
+        model = context.model
+        base_config = context.training_config
+        study.provenance = context.source_context()
         data = _get_evaluation_data(req, base_config)
         
     try:
@@ -147,6 +156,12 @@ def execute_calibration_study(study_id: str):
                 "positive_events": int(np.sum(y_eval)),
                 "negative_events": int(len(y_eval) - np.sum(y_eval))
             }
+            study.provenance = context.source_context()
+            study.limitations = list(study.limitations or [])
+            if context.source_context_type == "verified_demo_experiment":
+                study.limitations.append(
+                    "Derived from the immutable verified precomputed demo model context; no live training Run is claimed."
+                )
             
     except Exception as exc:
         with session_scope() as session:

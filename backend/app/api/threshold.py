@@ -7,6 +7,7 @@ from ..threshold.schemas import ThresholdAnalysisRequest, ThresholdPreflightResp
 from ..threshold.service import preflight, execute_threshold_study
 from ..utils.serialization import utcnow
 from ..utils.errors import AppError
+from ..evaluation.context import resolve_model_evaluation_context
 
 router = APIRouter(prefix="/threshold-analysis", tags=["Threshold Analysis"])
 
@@ -29,6 +30,10 @@ def create_study(req: ThresholdAnalysisRequest, background_tasks: BackgroundTask
         existing = session.scalar(select(ThresholdAnalysisStudy).where(ThresholdAnalysisStudy.operation_key == operation_key))
         if existing:
             return {"id": existing.id, "status": existing.status}
+        context = resolve_model_evaluation_context(
+            session, str(req.model_id), str(req.dataset_id),
+            str(req.dataset_version_id) if req.dataset_version_id else None,
+        )
             
         study = ThresholdAnalysisStudy(
             id=study_id,
@@ -37,6 +42,7 @@ def create_study(req: ThresholdAnalysisRequest, background_tasks: BackgroundTask
             dataset_version_id=str(req.dataset_version_id) if req.dataset_version_id else None,
             operation_key=operation_key,
             configuration=req.model_dump(mode="json"),
+            provenance=context.source_context(),
             created_at=utcnow()
         )
         session.add(study)
@@ -60,5 +66,6 @@ def get_study(study_id: str):
             "summary": study.summary,
             "limitations": study.limitations,
             "failure": study.failure,
-            "configuration": study.configuration
+            "configuration": study.configuration,
+            "provenance": study.provenance,
         }

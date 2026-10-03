@@ -1,6 +1,6 @@
-import { Notice, Loading, JsonDisclosure } from '../components/Shared';
+import { Notice, Loading, JsonDisclosure, ErrorBanner } from '../components/Shared';
 import { Button } from '../components/ui';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 
 
@@ -10,6 +10,7 @@ import { qh } from '../lib/api';
 import { ChartNoAxesCombined, CircuitBoard } from 'lucide-react';
 
 export function QuantumDiagnostics({ model }: { model: any }) {
+  const queryClient = useQueryClient();
   const { data: preflight, isLoading: isPreflightLoading } = useQuery({
     queryKey: ['quantum_diagnostics_preflight', model.experiment_id, model.id],
     queryFn: () => qh.quantum_diagnostics_preflight({
@@ -18,7 +19,7 @@ export function QuantumDiagnostics({ model }: { model: any }) {
     })
   });
 
-  const { data: report, isLoading: isReportLoading, refetch } = useQuery({
+  const { data: report, isLoading: isReportLoading } = useQuery({
     queryKey: ['quantum_diagnostics', model.id],
     queryFn: () => qh.quantum_diagnostics_by_run(model.id),
     retry: false
@@ -29,7 +30,10 @@ export function QuantumDiagnostics({ model }: { model: any }) {
       experiment_id: model.experiment_id,
       model_record_id: model.id
     }),
-    onSuccess: () => refetch()
+    onSuccess: (created) => {
+      queryClient.setQueryData(['quantum_diagnostics', model.id], created);
+      queryClient.invalidateQueries({queryKey: ['model-card', model.id]});
+    }
   });
 
   if (isPreflightLoading || isReportLoading) {
@@ -59,10 +63,11 @@ export function QuantumDiagnostics({ model }: { model: any }) {
           <CircuitBoard size={14} />
           QUANTUM RESEARCH DIAGNOSTICS
         </div>
-        <p className="mt-3 text-sm muted">No quantum diagnostics report exists for this run.</p>
+        <p className="mt-3 text-sm muted">No quantum diagnostics report exists for this model context.</p>
         <Button className="mt-4" onClick={() => generate.mutate()} disabled={generate.isPending}>
           Generate Diagnostics
         </Button>
+        {generate.error && <div className="mt-3"><ErrorBanner error={(generate.error as Error).message} /></div>}
       </div>
     );
   }

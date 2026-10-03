@@ -133,6 +133,27 @@ def test_legacy_model_without_run_reports_incomplete_provenance(registered):
     assert "run" in card["reproducibility"]["missing_provenance_fields"]
 
 
+def test_verified_demo_model_without_run_has_canonical_card(registered):
+    model_id = _persist_model(
+        registered, with_run=False,
+        details={
+            "experiment_kind": "precomputed_verified_demo",
+            "dataset_provenance": {"library_slug": "early-stage-diabetes"},
+            "supports_probability": True,
+        },
+    )
+    with session_scope() as session:
+        first, _, _ = assemble_card(session, model_id)
+        second, _, _ = assemble_card(session, model_id)
+    assert first == second
+    assert first["card_status"] == "COMPLETE_WITH_LIMITATIONS"
+    assert first["provenance"]["source_context"]["type"] == "verified_demo_experiment"
+    assert first["reproducibility"]["status"] == "verified_precomputed_package"
+    assert first["calibration"]["status"] == "not_available"
+    assert first["threshold"]["status"] == "not_available"
+    assert "run" not in first["reproducibility"]["missing_provenance_fields"]
+
+
 def test_model_card_api_not_found_and_pagination(client, registered):
     missing = client.get(f"/api/models/{uuid4()}/card")
     assert missing.status_code == 404
