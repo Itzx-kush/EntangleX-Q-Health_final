@@ -1,3 +1,5 @@
+
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,6 +25,7 @@ from ..storage.entities import (
     PipelineVersion,
     RobustnessRecord,
     Run,
+    SubgroupAnalysisStudy,
     ThresholdAnalysisStudy,
     QuantumDiagnosticReport,
 )
@@ -359,6 +362,19 @@ def _robustness(records: list[RobustnessRecord]) -> dict:
     return {"status": "available" if rows else MISSING, "records": rows}
 
 
+def _subgroups(studies: list[SubgroupAnalysisStudy]) -> dict:
+    rows = [{
+        "study_id": item.id,
+        "status": item.status,
+        "subgroup_field": item.subgroup_field,
+        "definition_fingerprint": item.definition_fingerprint,
+        "subgroup_count": len(item.subgroups_results or []),
+        "limitations": clean_json(item.limitations or []),
+        "artifact_id": _value(item.artifact_id),
+    } for item in studies]
+    return {"status": "available" if any(item.status == "completed" for item in studies) else MISSING, "studies": rows}
+
+
 def _quantum(model: ModelRecord, run: Run | None, config: dict, reports: list[QuantumDiagnosticReport]) -> dict:
     family = _family(model.model_type)
     if family == "classical":
@@ -440,6 +456,14 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         .where(QuantumDiagnosticReport.model_record_id == model.id)
         .order_by(QuantumDiagnosticReport.created_at)
     ))
+    subgroup_studies = list(session.scalars(
+        select(SubgroupAnalysisStudy)
+        .where(
+            (SubgroupAnalysisStudy.model_id == model.id)
+            | (SubgroupAnalysisStudy.experiment_id == model.experiment_id)
+        )
+        .order_by(SubgroupAnalysisStudy.created_at)
+    ))
     studies = [study for study in studies if not study.model_identities or model.id in clean_json(study.model_identities) or model.model_type in clean_json(study.model_identities)]
     controlled_protocol = session.scalar(
         select(ControlledComparisonProtocol)
@@ -466,6 +490,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     shift = _shift(shifts)
     group = _group(run, config)
     robust = _robustness(robustness_records)
+    subgroups = _subgroups(subgroup_studies)
     quantum = _quantum(model, run, config, diagnostic_reports)
     data_section = _dataset(dataset, version)
     training_section = _training(config)
@@ -473,6 +498,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     evaluation_section = _evaluation(model)
     gaps = _gaps(task=condition, run=run, source_context_type=source_context_type, version=version, multi=multi, calibration=calibration, threshold=threshold, external=external, shift=shift, group=group, robustness=robust, quantum=quantum)
 
+    records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports, *subgroup_studies]
     records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports]
     if run:
         records.append(run)

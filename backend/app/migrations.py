@@ -4,6 +4,43 @@ The project historically initialized tables with ``create_all``.  Migrations
 therefore remain deliberately dependency-free and additive: they never drop,
 rename, or rewrite historical rows.
 """
+from __future__ import annotations
+import json
+import logging
+from sqlalchemy import inspect, text
+from .database import engine
+from .utils.serialization import utcnow
+logger = logging.getLogger("qhealth.migrations")
+MIGRATION_ID = "20261002_01_experiment_run_artifact"
+MANIFEST_MIGRATION_ID = "20261002_02_immutable_run_manifest"
+DATASET_VERSION_MIGRATION_ID = "20261002_03_dataset_versioning"
+MULTI_SEED_STUDY_MIGRATION_ID = "20261003_01_multi_seed_evaluation"
+EXTERNAL_VALIDATION_MIGRATION_ID = "20261003_02_external_validation"
+DISTRIBUTION_SHIFT_MIGRATION_ID = "20261003_03_distribution_shift"
+CALIBRATION_STUDIES_MIGRATION_ID = "20261003_04_calibration_studies"
+TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
+EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
+RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
+EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
+CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
+RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
+DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
+PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
+EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
+SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
+def _columns(connection, table: str) -> set[str]:
+    return {column["name"] for column in inspect(connection).get_columns(table)}
+def apply_migrations() -> None:
+    with engine.begin() as connection:
+        connection.execute(text(
+            "CREATE TABLE IF NOT EXISTS schema_migrations ("
+BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_15_biomedical_subgroup_analysis"
+"""Small, explicit SQLite migrations for the existing local research registry.
+
+The project historically initialized tables with ``create_all``.  Migrations
+therefore remain deliberately dependency-free and additive: they never drop,
+rename, or rewrite historical rows.
+"""
 
 from __future__ import annotations
 
@@ -33,7 +70,6 @@ RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages
 DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
-SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
 
 
 
@@ -884,49 +920,3 @@ def apply_migrations() -> None:
                 {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
-        audit_timeline_applied = connection.execute(
-            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
-            {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID},
-        ).scalar()
-        if not audit_timeline_applied:
-            connection.execute(text("""
-                CREATE TABLE IF NOT EXISTS scientific_audit_events (
-                    id VARCHAR(36) PRIMARY KEY,
-                    schema_version VARCHAR(32) NOT NULL,
-                    event_type VARCHAR(64) NOT NULL,
-                    event_category VARCHAR(32) NOT NULL,
-                    occurred_at DATETIME NOT NULL,
-                    recorded_at DATETIME NOT NULL,
-                    actor_type VARCHAR(24) NOT NULL,
-                    actor_reference VARCHAR(120),
-                    source_component VARCHAR(64) NOT NULL,
-                    operation_key VARCHAR(240),
-                    object_type VARCHAR(48) NOT NULL,
-                    object_id VARCHAR(64) NOT NULL,
-                    parent_object_type VARCHAR(48),
-                    parent_object_id VARCHAR(64),
-                    before_fingerprint VARCHAR(64),
-                    after_fingerprint VARCHAR(64),
-                    previous_event_fingerprint VARCHAR(64),
-                    event_fingerprint VARCHAR(64) NOT NULL,
-                    metadata JSON NOT NULL,
-                    CONSTRAINT uq_audit_operation_event UNIQUE(operation_key, event_type)
-                )
-            """))
-            for statement in [
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_type ON scientific_audit_events(event_type)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_category ON scientific_audit_events(event_category)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_occurred_at ON scientific_audit_events(occurred_at)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_recorded_at ON scientific_audit_events(recorded_at)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_object_type_id ON scientific_audit_events(object_type, object_id)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_parent_object_id ON scientific_audit_events(parent_object_type, parent_object_id)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_occurred_at_id ON scientific_audit_events(occurred_at, id)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_source_component ON scientific_audit_events(source_component)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_operation_key ON scientific_audit_events(operation_key)",
-                "CREATE INDEX IF NOT EXISTS ix_audit_events_event_fingerprint ON scientific_audit_events(event_fingerprint)",
-            ]:
-                connection.execute(text(statement))
-            connection.execute(
-                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
-                {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()},
-            )

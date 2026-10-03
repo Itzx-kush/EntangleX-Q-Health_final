@@ -1,3 +1,5 @@
+
+
 import html
 import json
 from sqlalchemy import select
@@ -6,6 +8,23 @@ from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion, SubgroupAnalysisStudy
+from ..pipelines.service import pipeline_payload
+from ..storage.repository import require
+from ..storage.files import atomic_bytes, safe_path
+from ..utils.serialization import utcnow
+from .comparison import comparison
+
+def report_data(identity: str) -> dict:
+    with session_scope() as session:
+        experiment = require(session, Experiment, identity)
+        models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity)))
+        explanations = list(session.scalars(select(ExplanationRecord).where(ExplanationRecord.model_id.in_([m.id for m in models])))) if models else []
+        subgroup_studies = list(session.scalars(
+            select(SubgroupAnalysisStudy)
+            .where(SubgroupAnalysisStudy.experiment_id == identity)
+            .order_by(SubgroupAnalysisStudy.created_at)
+        ))
 from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion
 from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
@@ -78,7 +97,7 @@ def html_report(identity: str) -> str:
         "<h2>Experiment protocol</h2>" + pre(data["protocol"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
         "<h2>Model configuration</h2>" + pre(data["experiment"]["config"]),
-        "<h2>Scientific audit timeline</h2>" + pre(data.get("audit_summary", {}))]
+        "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
     for model in data["models"]:
         sections.append("<h2>Model: " + escaped(model.get("display_name", model["model_type"])) + "</h2><p>Model ID: " + escaped(model["id"]) + "; status: " + escaped(model["status"]) + "</p>")
         metrics = model["metrics"]
