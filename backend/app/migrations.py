@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import json
 import logging
+from uuid import uuid4
 from sqlalchemy import inspect, text
 
 from .database import engine
-from .utils.serialization import utcnow
+from .utils.serialization import fingerprint, utcnow
 
 logger = logging.getLogger("qhealth.migrations")
 
@@ -34,13 +35,175 @@ DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
 SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
-BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_16_biomedical_subgroup_analysis"
 DATASET_QUALITY_SCORECARD_MIGRATION_ID = "20261003_15_advanced_dataset_quality_scorecard"
+BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_16_biomedical_subgroup_analysis"
+DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID = "20261003_17_dataset_version_signature_repair"
+DATASET_QUALITY_SCORECARD_REPAIR_MIGRATION_ID = "20261003_18_dataset_quality_scorecard_schema_repair"
 
 
 
 def _columns(connection, table: str) -> set[str]:
     return {column["name"] for column in inspect(connection).get_columns(table)}
+
+
+def _table_exists(connection, table: str) -> bool:
+    return inspect(connection).has_table(table)
+
+
+def _scorecard_table_sql() -> str:
+    return """
+        CREATE TABLE IF NOT EXISTS dataset_quality_scorecards (
+            id VARCHAR(36) PRIMARY KEY,
+            schema_version VARCHAR(32) NOT NULL,
+            dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+            dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+            experiment_id VARCHAR(36) REFERENCES experiments(id),
+            protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id),
+            pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
+            status VARCHAR(24) NOT NULL DEFAULT 'PASS',
+            operation_key VARCHAR(128) NOT NULL,
+            assessment_fingerprint VARCHAR(64) NOT NULL,
+            configuration JSON NOT NULL,
+            summary JSON NOT NULL,
+            domains JSON NOT NULL,
+            schema_snapshot JSON NOT NULL,
+            limitations JSON NOT NULL,
+            provenance JSON NOT NULL,
+            artifact_id VARCHAR(36) REFERENCES artifacts(id),
+            created_at DATETIME NOT NULL,
+            completed_at DATETIME,
+            CONSTRAINT uq_dataset_quality_operation_key UNIQUE(operation_key)
+        )
+    """
+
+
+def _repair_dataset_quality_scorecard_schema(connection) -> None:
+    """Additively repair a legacy or partially-created scorecard table."""
+    connection.execute(text(_scorecard_table_sql()))
+    additions = {
+        "id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN id VARCHAR(36)",
+        "schema_version": (
+            "ALTER TABLE dataset_quality_scorecards ADD COLUMN schema_version "
+            "VARCHAR(32) DEFAULT 'dataset_quality_scorecard_v1'"
+        ),
+        "dataset_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN dataset_id VARCHAR(36) REFERENCES datasets(id)",
+        "dataset_version_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id)",
+        "experiment_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN experiment_id VARCHAR(36) REFERENCES experiments(id)",
+        "protocol_version_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id)",
+        "pipeline_version_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id)",
+        "status": "ALTER TABLE dataset_quality_scorecards ADD COLUMN status VARCHAR(24) DEFAULT 'PASS'",
+        "operation_key": "ALTER TABLE dataset_quality_scorecards ADD COLUMN operation_key VARCHAR(128)",
+        "assessment_fingerprint": "ALTER TABLE dataset_quality_scorecards ADD COLUMN assessment_fingerprint VARCHAR(64)",
+        "configuration": "ALTER TABLE dataset_quality_scorecards ADD COLUMN configuration JSON DEFAULT '{}'",
+        "summary": "ALTER TABLE dataset_quality_scorecards ADD COLUMN summary JSON DEFAULT '{}'",
+        "domains": "ALTER TABLE dataset_quality_scorecards ADD COLUMN domains JSON DEFAULT '{}'",
+        "schema_snapshot": "ALTER TABLE dataset_quality_scorecards ADD COLUMN schema_snapshot JSON DEFAULT '{}'",
+        "limitations": "ALTER TABLE dataset_quality_scorecards ADD COLUMN limitations JSON DEFAULT '[]'",
+        "provenance": "ALTER TABLE dataset_quality_scorecards ADD COLUMN provenance JSON DEFAULT '{}'",
+        "artifact_id": "ALTER TABLE dataset_quality_scorecards ADD COLUMN artifact_id VARCHAR(36) REFERENCES artifacts(id)",
+        "created_at": "ALTER TABLE dataset_quality_scorecards ADD COLUMN created_at DATETIME",
+        "completed_at": "ALTER TABLE dataset_quality_scorecards ADD COLUMN completed_at DATETIME",
+    }
+    existing = _columns(connection, "dataset_quality_scorecards")
+    for column, statement in additions.items():
+        if column not in existing:
+            connection.execute(text(statement))
+
+    # A legacy table may not have generated primary-key values.  Fill only
+    # missing IDs so historical values are preserved.
+    rows_without_ids = connection.execute(
+        text("SELECT rowid FROM dataset_quality_scorecards WHERE id IS NULL")
+    ).scalars().all()
+    for rowid in rows_without_ids:
+        connection.execute(
+            text("UPDATE dataset_quality_scorecards SET id = :id WHERE rowid = :rowid"),
+            {"id": str(uuid4()), "rowid": rowid},
+        )
+
+    for statement in [
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_id ON dataset_quality_scorecards(dataset_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version_id ON dataset_quality_scorecards(dataset_version_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_experiment_id ON dataset_quality_scorecards(experiment_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_protocol_version_id ON dataset_quality_scorecards(protocol_version_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_pipeline_version_id ON dataset_quality_scorecards(pipeline_version_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_status ON dataset_quality_scorecards(status)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_fingerprint ON dataset_quality_scorecards(assessment_fingerprint)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_operation_key ON dataset_quality_scorecards(operation_key)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at ON dataset_quality_scorecards(created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version ON dataset_quality_scorecards(dataset_id, dataset_version_id)",
+        "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at_id ON dataset_quality_scorecards(created_at, id)",
+    ]:
+        connection.execute(text(statement))
+
+    duplicate_operation_key = connection.execute(text("""
+        SELECT 1
+        FROM dataset_quality_scorecards
+        WHERE operation_key IS NOT NULL
+        GROUP BY operation_key
+        HAVING COUNT(*) > 1
+        LIMIT 1
+    """)).first()
+    if duplicate_operation_key is None:
+        connection.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_dataset_quality_operation_key_compat "
+            "ON dataset_quality_scorecards(operation_key) WHERE operation_key IS NOT NULL"
+        ))
+    else:
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_dataset_quality_operation_key_compat "
+            "ON dataset_quality_scorecards(operation_key)"
+        ))
+
+
+def _repair_dataset_version_signatures(connection) -> None:
+    """Materialize legacy signatures without deleting or rewriting versions."""
+    if not _table_exists(connection, "dataset_versions"):
+        return
+
+    columns = _columns(connection, "dataset_versions")
+    if "version_signature" not in columns:
+        connection.execute(
+            text("ALTER TABLE dataset_versions ADD COLUMN version_signature VARCHAR(64)")
+        )
+
+    legacy_versions = connection.execute(text("""
+        SELECT id, dataset_id, content_sha256, schema_fingerprint,
+               target, positive_label, negative_label
+        FROM dataset_versions
+        WHERE version_signature IS NULL
+    """)).mappings().all()
+    for row in legacy_versions:
+        signature = fingerprint({
+            "content_sha256": row["content_sha256"],
+            "schema_fingerprint": row["schema_fingerprint"],
+            "target": row["target"],
+            "positive_label": str(row["positive_label"]),
+            "negative_label": str(row["negative_label"]),
+        })
+        connection.execute(
+            text("UPDATE dataset_versions SET version_signature = :signature WHERE id = :id"),
+            {"signature": signature, "id": row["id"]},
+        )
+
+    duplicate_signature = connection.execute(text("""
+        SELECT 1
+        FROM dataset_versions
+        GROUP BY dataset_id, version_signature
+        HAVING COUNT(*) > 1
+        LIMIT 1
+    """)).first()
+    if duplicate_signature is None:
+        connection.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_dataset_versions_signature_compat "
+            "ON dataset_versions(dataset_id, version_signature)"
+        ))
+    else:
+        # Preserve duplicate historical signatures with a non-unique lookup
+        # index; new application writes still use idempotency.
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_dataset_versions_version_signature "
+            "ON dataset_versions(dataset_id, version_signature)"
+        ))
 
 
 def apply_migrations() -> None:
@@ -933,6 +1096,17 @@ def apply_migrations() -> None:
                 {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()},
             )
 
+        scorecard_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID},
+        ).scalar()
+        if not scorecard_applied:
+            connection.execute(text(_scorecard_table_sql()))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
         subgroup_analysis_applied = connection.execute(
             text("SELECT 1 FROM schema_migrations WHERE id = :id"),
             {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID},
@@ -978,50 +1152,24 @@ def apply_migrations() -> None:
                 {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
-        scorecard_applied = connection.execute(
+        dataset_version_signature_repair_applied = connection.execute(
             text("SELECT 1 FROM schema_migrations WHERE id = :id"),
-            {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID},
+            {"id": DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID},
         ).scalar()
-        if not scorecard_applied:
-            connection.execute(text("""
-                CREATE TABLE IF NOT EXISTS dataset_quality_scorecards (
-                    id VARCHAR(36) PRIMARY KEY,
-                    schema_version VARCHAR(32) NOT NULL,
-                    dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
-                    dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
-                    experiment_id VARCHAR(36) REFERENCES experiments(id),
-                    protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id),
-                    pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
-                    status VARCHAR(24) NOT NULL DEFAULT 'PASS',
-                    operation_key VARCHAR(128) NOT NULL,
-                    assessment_fingerprint VARCHAR(64) NOT NULL,
-                    configuration JSON NOT NULL,
-                    summary JSON NOT NULL,
-                    domains JSON NOT NULL,
-                    schema_snapshot JSON NOT NULL,
-                    limitations JSON NOT NULL,
-                    provenance JSON NOT NULL,
-                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
-                    created_at DATETIME NOT NULL,
-                    completed_at DATETIME,
-                    CONSTRAINT uq_dataset_quality_operation_key UNIQUE(operation_key)
-                )
-            """))
-            for statement in [
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_id ON dataset_quality_scorecards(dataset_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version_id ON dataset_quality_scorecards(dataset_version_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_experiment_id ON dataset_quality_scorecards(experiment_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_protocol_version_id ON dataset_quality_scorecards(protocol_version_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_pipeline_version_id ON dataset_quality_scorecards(pipeline_version_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_status ON dataset_quality_scorecards(status)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_fingerprint ON dataset_quality_scorecards(assessment_fingerprint)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_operation_key ON dataset_quality_scorecards(operation_key)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at ON dataset_quality_scorecards(created_at)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version ON dataset_quality_scorecards(dataset_id, dataset_version_id)",
-                "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at_id ON dataset_quality_scorecards(created_at, id)",
-            ]:
-                connection.execute(text(statement))
+        if not dataset_version_signature_repair_applied:
+            _repair_dataset_version_signatures(connection)
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
-                {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID, "applied_at": utcnow()},
+                {"id": DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        scorecard_repair_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DATASET_QUALITY_SCORECARD_REPAIR_MIGRATION_ID},
+        ).scalar()
+        if not scorecard_repair_applied:
+            _repair_dataset_quality_scorecard_schema(connection)
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DATASET_QUALITY_SCORECARD_REPAIR_MIGRATION_ID, "applied_at": utcnow()},
             )
