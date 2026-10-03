@@ -1,0 +1,47 @@
+# Scientific CI policy for EntangleX Q-Health.
+#
+# The authoritative list of checks, their categories, severities and timeouts
+# lives in code: backend/app/verification/registry.py (check modules register
+# themselves under backend/app/verification/checks/).  This file only records
+# repository-level policy that code cannot express, so there is exactly one
+# source of truth for the check registry.
+schema_version: scientific_ci_v1
+check_registry: backend/app/verification/registry.py
+baseline: scientific-ci-baseline.json
+fixtures: backend/app/verification/fixtures.py
+documentation: docs/scientific_ci_verification.md
+
+profiles:
+  fast:
+    purpose: pull-request gate
+    command: python -m app.verification --profile fast
+    workflow: .github/workflows/scientific-ci.yml
+    max_duration_minutes: 15
+    excludes:
+      - database_migration_upgrade_path
+      - fingerprint_cross_process_determinism
+  full:
+    purpose: main-branch, nightly and pre-release verification
+    command: python -m app.verification --profile full
+    workflow: .github/workflows/scientific-ci.yml
+    schedule: "0 3 * * *"
+    max_duration_minutes: 30
+
+policy:
+  blocking: a FAIL on a REQUIRED check blocks the pull request
+  advisory: an ADVISORY WARN or FAIL is reported but does not block the pull request
+  skipped: a check may only be SKIPPED when its precondition is genuinely absent, never for convenience
+  unverifiable: a check reports UNVERIFIABLE when the invariant exists but the repository provides no evidence
+  retries: deterministic checks are never retried; retries would hide nondeterminism
+  merge: Scientific CI never merges or deploys anything
+  claims: a passing run states only that the configured automated invariants held
+
+artifacts:
+  report: scientific-ci-report.json
+  manifest: scientific-ci-manifest.json
+  uploaded_by: .github/workflows/scientific-ci.yml
+  forbidden:
+    - .env
+    - credentials
+    - patient-level data
+    - production database dumps
