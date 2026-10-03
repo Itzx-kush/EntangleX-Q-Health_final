@@ -27,6 +27,7 @@ TRAINING_EXECUTION_MIGRATION_ID = "20261003_05_training_execution_tracking"
 EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
 RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
 EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
+CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
 
 
 
@@ -538,4 +539,42 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": RESUMABLE_JOBS_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        controlled_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": CONTROLLED_COMPARISON_MIGRATION_ID},
+        ).scalar()
+        if not controlled_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS controlled_comparison_protocols (
+                    id VARCHAR(36) PRIMARY KEY,
+                    experiment_id VARCHAR(36) NOT NULL REFERENCES experiments(id),
+                    schema_version VARCHAR(48) NOT NULL,
+                    status VARCHAR(40) NOT NULL,
+                    operation_key VARCHAR(160) NOT NULL UNIQUE,
+                    configuration_fingerprint VARCHAR(64) NOT NULL,
+                    protocol_fingerprint VARCHAR(64) NOT NULL,
+                    classical_model_ids JSON NOT NULL DEFAULT '[]',
+                    quantum_model_ids JSON NOT NULL DEFAULT '[]',
+                    comparison_pairs JSON NOT NULL DEFAULT '[]',
+                    control_summary JSON NOT NULL DEFAULT '{}',
+                    provenance JSON NOT NULL DEFAULT '{}',
+                    limitations JSON NOT NULL DEFAULT '[]',
+                    warnings JSON NOT NULL DEFAULT '[]',
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    created_at DATETIME NOT NULL
+                )
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_controlled_protocol_experiment_id ON controlled_comparison_protocols(experiment_id)",
+                "CREATE INDEX IF NOT EXISTS ix_controlled_protocol_status ON controlled_comparison_protocols(status)",
+                "CREATE INDEX IF NOT EXISTS ix_controlled_protocol_operation_key ON controlled_comparison_protocols(operation_key)",
+                "CREATE INDEX IF NOT EXISTS ix_controlled_protocol_fingerprint ON controlled_comparison_protocols(protocol_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_controlled_protocol_created_at ON controlled_comparison_protocols(created_at)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": CONTROLLED_COMPARISON_MIGRATION_ID, "applied_at": utcnow()},
             )

@@ -11,6 +11,7 @@ from ..storage.entities import (
     Artifact,
     CalibrationStudy,
     ConditionTask,
+    ControlledComparisonProtocol,
     Dataset,
     DatasetVersion,
     DistributionShiftAnalysis,
@@ -430,6 +431,22 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         .order_by(QuantumDiagnosticReport.created_at)
     ))
     studies = [study for study in studies if not study.model_identities or model.id in clean_json(study.model_identities) or model.model_type in clean_json(study.model_identities)]
+    controlled_protocol = session.scalar(
+        select(ControlledComparisonProtocol)
+        .where(ControlledComparisonProtocol.experiment_id == model.experiment_id)
+        .order_by(ControlledComparisonProtocol.created_at.desc())
+    )
+    controlled_pairs = [
+        item for item in (controlled_protocol.comparison_pairs if controlled_protocol else [])
+        if model.id in {item.get("classical_model", {}).get("id"), item.get("quantum_model", {}).get("id")}
+    ]
+    controlled_comparison = {
+        "status": controlled_protocol.status,
+        "protocol_id": controlled_protocol.id,
+        "protocol_fingerprint": controlled_protocol.protocol_fingerprint,
+        "artifact_id": controlled_protocol.artifact_id,
+        "pair_statuses": [{"pair_id": item.get("pair_id"), "status": item.get("status")} for item in controlled_pairs],
+    } if controlled_protocol and controlled_pairs else {"status": MISSING}
 
     condition = _condition(task)
     multi = _multi_seed(studies)
@@ -449,6 +466,8 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports]
     if run:
         records.append(run)
+    if controlled_protocol and controlled_pairs:
+        records.append(controlled_protocol)
     card_status = (
         "INCOMPLETE_EVIDENCE"
         if not experiment or source_context_type == "unresolved"
@@ -492,6 +511,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         "group_validation": group,
         "robustness": robust,
         "quantum": quantum,
+        "controlled_comparison": controlled_comparison,
         "run_provenance": {
             "id": run.id,
             "configuration_fingerprint": run.configuration_fingerprint,
@@ -536,6 +556,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         "distribution_shift": shift,
         "group_validation": group,
         "quantum": quantum,
+        "controlled_comparison": controlled_comparison,
         "provenance": {
             "source_fingerprint": source_fingerprint,
             "source_context": {
@@ -563,6 +584,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
                 "robustness_record_ids": [item.id for item in robustness_records],
                 "multi_seed_study_ids": [item.id for item in studies],
                 "quantum_diagnostic_report_ids": [item.id for item in diagnostic_reports if item.status == "completed"],
+                "controlled_comparison_protocol_id": controlled_protocol.id if controlled_protocol and controlled_pairs else None,
             },
         },
         "limitations": limitations,
