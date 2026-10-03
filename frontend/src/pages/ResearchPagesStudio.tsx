@@ -10,6 +10,7 @@ import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
 import { CalibrationLaboratory } from './CalibrationLaboratory';
 import { ThresholdAnalysis } from './ThresholdAnalysis';
+import { AblationLaboratory } from './AblationLaboratory';
 import type {Experiment} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
@@ -99,6 +100,7 @@ export function ExperimentDetail(){
                             <ThresholdAnalysis model={model} /><JsonDisclosure label="Model identity, provenance, metrics and limitations" value={{details:model.details,metrics:model.metrics}}/></>}</article></GlareHover>):<EmptyState title="No model records">Model records appear when the backend training job completes or records a failure.</EmptyState>}
     </Card></div>
     <div className="two-grid mt-5"><Card title="Experiment provenance"><JsonDisclosure label="Summary / split / provenance" value={detail.experiment.summary}/><JsonDisclosure label="Exact training configuration" value={detail.experiment.config}/></Card><Card title="Execution records"><div className="space-y-2">{detail.jobs.map(job=><div className="rounded-xl border p-3" key={job.id}><div className="flex justify-between"><StatusBadge value={job.status}/><span className="text-xs muted">{job.progress}%</span></div><p className="mt-1 text-xs">{job.state}</p>{job.errors.length>0&&<JsonDisclosure label="Recorded failures" value={job.errors}/>}</div>)}</div></Card></div>
+    <AblationLaboratory experiment={detail.experiment} />
     <Notice tone="amber">Research prototype boundary: measured benchmark outputs do not establish clinical validation, diagnosis or treatment efficacy.</Notice>
   </div>
 }
