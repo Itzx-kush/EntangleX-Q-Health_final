@@ -1,30 +1,4 @@
-
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
-
-export function resolveApiBase(configured:string|undefined,production:boolean){
-  const value=(configured||'/api').trim()||'/api';
-  const normalized=value.length>1?value.replace(/\/+$/,''):value;
-  if(production){
-    try{
-      const url=new URL(normalized);
-      if(['localhost','127.0.0.1','::1'].includes(url.hostname))throw new Error('Production API base must not target localhost.');
-      if(url.protocol!=='https:')throw new Error('Production cross-origin API base must use HTTPS.');
-    }catch(error){
-      if(normalized.startsWith('/'))return normalized;
-      if(error instanceof Error&&error.message.startsWith('Production '))throw error;
-      throw new Error('Production API base must be a relative path or absolute HTTPS URL.');
-    }
-  }
-  return normalized;
-}
-export const apiBase=resolveApiBase(import.meta.env.VITE_API_BASE as string|undefined,import.meta.env.PROD);
-const base=apiBase;
-let token='';
-export function setSessionToken(value:string){token=value.trim();}
-async function request(path:string,options:RequestInit={}){
-  const headers=new Headers(options.headers);
-import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
-import type {AlignmentContract,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -147,6 +121,11 @@ export const qh={
     });
     return api.get<LineageSnapshot>(`/experiments/${id}/lineage?${query}`);
   },
+  experimentAudit:(id:string,category?:string)=>{const q=category&&category!=='all'?'?event_category='+encodeURIComponent(category):'';return api.get<AuditTimeline>('/experiments/'+id+'/audit'+q)},
+  experimentAuditExport:(id:string)=>api.download('/experiments/'+id+'/audit/export','qhealth-audit-'+id+'.json'),
+  auditIntegrity:(objectType?:string,objectId?:string)=>{const sp=new URLSearchParams();if(objectType)sp.set('object_type',objectType);if(objectId)sp.set('object_id',objectId);return api.get<AuditIntegrity>('/audit/integrity'+(sp.toString()?'?'+sp.toString():''))},
+  auditEvents:(params?:AuditFilterParams)=>{const sp=new URLSearchParams();if(params)Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')sp.set(k,String(v))});return api.get<ScientificAuditEvent[]>('/audit/events'+(sp.toString()?'?'+sp.toString():''))},
+  objectAudit:(objectType:string,objectId:string)=>api.get<AuditTimeline>('/audit/'+objectType+'/'+objectId),
   robustness:(id:string,body:{model_ids:string[];scenarios:RobustnessScenario[];random_seed:number;max_samples:number})=>api.post<RobustnessResponse>(`/experiments/${id}/robustness`,body),
   robustnessHistory:(id:string)=>api.get<{id:string;result:RobustnessResponse['results'][number]}[]>(`/experiments/${id}/robustness`),
   rerun:(id:string)=>api.post<{job:Job;experiment:Experiment}>(`/experiments/${id}/rerun`),
@@ -172,6 +151,11 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
     `/experiments/${id}/report?format=${format}`,
     `qhealth-${id}.${format}`
   ),
+  subgroupPreflight:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupPreflightResponse>(`/experiments/${id}/subgroup-analysis/preflight`,body),
+  createSubgroupAnalysis:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupStudy>(`/experiments/${id}/subgroup-analysis`,body),
+  subgroupStudies:(id:string)=>api.get<SubgroupStudy[]>(`/experiments/${id}/subgroup-analysis`),
+  subgroupStudy:(id:string,studyId:string)=>api.get<SubgroupStudy>(`/experiments/${id}/subgroup-analysis/${studyId}`),
+  downloadSubgroupStudy:(id:string,studyId:string)=>api.download(`/experiments/${id}/subgroup-analysis/${studyId}/export`,`qhealth-subgroup-${studyId}.json`),
   aiChat:(body:{message:string;conversation:{role:'user'|'model';content:string}[]})=>
     api.post<{reply:string}>('/ai/chat',body)
 };

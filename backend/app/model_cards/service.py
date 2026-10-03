@@ -1,5 +1,3 @@
-
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -363,16 +361,8 @@ def _robustness(records: list[RobustnessRecord]) -> dict:
 
 
 def _subgroups(studies: list[SubgroupAnalysisStudy]) -> dict:
-    rows = [{
-        "study_id": item.id,
-        "status": item.status,
-        "subgroup_field": item.subgroup_field,
-        "definition_fingerprint": item.definition_fingerprint,
-        "subgroup_count": len(item.subgroups_results or []),
-        "limitations": clean_json(item.limitations or []),
-        "artifact_id": _value(item.artifact_id),
-    } for item in studies]
-    return {"status": "available" if any(item.status == "completed" for item in studies) else MISSING, "studies": rows}
+    rows=[{"study_id":x.id,"status":x.status,"subgroup_field":x.subgroup_field,"definition_fingerprint":x.definition_fingerprint,"subgroup_count":len(x.subgroups_results or []),"limitations":clean_json(x.limitations or []),"artifact_id":_value(x.artifact_id)} for x in studies]
+    return {"status":"available" if any(x.status=="completed" for x in studies) else MISSING,"studies":rows}
 
 
 def _quantum(model: ModelRecord, run: Run | None, config: dict, reports: list[QuantumDiagnosticReport]) -> dict:
@@ -450,19 +440,12 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     externals = list(session.scalars(select(ExternalValidation).where(ExternalValidation.model_id == model.id).order_by(ExternalValidation.created_at)))
     shifts = list(session.scalars(select(DistributionShiftAnalysis).where(DistributionShiftAnalysis.model_id == model.id).order_by(DistributionShiftAnalysis.created_at)))
     robustness_records = list(session.scalars(select(RobustnessRecord).where(RobustnessRecord.model_id == model.id).order_by(RobustnessRecord.created_at)))
+    subgroup_studies = list(session.scalars(select(SubgroupAnalysisStudy).where((SubgroupAnalysisStudy.model_id == model.id) | (SubgroupAnalysisStudy.experiment_id == model.experiment_id)).order_by(SubgroupAnalysisStudy.created_at)))
     studies = list(session.scalars(select(MultiSeedStudy).where(MultiSeedStudy.base_experiment_id == model.experiment_id).order_by(MultiSeedStudy.created_at)))
     diagnostic_reports = list(session.scalars(
         select(QuantumDiagnosticReport)
         .where(QuantumDiagnosticReport.model_record_id == model.id)
         .order_by(QuantumDiagnosticReport.created_at)
-    ))
-    subgroup_studies = list(session.scalars(
-        select(SubgroupAnalysisStudy)
-        .where(
-            (SubgroupAnalysisStudy.model_id == model.id)
-            | (SubgroupAnalysisStudy.experiment_id == model.experiment_id)
-        )
-        .order_by(SubgroupAnalysisStudy.created_at)
     ))
     studies = [study for study in studies if not study.model_identities or model.id in clean_json(study.model_identities) or model.model_type in clean_json(study.model_identities)]
     controlled_protocol = session.scalar(
@@ -499,7 +482,6 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
     gaps = _gaps(task=condition, run=run, source_context_type=source_context_type, version=version, multi=multi, calibration=calibration, threshold=threshold, external=external, shift=shift, group=group, robustness=robust, quantum=quantum)
 
     records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports, *subgroup_studies]
-    records: list[Any] = [model, *studies, *calibrations, *thresholds, *externals, *shifts, *robustness_records, *diagnostic_reports]
     if run:
         records.append(run)
     if controlled_protocol and controlled_pairs:
@@ -546,6 +528,7 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         "distribution_shift": shift,
         "group_validation": group,
         "robustness": robust,
+        "subgroup_analysis": subgroups,
         "quantum": quantum,
         "controlled_comparison": controlled_comparison,
         "pipeline": {

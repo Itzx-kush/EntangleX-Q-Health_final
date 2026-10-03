@@ -11,19 +11,6 @@ from ..storage.entities import (
     AblationStudy,
     Artifact,
     CalibrationStudy,
-from __future__ import annotations
-
-from collections import defaultdict, deque
-from datetime import datetime
-from typing import Any, Iterable
-from uuid import NAMESPACE_URL, uuid5
-
-from sqlalchemy import select
-
-from ..storage.entities import (
-    AblationStudy,
-    Artifact,
-    CalibrationStudy,
     ControlledComparisonProtocol,
     Dataset,
     DatasetVersion,
@@ -49,6 +36,7 @@ from ..storage.entities import (
     RobustnessRecord,
     Run,
     StudyRun,
+    SubgroupAnalysisStudy,
     ThresholdAnalysisStudy,
 )
 from ..storage.repository import require
@@ -65,6 +53,7 @@ EVIDENCE_TYPES = {
     "threshold_analysis_study", "robustness_record", "ablation_study",
     "quantum_diagnostic_report", "controlled_comparison_protocol",
     "explanation_record", "research_evidence_package",
+    "subgroup_analysis_study",
 }
 
 MODEL_BY_TYPE = {
@@ -83,6 +72,7 @@ MODEL_BY_TYPE = {
     "distribution_shift_analysis": DistributionShiftAnalysis,
     "calibration_study": CalibrationStudy,
     "threshold_analysis_study": ThresholdAnalysisStudy,
+    "subgroup_analysis_study": SubgroupAnalysisStudy,
     "robustness_record": RobustnessRecord,
     "ablation_study": AblationStudy,
     "quantum_diagnostic_report": QuantumDiagnosticReport,
@@ -123,6 +113,7 @@ ALLOWED_RELATIONSHIPS = {
         ("dataset_version", "distribution_shift_analysis"),
         ("dataset_version", "calibration_study"),
         ("dataset_version", "threshold_analysis_study"),
+        ("dataset_version", "subgroup_analysis_study"),
         ("dataset_version", "ablation_study"),
     },
     "rerun_of": {("experiment", "experiment")},
@@ -379,6 +370,12 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
     elif isinstance(value, ThresholdAnalysisStudy):
         add("model_record", value.model_id, "threshold_analysis_study", value.id, "has_evidence")
         add("dataset_version", value.dataset_version_id, "threshold_analysis_study", value.id, "selected_by")
+    elif isinstance(value, SubgroupAnalysisStudy):
+        add("experiment", value.experiment_id, "subgroup_analysis_study", value.id, "has_evidence")
+        add("model_record", value.model_id, "subgroup_analysis_study", value.id, "has_evidence")
+        if value.run_id: add("run", value.run_id, "subgroup_analysis_study", value.id, "has_evidence")
+        if value.dataset_version_id: add("dataset_version", value.dataset_version_id, "subgroup_analysis_study", value.id, "selected_by")
+        if value.artifact_id: add("subgroup_analysis_study", value.id, "artifact", value.artifact_id, "produced_artifact")
     elif isinstance(value, RobustnessRecord):
         add("experiment", value.experiment_id, "robustness_record", value.id, "has_evidence")
         add("model_record", value.model_id, "robustness_record", value.id, "has_evidence")

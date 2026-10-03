@@ -3,19 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Iterable
 from uuid import NAMESPACE_URL, uuid5
-from sqlalchemy import select
-from ..artifacts.service import register_metadata
-from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
-from ..storage.entities import (
-    AblationStudy,
-    Artifact,
-    CalibrationStudy,
-
-from __future__ import annotations
-
-from datetime import datetime
-from typing import Any, Iterable
-from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import select
 
@@ -272,9 +259,7 @@ def _load_evidence(session, experiment: Experiment) -> dict:
     explanations = list(session.scalars(select(ExplanationRecord).where(
         ExplanationRecord.model_id.in_(model_ids) if model_ids else False
     )))
-    subgroup_studies = list(session.scalars(select(SubgroupAnalysisStudy).where(
-        SubgroupAnalysisStudy.experiment_id == experiment.id
-    )))
+    subgroup_studies = list(session.scalars(select(SubgroupAnalysisStudy).where(SubgroupAnalysisStudy.experiment_id == experiment.id)))
     return {
         "models": models, "runs": runs, "artifacts": artifacts,
         "multi_seed": multi_seed, "external_validation": external,
@@ -282,8 +267,6 @@ def _load_evidence(session, experiment: Experiment) -> dict:
         "threshold": threshold, "robustness": robustness, "ablation": ablation,
         "quantum_diagnostics": diagnostics, "controlled_comparison": protocols,
         "explainability": explanations, "subgroup_analysis": subgroup_studies,
-    }
-        "explainability": explanations,
     }
 
 
@@ -325,6 +308,7 @@ def _validate(
         ("multi_seed", "study_artifact_id"), ("external_validation", "artifact_id"),
         ("distribution_shift", "artifact_id"), ("calibration", "artifact_id"),
         ("ablation", "artifact_id"), ("controlled_comparison", "artifact_id"),
+        ("subgroup_analysis", "artifact_id"),
     ):
         for record in evidence[key]:
             references.append((record, field, getattr(record, "model_id", None)))
@@ -376,6 +360,7 @@ def preflight_package(session, experiment_id: str) -> dict:
         "controlled_comparison": _category(evidence["controlled_comparison"], not_applicable=not has_quantum),
         "model_cards": _model_cards(evidence["artifacts"], {model.id for model in models}),
         "explainability": _category(evidence["explainability"]),
+        "subgroup_analysis": _category(evidence["subgroup_analysis"]),
     }
     configuration_fingerprints = sorted({
         run.configuration_fingerprint for run in evidence["runs"] if run.configuration_fingerprint
@@ -598,6 +583,20 @@ def create_package(session, experiment_id: str) -> tuple[ResearchEvidencePackage
     )
     session.add(package)
     session.flush()
+    from ..audit.service import record_event
+    record_event(
+        session,
+        event_type="EVIDENCE_PACKAGE_CREATED",
+        event_category="EVIDENCE",
+        object_type="evidence_package",
+        object_id=package.id,
+        parent_object_type="experiment",
+        parent_object_id=experiment_id,
+        source_component="evidence_package_service",
+        operation_key=f"evidence-package-created:{package.id}",
+        after_fingerprint=package.package_fingerprint,
+        metadata={"package_id": package.id, "package_status": package.status},
+    )
     return package, True
 
 
