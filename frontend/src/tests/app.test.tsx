@@ -96,7 +96,9 @@ describe('medical dataset library',()=>{
     vi.mocked(qh.registerBuiltIn).mockResolvedValue(registeredDataset(libraryItem));
     renderWithProviders(<Datasets/>,['/datasets']);
     await waitFor(()=>expect(screen.getByText('Breast Cancer Wisconsin Diagnostic')).toBeInTheDocument());
-    expect(screen.getByText('Medical Dataset Library')).toBeInTheDocument();
+    expect(screen.getByText('Biomedical Tabular Dataset Library')).toBeInTheDocument();
+    expect(screen.getByText(/deidentified CSV tabular data for binary classification/i)).toBeInTheDocument();
+    expect(screen.getByText(/Medical imaging, genomics, continuous signals and direct EHR integrations are not implemented/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Use Dataset'}));
     await waitFor(()=>expect(qh.registerBuiltIn).toHaveBeenCalledWith('wdbc'));
     await waitFor(()=>{
