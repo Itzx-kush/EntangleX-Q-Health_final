@@ -93,3 +93,11 @@ Tests cover the real persisted Early Stage Diabetes hybrid artifact, exact-case 
 ## Fair benchmark validation
 
 Comparison tests cover matching and mismatching dataset hashes, sample pools, splits, PCA/qubit dimensions, sample budgets, seeds, CV folds, and threshold strategies. They also verify neutral deltas, null-preserving metrics, measured timing, `default.qubit` metadata, persistence, paired robustness fingerprints, report export, and the absence of ranking claims. The bounded diabetes integration test executes the real PennyLane + PyTorch training path when hybrid dependencies are installed; it is not replaced with a mocked estimator.
+
+## Scientific CI verification
+
+`python -m app.verification` runs the Scientific CI gate that verifies reproducibility, immutability,
+migration, deployment-import and scientific contract invariants independently of the test suite.
+The pull-request gate is the `fast` profile; the nightly and manual runs use the `full` profile.
+See [Scientific CI verification](scientific_ci_verification.md) for the check registry, severity
+semantics, fixtures and local commands.

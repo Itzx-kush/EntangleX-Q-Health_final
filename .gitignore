@@ -21,3 +21,5 @@ experiments/*.json
 experiments/*.html
 *.zip
 .artifact_key
+scientific-ci-report.json
+scientific-ci-manifest.json

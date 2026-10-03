@@ -1,0 +1,117 @@
+name: Scientific CI
+
+# Scientific CI verifies implementation-level scientific, reproducibility,
+# provenance and deployment invariants.  A passing run means the configured
+# automated invariants held; it is not independent scientific validation of any
+# model, dataset, experiment or biomedical conclusion.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scientific-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  scientific-verification:
+    name: Scientific verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # Fast profile: the pull-request gate and the main-branch regression gate.
+      - name: Scientific CI (fast profile)
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        working-directory: backend
+        env:
+          QHEALTH_DEPLOYMENT_MODE: local
+          QHEALTH_API_TOKEN: ""
+        run: |
+          python -m app.verification --profile fast \
+            --manifest-out ../scientific-ci-manifest.json \
+            --json-out ../scientific-ci-report.json
+
+      # Full profile: nightly and manual runs cover the heavier verification.
+      - name: Scientific CI (full profile)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        working-directory: backend
+        env:
+          QHEALTH_DEPLOYMENT_MODE: local
+          QHEALTH_API_TOKEN: ""
+        run: |
+          python -m app.verification --profile full \
+            --manifest-out ../scientific-ci-manifest.json \
+            --json-out ../scientific-ci-report.json
+
+      - name: Publish Scientific CI summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import pathlib
+
+          path = pathlib.Path("scientific-ci-report.json")
+          if not path.is_file():
+              print("## Scientific CI\n\nNo Scientific CI report was produced.")
+              raise SystemExit(0)
+
+          report = json.loads(path.read_text())
+          counts = report["counts"]
+          print("## Scientific CI")
+          print()
+          print("```text")
+          print("Scientific CI Verification")
+          print()
+          print("Required:")
+          print(f"  PASS {counts['required_pass']:>3}")
+          print(f"  FAIL {counts['required_fail']:>3}")
+          print()
+          print("Advisory:")
+          print(f"  PASS {counts['advisory_pass']:>3}")
+          print(f"  WARN {counts['advisory_warn']:>3}")
+          print()
+          print("Skipped:")
+          print(f"  {counts['skipped']:>3}")
+          print()
+          print("Result:")
+          print(f"  {report['result']}")
+          print("```")
+          print()
+          print("A passing run states only that the configured automated scientific "
+                "integrity checks held. It is not independent scientific validation.")
+          PY
+
+      - name: Upload Scientific CI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-ci
+          path: |
+            scientific-ci-report.json
+            scientific-ci-manifest.json
+          if-no-files-found: warn
