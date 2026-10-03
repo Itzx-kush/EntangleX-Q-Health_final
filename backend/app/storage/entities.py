@@ -346,3 +346,34 @@ class ConditionTask(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AblationStudy(Base):
+    """One controlled ablation study derived from a completed baseline experiment."""
+
+    __tablename__ = "ablation_studies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    base_experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    base_run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    ablation_experiment_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True, index=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    condition_task_id: Mapped[str | None] = mapped_column(ForeignKey("condition_tasks.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    baseline_configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    ablation_configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    changed_components: Mapped[str] = mapped_column(Text, default="")
+    held_constant: Mapped[list] = mapped_column(JSON, default=list)
+    configuration_diff: Mapped[dict] = mapped_column(JSON, default=dict)
+    configuration_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    comparison_results: Mapped[dict] = mapped_column(JSON, default=dict)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
