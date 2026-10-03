@@ -12,11 +12,11 @@ import { CalibrationLaboratory } from './CalibrationLaboratory';
 import { ThresholdAnalysis } from './ThresholdAnalysis';
 import { QuantumDiagnostics } from './QuantumDiagnostics';
 import { AblationLaboratory } from './AblationLaboratory';
-import { BiomedicalSubgroupAnalysisPanel } from './BiomedicalSubgroupAnalysis';
-import type {Experiment,LineageNode} from '../types/qhealth';
+import type {Experiment,LineageNode,ProtocolComplianceRule,ProtocolDiffChange} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
 import {ModelCardPanel} from '../components/ModelCardPanel';
+import {DatasetQualityPanel} from './DatasetQualityScorecard';
 import {useResearchRecorder} from '../research/useResearchHistory';
 import {experimentActivity} from '../research/historyRecords';
 
@@ -193,7 +193,7 @@ export function ExperimentProtocolPanel({experimentId}:{experimentId:string}){
         </div>
         {compliance.isLoading?<div className="mt-3"><Loading/></div>:compliance.data?.status==='AVAILABLE'?<div className="mt-3">
           <div className="max-h-72 space-y-2 overflow-y-auto">
-            {compliance.data.checks.map((check,index)=><div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2 text-xs last:border-0" key={`${check.rule}-${index}`}>
+            {compliance.data.checks.map((check: ProtocolComplianceRule, index: number)=><div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2 text-xs last:border-0" key={`${check.rule}-${index}`}>
               <div className="flex-1 min-w-[200px]">
                 <div className="flex items-center gap-2">
                   <strong className="text-xs">{check.rule.replaceAll('_',' ')}</strong>
@@ -218,8 +218,8 @@ export function ExperimentProtocolPanel({experimentId}:{experimentId:string}){
         </Select>
         {diff.isLoading&&<Loading/>}
         {diff.data&&<div className="mt-3">
-          <div className="flex flex-wrap gap-2">{diff.data.category_summaries.map(item=><Badge key={item.category} tone={item.status==='Unchanged'?'green':'amber'}>{item.category.replaceAll('_',' ')} · {item.status}</Badge>)}</div>
-          {diff.data.changes.length?<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{diff.data.changes.map((change,index)=><div className="border-b pb-2 text-xs last:border-0" key={`${change.category}-${change.field}-${index}`}><strong>{change.change_type}: {change.category.replaceAll('_',' ')} · {change.field}</strong><div className="mono mt-1 break-all text-[10px] muted">{JSON.stringify(change.before)} → {JSON.stringify(change.after)}</div></div>)}</div>:<p className="mt-2 text-xs muted">No protocol changes.</p>}
+          <div className="flex flex-wrap gap-2">{diff.data.category_summaries.map((item: { category: string; status: 'Changed' | 'Unchanged' })=><Badge key={item.category} tone={item.status==='Unchanged'?'green':'amber'}>{item.category.replaceAll('_',' ')} · {item.status}</Badge>)}</div>
+          {diff.data.changes.length?<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{diff.data.changes.map((change: ProtocolDiffChange, index: number)=><div className="border-b pb-2 text-xs last:border-0" key={`${change.category}-${change.field}-${index}`}><strong>{change.change_type}: {change.category.replaceAll('_',' ')} · {change.field}</strong><div className="mono mt-1 break-all text-[10px] muted">{JSON.stringify(change.before)} → {JSON.stringify(change.after)}</div></div>)}</div>:<p className="mt-2 text-xs muted">No protocol changes.</p>}
           <p className="mt-2 text-xs muted">{diff.data.interpretation}</p>
         </div>}
       </div>}
@@ -348,7 +348,7 @@ export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string
   </Card>
 }
 
-const auditCategoryTone=(category:string):'blue'|'green'|'amber'|'red'|'purple'=>{
+const auditCategoryTone=(category:string):'blue'|'green'|'amber'|'purple'=>{
   switch(category.toUpperCase()){
     case 'EXPERIMENT':
     case 'MODEL':
@@ -359,10 +359,6 @@ const auditCategoryTone=(category:string):'blue'|'green'|'amber'|'red'|'purple'=
     case 'RUN':
     case 'JOB':
     case 'PIPELINE':
-      return 'blue';
-    case 'ARTIFACT':
-    case 'CONFIGURATION':
-      return 'amber';
     default:
       return 'blue';
   }
@@ -377,18 +373,12 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
     queryFn:()=>qh.experimentAudit(experimentId,selectedCategory),
     retry:false,
   });
-  const integrity=useQuery({
-    queryKey:['audit-integrity',experimentId],
-    queryFn:()=>qh.auditIntegrity('experiment',experimentId),
-    retry:false,
-  });
 
   const value=timeline.data;
   const categories=['all','EXPERIMENT','RUN','JOB','PIPELINE','MODEL','EVIDENCE','ARTIFACT','CONFIGURATION'];
 
   return <Card className="mt-5" title="Scientific Audit Timeline" description="Immutable, chronological record of research-platform events recording operations and resulting persisted state.">
     <ErrorBanner error={(timeline.error as Error)?.message}/>
-    <ErrorBanner error={(integrity.error as Error)?.message}/>
     <div className="controls mb-4">
       <label className="field"><span>Filter Category</span><Select value={selectedCategory} onChange={event=>setSelectedCategory(event.target.value)}>{categories.map(cat=><option key={cat} value={cat}>{cat==='all'?'All categories':cat.replaceAll('_',' ')}</option>)}</Select></label>
     </div>
@@ -396,14 +386,14 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
     {timeline.isLoading?<Loading/>:!value?<EmptyState title="Audit timeline not available for this experiment">No audit snapshot could be loaded.</EmptyState>:<>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={(integrity.data?.valid ?? (value.integrity_status==='VERIFIED'))?'green':'amber'}>{(integrity.data?.valid ?? (value.integrity_status==='VERIFIED'))?'INTEGRITY VERIFIED':'INTEGRITY WARNING'}</Badge>
-          <Badge tone="blue">{value.total_events} RECORDED EVENT{value.total_events===1?'':'S'}</Badge>
+          <Badge tone={value.integrity.verified?'green':'amber'}>{value.integrity.verified?'INTEGRITY VERIFIED':'INTEGRITY WARNING'}</Badge>
+          <Badge tone="blue">{value.events.length} RECORDED EVENT{value.events.length===1?'':'S'}</Badge>
         </div>
         <Button variant="outline" onClick={()=>qh.experimentAuditExport(experimentId)}><Download size={13}/>Export Audit JSON</Button>
       </div>
 
-      {integrity.data?.issues.length? <Notice tone="amber">Audit integrity warning: {integrity.data.issues.map(i=>i.message).join('; ')}</Notice>:null}
-      {value.legacy_disclaimer&&<Notice tone="blue">{value.legacy_disclaimer}</Notice>}
+      {value.integrity.issues.length>0&&<Notice tone="amber">Audit integrity warning: {value.integrity.issues.map(i=>i.description).join('; ')}</Notice>}
+      {value.disclaimer&&<Notice tone="blue">{value.disclaimer}</Notice>}
 
       {value.events.length===0?<EmptyState title="No audit events found">No recorded platform events match the active category filter.</EmptyState>:<div className="mt-4 space-y-3">
         {value.events.map(event=>{
@@ -451,7 +441,6 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
   </Card>;
 }
 
-
 export function ExperimentDetail(){
   const {id=''}=useParams();
   const result=useQuery({queryKey:['experiment',id],queryFn:()=>qh.experiment(id),enabled:Boolean(id),refetchInterval:query=>['queued','running','cancel_requested'].includes(query.state.data?.experiment.status||'')?5000:false});
@@ -482,6 +471,7 @@ export function ExperimentDetail(){
     <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>
     <ScientificAuditTimelinePanel experimentId={id}/>
+    <DatasetQualityPanel experimentId={id} datasetId={detail.experiment.dataset_id} />
     <BiomedicalSubgroupAnalysisPanel experimentId={id}/>
     <div className="mt-5"><Card title="Measured model records" description="Only measurements returned by the backend are displayed.">
       {detail.models.length?detail.models.map(model=><GlareHover key={model.id} className="border-b py-5 last:border-b-0"><article className="py-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h3 className="font-semibold">{modelLabels[model.model_type]}</h3><StatusBadge value={model.status}/></div><small className="muted">Model {shortId(model.id)} · {dateTime(model.created_at)}</small></div><button className="btn btn-ghost" onClick={()=>setExpanded(expanded===model.id?null:model.id)}>{expanded===model.id?'Collapse':'Inspect'}</button></div>{model.model_type==='hybrid_pennylane_torch'&&model.details.quantum&&<div className="mt-4 rounded-xl border p-4"><div className="metric-label">HYBRID EXECUTION EVIDENCE</div><div className="mt-3 grid gap-3 md:grid-cols-3"><div><span className="metric-label">FRAMEWORKS</span><strong className="block">{model.details.quantum.framework} + {model.details.quantum.classical_framework}</strong></div><div><span className="metric-label">EXECUTION</span><strong className="block">{model.details.quantum.execution_kind}</strong></div><div><span className="metric-label">BACKEND</span><strong className="block">{model.details.quantum.backend}</strong></div><div><span className="metric-label">QUBITS / LAYERS</span><strong className="block">{model.details.quantum.qubits} / {model.details.quantum.quantum_layers}</strong></div><div><span className="metric-label">PROBABILITY</span><strong className="block">Measured positive-class output</strong></div><div><span className="metric-label">HARDWARE</span><strong className="block">Not implemented</strong></div></div><Notice tone="amber">Quantum advantage: not established. Operating threshold is selected from out-of-fold validation evidence.</Notice></div>}{model.metrics.test&&<div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]"><div className="rounded-xl border p-4"><div className="metric-label">HELD-OUT METRICS</div><div className="mt-3 space-y-1">{(['sensitivity','specificity','roc_auc','f1','accuracy','precision','recall'] as const).map(k=><div className="flex justify-between border-b py-1.5 last:border-0" key={k}><span className="text-xs muted">{k}</span><strong className="mono text-xs">{metric(model.metrics.test?.[k],k!=='roc_auc')}</strong></div>)}</div></div><div className="rounded-xl border p-4"><div className="metric-label">RUNTIME</div><div className="mt-3 space-y-1 text-xs">{[['Final training',seconds(model.metrics.timing?.final_training_seconds)],['CV total',seconds(model.metrics.timing?.cv_total_seconds)],['Test inference',seconds(model.metrics.timing?.test_inference_seconds_per_sample)+'/sample']].map(x=><div className="flex justify-between border-b py-1.5 last:border-0" key={String(x[0])}><span className="muted">{x[0]}</span><strong>{x[1]}</strong></div>)}</div></div></div>}{expanded===model.id&&<><ModelCardPanel model={model}/><CalibrationLaboratory model={model} />

@@ -53,6 +53,7 @@ def create_run(
     )
     session.add(run)
     session.flush()
+
     from ..audit.service import record_event
     record_event(
         session,
@@ -64,7 +65,11 @@ def create_run(
         parent_object_id=experiment.id,
         source_component="run_service",
         operation_key=f"run-created:{run.id}",
-        metadata={"dataset_id": run.dataset_id, "pipeline_version_id": run.pipeline_version_id},
+        metadata={
+            "dataset_id": run.dataset_id,
+            "pipeline_version_id": run.pipeline_version_id,
+            "protocol_version_id": run.protocol_version_id,
+        },
     )
     return run
 
@@ -101,6 +106,7 @@ def transition(
     elif status == "cancelled":
         run.cancelled_at = now
         run.failure = failure or {"code": "cancelled", "message": "Scientific execution was cancelled."}
+
     from ..audit.service import record_event
     event_type = (
         "RUN_STARTED" if status == "running"

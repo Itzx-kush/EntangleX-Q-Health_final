@@ -13,6 +13,7 @@ from ..storage.entities import (
     CalibrationStudy,
     ControlledComparisonProtocol,
     Dataset,
+    DatasetQualityScorecard,
     DatasetVersion,
     DistributionShiftAnalysis,
     Experiment,
@@ -36,7 +37,6 @@ from ..storage.entities import (
     RobustnessRecord,
     Run,
     StudyRun,
-    SubgroupAnalysisStudy,
     ThresholdAnalysisStudy,
 )
 from ..storage.repository import require
@@ -53,12 +53,13 @@ EVIDENCE_TYPES = {
     "threshold_analysis_study", "robustness_record", "ablation_study",
     "quantum_diagnostic_report", "controlled_comparison_protocol",
     "explanation_record", "research_evidence_package",
-    "subgroup_analysis_study",
+    "dataset_quality_scorecard",
 }
 
 MODEL_BY_TYPE = {
     "dataset": Dataset,
     "dataset_version": DatasetVersion,
+    "dataset_quality_scorecard": DatasetQualityScorecard,
     "experiment": Experiment,
     "run": Run,
     "job": Job,
@@ -72,7 +73,6 @@ MODEL_BY_TYPE = {
     "distribution_shift_analysis": DistributionShiftAnalysis,
     "calibration_study": CalibrationStudy,
     "threshold_analysis_study": ThresholdAnalysisStudy,
-    "subgroup_analysis_study": SubgroupAnalysisStudy,
     "robustness_record": RobustnessRecord,
     "ablation_study": AblationStudy,
     "quantum_diagnostic_report": QuantumDiagnosticReport,
@@ -113,7 +113,6 @@ ALLOWED_RELATIONSHIPS = {
         ("dataset_version", "distribution_shift_analysis"),
         ("dataset_version", "calibration_study"),
         ("dataset_version", "threshold_analysis_study"),
-        ("dataset_version", "subgroup_analysis_study"),
         ("dataset_version", "ablation_study"),
     },
     "rerun_of": {("experiment", "experiment")},
@@ -172,7 +171,7 @@ def _iso(value: datetime | None) -> str | None:
 def _stable_fingerprint(value: Any, object_type: str) -> str | None:
     for field in (
         "package_fingerprint", "protocol_fingerprint", "definition_fingerprint", "configuration_fingerprint",
-        "state_fingerprint", "result_fingerprint", "integrity_hash",
+        "assessment_fingerprint", "state_fingerprint", "result_fingerprint", "integrity_hash",
         "version_signature", "artifact_sha256", "sha256",
     ):
         found = getattr(value, field, None)
@@ -370,12 +369,6 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
     elif isinstance(value, ThresholdAnalysisStudy):
         add("model_record", value.model_id, "threshold_analysis_study", value.id, "has_evidence")
         add("dataset_version", value.dataset_version_id, "threshold_analysis_study", value.id, "selected_by")
-    elif isinstance(value, SubgroupAnalysisStudy):
-        add("experiment", value.experiment_id, "subgroup_analysis_study", value.id, "has_evidence")
-        add("model_record", value.model_id, "subgroup_analysis_study", value.id, "has_evidence")
-        if value.run_id: add("run", value.run_id, "subgroup_analysis_study", value.id, "has_evidence")
-        if value.dataset_version_id: add("dataset_version", value.dataset_version_id, "subgroup_analysis_study", value.id, "selected_by")
-        if value.artifact_id: add("subgroup_analysis_study", value.id, "artifact", value.artifact_id, "produced_artifact")
     elif isinstance(value, RobustnessRecord):
         add("experiment", value.experiment_id, "robustness_record", value.id, "has_evidence")
         add("model_record", value.model_id, "robustness_record", value.id, "has_evidence")
@@ -406,6 +399,11 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
         for artifact_id_value in (value.provenance or {}).get("artifact_ids", []):
             if artifact_id_value != value.artifact_id:
                 add("artifact", artifact_id_value, "research_evidence_package", value.id, "included_in")
+    elif isinstance(value, DatasetQualityScorecard):
+        if value.experiment_id:
+            add("experiment", value.experiment_id, "dataset_quality_scorecard", value.id, "has_evidence")
+        if value.artifact_id:
+            add("dataset_quality_scorecard", value.id, "artifact", value.artifact_id, "produced_artifact")
     return nodes, edges
 
 

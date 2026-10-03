@@ -1,9 +1,6 @@
 from contextlib import contextmanager
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from contextlib import contextmanager
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from .config import get_settings
 
 class Base(DeclarativeBase):
@@ -43,3 +40,9 @@ def init_db():
     install_lineage_capture()
     from .pipelines.immutability import install_pipeline_immutability
     install_pipeline_immutability()
+    from .protocols.immutability import install_protocol_immutability
+    install_protocol_immutability()
+    from .audit.immutability import register_audit_immutability
+    register_audit_immutability()
+
+

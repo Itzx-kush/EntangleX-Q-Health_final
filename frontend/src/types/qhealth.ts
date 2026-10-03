@@ -231,22 +231,20 @@ export interface ProtocolDiff {
   interpretation: string;
 }
 
-export interface ProtocolPreflight {
-  valid: boolean;
-  publishable: boolean;
-  fingerprint_deterministic: boolean;
-  fingerprint: string | null;
-  canonical_definition?: Record<string, unknown>;
-  blockers: { code: string; message?: string; reference_id?: string }[];
-  errors: { code: string; message?: string; reference_id?: string }[];
-  warnings: { code: string; message?: string }[];
-}
-
 export type ExperimentProtocolResponse =
   | { experiment_id: string; status: 'AVAILABLE'; protocol_version: ExperimentProtocolVersion }
   | { experiment_id: string; status: 'LEGACY_UNSPECIFIED'; protocol_version: null; reason: string };
 
 export type ComplianceStatus = 'MATCHED' | 'MISSING' | 'MISMATCHED' | 'NOT_APPLICABLE' | 'UNVERIFIABLE';
+
+export interface ProtocolComplianceSummary {
+  matched: number;
+  missing: number;
+  mismatched: number;
+  not_applicable: number;
+  unverifiable: number;
+  total_checks: number;
+}
 
 export interface ProtocolComplianceRule {
   rule: string;
@@ -256,15 +254,6 @@ export interface ProtocolComplianceRule {
   actual: unknown;
   status: ComplianceStatus;
   details: string;
-}
-
-export interface ProtocolComplianceSummary {
-  matched: number;
-  missing: number;
-  mismatched: number;
-  not_applicable: number;
-  unverifiable: number;
-  total_checks: number;
 }
 
 export interface ProtocolComplianceResponse {
@@ -279,6 +268,85 @@ export interface ProtocolComplianceResponse {
   reason?: string;
   interpretation: string;
 }
+
+export interface ProtocolPreflight {
+  valid: boolean;
+  publishable: boolean;
+  fingerprint_deterministic: boolean;
+  fingerprint: string | null;
+  canonical_definition?: Record<string, unknown>;
+  blockers: { code: string; message?: string; reference_id?: string }[];
+  errors: { code: string; message?: string; reference_id?: string }[];
+  warnings: { code: string; message?: string }[];
+}
+
+export type AuditEventCategory =
+  | 'EXPERIMENT'
+  | 'DATASET'
+  | 'PIPELINE'
+  | 'PROTOCOL'
+  | 'RUN'
+  | 'JOB'
+  | 'MODEL'
+  | 'EVIDENCE'
+  | 'ARTIFACT'
+  | 'CONFIGURATION'
+  | 'DEPLOYMENT';
+
+export interface ScientificAuditEvent {
+  id: string;
+  schema_version: string;
+  event_type: string;
+  event_category: AuditEventCategory | string;
+  occurred_at: string;
+  recorded_at: string;
+  actor_type: string;
+  actor_reference: string | null;
+  source_component: string;
+  operation_key: string | null;
+  object_type: string;
+  object_id: string;
+  parent_object_type: string | null;
+  parent_object_id: string | null;
+  before_fingerprint: string | null;
+  after_fingerprint: string | null;
+  previous_event_fingerprint: string | null;
+  event_fingerprint: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface AuditIntegrityIssue {
+  event_id: string;
+  issue_type: string;
+  description: string;
+}
+
+export interface AuditIntegrity {
+  verified: boolean;
+  total_events: number;
+  issues: AuditIntegrityIssue[];
+  checked_at: string;
+}
+
+export interface AuditTimeline {
+  object_type: string;
+  object_id: string;
+  events: ScientificAuditEvent[];
+  integrity: AuditIntegrity;
+  disclaimer: string;
+}
+
+export interface AuditFilterParams {
+  event_type?: string;
+  event_category?: string;
+  object_type?: string;
+  object_id?: string;
+  actor_type?: string;
+  from_time?: string;
+  to_time?: string;
+  limit?: number;
+}
+
 export interface Preview {train_count:number;test_count:number;input_features:string[];selected_features:string[];output_features:string[];selection_scores:{feature:string;score:number|null;selected:boolean}[];pca_explained_variance:number[];pca_loadings:number[][];split_hash:string;stages:string[];warnings:string[]}
 export interface Circuit {model_type:string;execution_kind:string;backend:string;qubits:number;logical_depth:number|null;parameter_count:number;gate_counts:Record<string,number>;text:string;gates:{name:string;qubits:number[];parameters:string[]}[];limitation:string}
 export interface ResourceAdvisorChange {field:string;from:number;to:number;reason:string}
@@ -341,21 +409,123 @@ export interface VerifiedEvidencePackage {
   };
 }
 
-export type AuditEventCategory='EXPERIMENT'|'DATASET'|'PIPELINE'|'PROTOCOL'|'RUN'|'JOB'|'MODEL'|'EVIDENCE'|'ARTIFACT'|'CONFIGURATION'|'SYSTEM';
-export interface ScientificAuditEvent{id:string;schema_version:string;event_type:string;event_category:AuditEventCategory|string;occurred_at:string;recorded_at:string;actor_type:string;actor_reference:string|null;source_component:string;operation_key:string|null;object_type:string;object_id:string;parent_object_type:string|null;parent_object_id:string|null;before_fingerprint:string|null;after_fingerprint:string|null;previous_event_fingerprint:string|null;event_fingerprint:string;metadata:Record<string,unknown>}
-export interface AuditIntegrityIssue{event_id:string|null;issue_type:string;message:string;details:Record<string,unknown>}
-export interface AuditIntegrity{valid:boolean;total_events:number;issues:AuditIntegrityIssue[];interpretation:string}
-export interface AuditTimeline{object_type:string;object_id:string;total_events:number;events:ScientificAuditEvent[];categories_present:string[];integrity_status:'VERIFIED'|'INTEGRITY_WARNING'|'NOT_VERIFIED';legacy_disclaimer:string|null;scientific_boundary:string}
-export interface AuditFilterParams{event_type?:string;event_category?:string;object_type?:string;object_id?:string;parent_object_id?:string;source_component?:string;actor_type?:string;start_time?:string;end_time?:string;limit?:number;offset?:number}
-export type SubgroupOperator='equals'|'between'|'in'|'greater_than'|'less_than'|'greater_than_or_equal'|'less_than_or_equal'|'is_null';
-export type MissingValuePolicy='exclude'|'separate_unknown_group'|'error';
-export type SubgroupStatus='VALID'|'TOO_SMALL'|'EMPTY'|'UNAVAILABLE'|'UNVERIFIABLE';
-export type MetricStatus='AVAILABLE'|'UNDEFINED'|'INSUFFICIENT_DATA'|'WITHHELD'|'NOT_APPLICABLE'|'UNVERIFIABLE';
-export interface SubgroupRule{id:string;label:string;field:string;operator:SubgroupOperator;value?:unknown;lower?:number|null;upper?:number|null;values?:unknown[]|null}
-export interface SubgroupMetricValue{value:number|null;status:MetricStatus;reason?:string|null;ci_lower?:number|null;ci_upper?:number|null;ci_level?:number|null;ci_method?:string|null}
-export interface SubgroupPopulationAccounting{n:number;positive_n:number;negative_n:number;prevalence:number;excluded_missing_n:number}
-export interface SubgroupResult{id:string;label:string;rule:Record<string,unknown>;status:SubgroupStatus;status_reason?:string|null;population:SubgroupPopulationAccounting;metrics:Record<string,SubgroupMetricValue>}
-export interface SubgroupComparison{subgroup_id:string;subgroup_label:string;reference_id:string;reference_label:string;status:string;status_reason?:string|null;deltas:Record<string,number|null>;disparity_ratios:Record<string,number|null>;notes:string[]}
-export interface SubgroupAnalysisRequest{model_id?:string|null;dataset_id?:string|null;dataset_version_id?:string|null;subgroup_field:string;subgroup_rules?:SubgroupRule[]|null;minimum_n?:number;missing_value_policy?:MissingValuePolicy;reference_subgroup_id?:string|null;confidence_level?:number}
-export interface SubgroupStudy{id:string;schema_version:string;experiment_id:string;model_id:string;model_type:string;run_id?:string|null;dataset_id:string;dataset_version_id?:string|null;status:string;operation_key:string;definition_fingerprint:string;subgroup_field:string;configuration:Record<string,unknown>;overall_population:{n:number;positive_n:number;negative_n:number;prevalence:number;missing_n:number;metrics:Record<string,SubgroupMetricValue>};subgroups:SubgroupResult[];subgroups_results?:SubgroupResult[];comparisons:SubgroupComparison[];limitations:string[];provenance:Record<string,unknown>;artifact_id?:string|null;created_at:string;completed_at?:string|null}
-export interface SubgroupPreflightResponse{feasible:boolean;subgroup_field:string;field_data_type:string;unique_values_count:number;missing_values_count:number;suggested_rules:SubgroupRule[];eligible_samples:number;blockers:string[];warnings:string[];limitations:string[];configuration_fingerprint:string}
+export type QualityCheckStatus = 'PASS' | 'WARN' | 'FAIL' | 'UNVERIFIABLE' | 'NOT_APPLICABLE';
+export type QualityCheckSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface QualityCheckResult {
+  name: string;
+  domain: string;
+  status: QualityCheckStatus;
+  severity: QualityCheckSeverity;
+  message: string;
+  details: Record<string, unknown>;
+  recommendation?: string | null;
+}
+
+export interface QualityDomainResult {
+  name: string;
+  title: string;
+  status: QualityCheckStatus;
+  passed: number;
+  warnings: number;
+  failures: number;
+  unverifiable: number;
+  checks: QualityCheckResult[];
+}
+
+export interface ScorecardSummary {
+  quality_score: number;
+  overall_status: QualityCheckStatus;
+  total_checks: number;
+  passed: number;
+  warnings: number;
+  failed: number;
+  unverifiable: number;
+  domain_scores: Record<string, number>;
+}
+
+export interface FeatureProfile {
+  name: string;
+  data_type: string;
+  missing_count: number;
+  missing_percentage: number;
+  unique_count: number;
+  is_constant: boolean;
+  is_identifier_candidate: boolean;
+  mean?: number | null;
+  std?: number | null;
+  min?: number | null;
+  max?: number | null;
+  top_categories?: Record<string, number>;
+}
+
+export interface SchemaSnapshot {
+  total_rows: number;
+  total_columns: number;
+  feature_count: number;
+  target_column?: string | null;
+  positive_label?: string | null;
+  features: Record<string, FeatureProfile>;
+}
+
+export interface DatasetQualityScorecard {
+  id: string;
+  schema_version: string;
+  dataset_id: string;
+  dataset_version_id?: string | null;
+  experiment_id?: string | null;
+  protocol_version_id?: string | null;
+  pipeline_version_id?: string | null;
+  status: QualityCheckStatus;
+  assessment_fingerprint: string;
+  summary: ScorecardSummary;
+  domains: Record<string, QualityDomainResult>;
+  schema_snapshot?: SchemaSnapshot;
+  limitations: string[];
+  recommendations: string[];
+  blocking_reasons: string[];
+  artifact_id?: string | null;
+  created_at?: string;
+}
+
+export interface DatasetQualityPreflightResponse {
+  dataset_id: string;
+  dataset_version_id?: string | null;
+  dataset_name: string;
+  dataset_hash: string;
+  expected_fingerprint: string;
+  checks_planned: number;
+  domains_planned: string[];
+  context: Record<string, unknown>;
+  ready_to_assess: boolean;
+  reasons: string[];
+}
+
+export interface ScorecardComparison {
+  base_scorecard_id: string;
+  target_scorecard_id: string;
+  base_fingerprint: string;
+  target_fingerprint: string;
+  status_delta: {
+    base_status: QualityCheckStatus;
+    target_status: QualityCheckStatus;
+    changed: boolean;
+  };
+  summary_delta: {
+    score_delta: number;
+    passed_delta: number;
+    warnings_delta: number;
+    failed_delta: number;
+  };
+  domain_deltas: Record<string, unknown>;
+  new_warnings: QualityCheckResult[];
+  resolved_warnings: QualityCheckResult[];
+  new_failures: QualityCheckResult[];
+  resolved_failures: QualityCheckResult[];
+  metric_changes: Array<{
+    metric: string;
+    base: unknown;
+    target: unknown;
+    delta: unknown;
+  }>;
+}
