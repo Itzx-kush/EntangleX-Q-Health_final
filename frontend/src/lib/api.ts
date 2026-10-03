@@ -42,6 +42,11 @@ export const api={
 };
 
 export const qh={
+
+  threshold_preflight:(body:any)=>api.post<any>('/threshold-analysis/preflight',body),
+  create_threshold_study:(body:any)=>api.post<any>('/threshold-analysis',body),
+  threshold_study:(id:string)=>api.get<any>(`/threshold-analysis/${id}`),
+
   calibration_preflight:(body:any)=>api.post<any>('/calibration/preflight',body),
   create_calibration_study:(body:any)=>api.post<any>('/calibration',body),
   calibration_study:(id:string)=>api.get<any>(`/calibration/${id}`),

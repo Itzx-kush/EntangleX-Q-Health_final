@@ -361,3 +361,35 @@ def apply_migrations() -> None:
                 {"id": CALIBRATION_STUDIES_MIGRATION_ID, "applied_at": utcnow()},
             )
 
+
+        THRESHOLD_STUDIES_MIGRATION_ID = "0010_threshold_analysis_studies"
+        thresh_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": THRESHOLD_STUDIES_MIGRATION_ID},
+        ).scalar()
+        if not thresh_applied:
+            connection.execute(text('''
+                CREATE TABLE IF NOT EXISTS threshold_analysis_studies (
+                    id VARCHAR(36) PRIMARY KEY,
+                    model_id VARCHAR(36) NOT NULL,
+                    dataset_id VARCHAR(36) NOT NULL,
+                    dataset_version_id VARCHAR(36),
+                    operation_key VARCHAR(128) NOT NULL,
+                    configuration JSON NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'created',
+                    results JSON,
+                    curves JSON,
+                    summary JSON,
+                    limitations JSON,
+                    failure JSON,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME
+                )
+            '''))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_thresh_model_id ON threshold_analysis_studies(model_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_thresh_dataset_id ON threshold_analysis_studies(dataset_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_thresh_op_key ON threshold_analysis_studies(operation_key)"))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": THRESHOLD_STUDIES_MIGRATION_ID, "applied_at": utcnow()},
+            )

@@ -7,7 +7,7 @@ class CalibrationRequest(BaseModel):
     dataset_id: UUID
     dataset_version_id: UUID | None = None
     calibration_method: Literal["sigmoid", "isotonic", "temperature_scaling", "none"] = Field(default="none")
-    calibration_protocol: Literal["out_of_fold", "dedicated_split", "prefit_on_test"] = Field(default="dedicated_split")
+    calibration_protocol: Literal["dedicated_split"] = Field(default="dedicated_split")
     sampling_unit: Literal["independent_samples", "grouped_samples"] = Field(default="independent_samples")
     group_column: str | None = Field(default=None, max_length=200)
     split_seed: int = Field(default=42)

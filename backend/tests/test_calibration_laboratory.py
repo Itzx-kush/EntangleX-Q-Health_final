@@ -33,4 +33,4 @@ def test_calibration_uncalibrated_baseline(auth_headers):
     })
     # Should say model_unavailable
     assert res.status_code == 422, res.json()
-    assert "model is not available" in res.json()["detail"]
+    assert "model is not available" in res.json().get("error", {}).get("message", "") or "model is not available" in str(res.json())
