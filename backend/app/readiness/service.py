@@ -9,12 +9,12 @@ from typing import Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
-from backend.app.storage.entities import ConditionTask, DatasetVersion, Dataset, ModelRecord
-from backend.app.readiness.schemas import ReadinessResult, ConditionTaskResponse, ConditionTaskCreate
-from backend.app.readiness.capabilities import get_model_capabilities
-from backend.app.data.splitting import _validate_group_column
-from backend.app.data.quality import quality_report, validate_target
-from backend.app.data.service import load_versioned_frame
+from ..storage.entities import ConditionTask, DatasetVersion, Dataset, ModelRecord
+from .schemas import ReadinessResult, ConditionTaskResponse, ConditionTaskCreate
+from .capabilities import get_model_capabilities
+from ..data.splitting import _validate_group_column
+from ..data.quality import quality_report, validate_target
+from ..data.service import load_versioned_frame
 
 logger = logging.getLogger(__name__)
 

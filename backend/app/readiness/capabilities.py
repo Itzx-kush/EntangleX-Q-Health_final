@@ -1,4 +1,4 @@
-from backend.app.readiness.schemas import ModelCapabilityResponse
+from .schemas import ModelCapabilityResponse
 
 def get_model_capabilities() -> dict[str, ModelCapabilityResponse]:
     return {

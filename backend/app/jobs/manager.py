@@ -17,7 +17,7 @@ from ..runs.service import create_run, transition
 from ..storage.entities import Experiment, Job, ModelRecord, Run
 from ..storage.files import atomic_bytes, safe_path, save_model
 from ..storage.repository import require
-from backend.app.readiness.service import evaluate_condition_task_readiness
+from ..readiness.service import evaluate_condition_task_readiness
 from ..utils.errors import AppError, CancelledError
 from ..utils.serialization import clean_json, fingerprint, software_versions, utcnow
 from .engine import (PauseRequested, acquire_lease, begin_logical_unit, check_control,

@@ -3,10 +3,10 @@ from uuid import uuid4
 import json
 import hashlib
 from sqlalchemy import select
-from backend.app.storage.entities import QuantumDiagnosticReport, Experiment, ModelRecord
-from backend.app.quantum.schemas import QuantumPreflightRequest, QuantumDiagnosticReportOut, QuantumDiagnosticFinding, QuantumDiagnosticPreflightResponse
-from backend.app.evaluation.context import resolve_model_evaluation_context
-from backend.app.utils.errors import AppError
+from ..storage.entities import QuantumDiagnosticReport, Experiment, ModelRecord
+from .schemas import QuantumPreflightRequest, QuantumDiagnosticReportOut, QuantumDiagnosticFinding, QuantumDiagnosticPreflightResponse
+from ..evaluation.context import resolve_model_evaluation_context
+from ..utils.errors import AppError
 
 
 def _diagnostic_source_context(session, exp: Experiment, model: ModelRecord) -> dict:
