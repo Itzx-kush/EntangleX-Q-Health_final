@@ -330,6 +330,7 @@ class ThresholdAnalysisStudy(Base):
     curves: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     limitations: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
     failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

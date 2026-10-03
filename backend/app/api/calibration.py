@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from uuid import uuid4
 
 from ..database import session_scope
 from ..storage.entities import CalibrationStudy
 from ..calibration.schemas import CalibrationRequest, CalibrationPreflightResponse
 from ..calibration.service import preflight, execute_calibration_study
+from ..evaluation.context import resolve_model_evaluation_context
+from ..utils.errors import AppError
 from ..utils.serialization import utcnow
 
 router = APIRouter(prefix="/calibration", tags=["Calibration"])
@@ -18,7 +20,11 @@ def create_study(req: CalibrationRequest, background_tasks: BackgroundTasks):
     from ..utils.serialization import fingerprint
     pf = preflight(req)
     if not pf.feasible:
-        raise HTTPException(status_code=400, detail="Calibration study is not feasible.")
+        raise AppError(
+            "calibration_infeasible",
+            "Calibration study is not feasible: " + "; ".join(pf.limitations),
+            422,
+        )
         
     study_id = str(uuid4())
     operation_key = f"calibration:{fingerprint(req.model_dump(mode='json'))}"
@@ -29,6 +35,10 @@ def create_study(req: CalibrationRequest, background_tasks: BackgroundTasks):
         existing = session.scalar(select(CalibrationStudy).where(CalibrationStudy.operation_key == operation_key))
         if existing:
             return {"id": existing.id, "status": existing.status}
+        context = resolve_model_evaluation_context(
+            session, str(req.model_id), str(req.dataset_id),
+            str(req.dataset_version_id) if req.dataset_version_id else None,
+        )
             
         study = CalibrationStudy(
             id=study_id,
@@ -37,6 +47,7 @@ def create_study(req: CalibrationRequest, background_tasks: BackgroundTasks):
             dataset_version_id=str(req.dataset_version_id) if req.dataset_version_id else None,
             operation_key=operation_key,
             configuration=req.model_dump(mode="json"),
+            provenance=context.source_context(),
             created_at=utcnow()
         )
         session.add(study)
@@ -49,7 +60,7 @@ def get_study(study_id: str):
     with session_scope() as session:
         study = session.get(CalibrationStudy, study_id)
         if not study:
-            raise HTTPException(status_code=404)
+            raise AppError("calibration_study_missing", "Calibration study not found.", 404)
         return {
             "id": study.id,
             "status": study.status,
@@ -59,5 +70,6 @@ def get_study(study_id: str):
             "curves": study.curves,
             "summary": study.summary,
             "limitations": study.limitations,
+            "provenance": study.provenance,
             "failure": study.failure
         }

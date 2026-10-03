@@ -1,15 +1,28 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Button, Select } from '../components/ui';
 import { Loading, ErrorBanner, JsonDisclosure, Notice } from '../components/Shared';
 import { qh } from '../lib/api';
 
 export function ThresholdAnalysis({ model }: { model: any }) {
+    const queryClient = useQueryClient();
     const [method, setMethod] = useState<string>('youden_j');
     const [targetVal, setTargetVal] = useState<string>('0.9');
     const [metricY, setMetricY] = useState<string>('f1');
     const [studyId, setStudyId] = useState<string | null>(null);
+    const request = {
+        model_id: model.id,
+        dataset_id: model.dataset_id,
+        selection_method: method,
+        target_value: ["target_sensitivity", "target_specificity", "target_precision", "target_npv"].includes(method) ? parseFloat(targetVal) : null,
+        selection_protocol: "dedicated_split",
+        sampling_unit: "independent_samples",
+    };
+    const preflightQuery = useQuery({
+        queryKey: ['threshold-preflight', model.id, method, targetVal],
+        queryFn: () => qh.threshold_preflight(request),
+    });
 
     const studyQuery = useQuery({
         queryKey: ['threshold_analysis', studyId],
@@ -20,19 +33,11 @@ export function ThresholdAnalysis({ model }: { model: any }) {
 
     const createMutation = useMutation({
         mutationFn: async () => {
-            const req = {
-                model_id: model.id,
-                dataset_id: model.dataset_id,
-                selection_method: method,
-                target_value: ["target_sensitivity", "target_specificity", "target_precision", "target_npv"].includes(method) ? parseFloat(targetVal) : null,
-                selection_protocol: "dedicated_split",
-                sampling_unit: "independent_samples",
-            };
-            const preflight = await qh.threshold_preflight(req);
+            const preflight = await qh.threshold_preflight(request);
             if (!preflight.feasible) {
                 throw new Error("Threshold analysis is not feasible: " + preflight.limitations.join("; "));
             }
-            return await qh.create_threshold_study(req);
+            return await qh.create_threshold_study(request);
         },
         onSuccess: (data) => {
             setStudyId(data.id);
@@ -40,6 +45,11 @@ export function ThresholdAnalysis({ model }: { model: any }) {
     });
 
     const s = studyQuery.data;
+    useEffect(() => {
+        if (s?.status === 'completed') {
+            queryClient.invalidateQueries({queryKey: ['model-card', model.id]});
+        }
+    }, [s?.status, queryClient, model.id]);
 
     return (
         <div className="mt-4 rounded-xl border p-4 bg-muted/5">
@@ -56,7 +66,7 @@ export function ThresholdAnalysis({ model }: { model: any }) {
                     {["target_sensitivity", "target_specificity", "target_precision", "target_npv"].includes(method) && (
                         <input type="number" step="0.05" min="0" max="1" value={targetVal} onChange={e => setTargetVal(e.target.value)} className="input input-sm w-20" />
                     )}
-                    <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+                    <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || preflightQuery.isLoading || preflightQuery.data?.feasible === false}>
                         Evaluate
                     </Button>
                 </div>
@@ -64,6 +74,12 @@ export function ThresholdAnalysis({ model }: { model: any }) {
 
             {createMutation.error && (
                 <ErrorBanner error={(createMutation.error as Error).message} />
+            )}
+            {preflightQuery.error && <ErrorBanner error={(preflightQuery.error as Error).message} />}
+            {preflightQuery.data?.feasible === false && (
+                <Notice tone="amber">
+                    Threshold analysis is infeasible: {preflightQuery.data.limitations.join("; ")}
+                </Notice>
             )}
 
             {studyQuery.isLoading && <Loading />}

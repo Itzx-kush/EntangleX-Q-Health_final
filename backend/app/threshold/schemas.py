@@ -39,3 +39,4 @@ class ThresholdPreflightResponse(BaseModel):
     limitations: list[str]
     method_support: dict[str, bool]
     configuration_fingerprint: str
+    source_context_type: str | None = None

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.database import session_scope
 from backend.app.storage.entities import Experiment, Dataset, ModelRecord
+from backend.app.model_cards.service import assemble_card
 
 client = TestClient(app)
 
@@ -68,6 +69,39 @@ def test_quantum_diagnostics_preflight_and_generate(auth_headers):
     assert report["configuration_fingerprint"] is not None
     assert len(report["warnings"]) == 0
     assert report["noise_profile"]["noise_enabled"] is False
+    repeated = client.post("/api/quantum/diagnostics", json=req, headers=auth_headers)
+    assert repeated.status_code == 200
+    assert repeated.json()["id"] == report["id"]
+    with session_scope() as session:
+        card, _, _ = assemble_card(session, model_id)
+    assert card["quantum"]["status"] == "available"
+    assert report["id"] in card["quantum"]["diagnostic_report_ids"]
+
+
+@pytest.mark.parametrize("model_type", ["vqc", "qsvc", "qnn", "hybrid_pennylane_torch"])
+def test_quantum_diagnostics_preflight_supports_all_research_families(auth_headers, model_type):
+    exp_id, dataset_id, model_id = str(uuid4()), str(uuid4()), str(uuid4())
+    config = {
+        "dataset_id": dataset_id,
+        "models": [model_type],
+        "pipeline": {"pca_components": 4},
+        "quantum": {"qubits": 4},
+        "hybrid": {"qubits": 4},
+    }
+    with session_scope() as session:
+        session.add(Dataset(id=dataset_id, name="Test", filename="test.csv", sha256="fake", provenance={}, quality={}))
+        session.add(Experiment(id=exp_id, name="Diagnostics family", dataset_id=dataset_id, config=config, status="completed"))
+        session.add(ModelRecord(
+            id=model_id, experiment_id=exp_id, dataset_id=dataset_id,
+            model_type=model_type, status="ready", metrics={},
+        ))
+    response = client.post(
+        "/api/quantum/diagnostics/preflight",
+        json={"experiment_id": exp_id, "model_record_id": model_id},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["feasible"] is True
 
 def test_quantum_diagnostics_classical_rejection(auth_headers):
     exp_id = str(uuid4())

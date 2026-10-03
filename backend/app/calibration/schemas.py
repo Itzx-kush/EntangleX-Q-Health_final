@@ -21,3 +21,5 @@ class CalibrationPreflightResponse(BaseModel):
     limitations: list[str]
     method_support: dict[str, bool]
     configuration_fingerprint: str
+    source_context_type: str | None = None
+    model_family: str | None = None
