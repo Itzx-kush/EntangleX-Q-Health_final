@@ -720,7 +720,6 @@ class ScientificAuditEvent(Base):
 
 
 class SubgroupAnalysisStudy(Base):
-    """First-class record of biomedical subgroup analysis and stratified evaluation."""
     __tablename__ = "subgroup_analysis_studies"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     schema_version: Mapped[str] = mapped_column(String(32), default="subgroup_analysis_v1")
@@ -743,6 +742,7 @@ class SubgroupAnalysisStudy(Base):
     failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 class DatasetQualityScorecard(Base):
     """First-class reproducible assessment of dataset quality and readiness."""

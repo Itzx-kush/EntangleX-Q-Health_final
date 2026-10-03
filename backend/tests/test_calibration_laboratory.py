@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from uuid import uuid4
 import time
 
-from backend.app.main import app
+from app.main import app
 
 client = TestClient(app)
 
