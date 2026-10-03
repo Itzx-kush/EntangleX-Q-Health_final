@@ -6,6 +6,7 @@ import {useGuestMigration} from './GuestMigrationProvider';
 import {LogoIntro} from '../components/LogoIntro';
 import {PublicExperience} from '../components/PublicExperience';
 import {QuantumNetworkBackground} from '../components/QuantumNetworkBackground';
+import {usePointerMotion} from '../components/motion/usePointerMotion';
 import './auth.css';
 
 function applyStoredTheme(){
@@ -56,6 +57,8 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
   const [authenticating,setAuthenticating]=useState<'google'|'github'|null>(null);
   const [enteringGuest,setEnteringGuest]=useState(false);
   const guestTimer=useRef<number|null>(null);
+  const sceneRef=useRef<HTMLElement|null>(null);
+  usePointerMotion(sceneRef);
 
   useEffect(()=>{
     if(error)setAuthenticating(null);
@@ -79,16 +82,16 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
     },reduced?80:520);
   };
 
-  return <main className="auth-entry">
+  return <main ref={sceneRef} className="auth-entry">
     <QuantumNetworkBackground/>
     <div className="auth-atmosphere" aria-hidden="true">
       <div className="auth-grid"/>
-      <span className="auth-depth-glow auth-depth-glow-a"/>
-      <span className="auth-depth-glow auth-depth-glow-b"/>
+      <span className="auth-depth-glow auth-depth-glow-a" data-motion-depth="back"/>
+      <span className="auth-depth-glow auth-depth-glow-b" data-motion-depth="mid"/>
       <span className="auth-depth-vignette"/>
     </div>
 
-    <section className="auth-brand" aria-labelledby="auth-title">
+    <section className="auth-brand" data-motion-depth="back" aria-labelledby="auth-title">
       <button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={14}/> Back to public experience</button>
       <div className="auth-brand-lockup">
         <img src="/entanglex-logo-dark.svg" alt="EntangleX"/>
@@ -105,7 +108,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       <p className="auth-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
     </section>
 
-    <section className="auth-panel" aria-label="Choose how to continue">
+    <section className="auth-panel" data-motion-depth="front" aria-label="Choose how to continue">
       <div className="auth-panel-index" aria-hidden="true"><span>ACCESS</span><strong>03</strong></div>
       <div className="auth-panel-heading">
         <span className="auth-step">ENTANGLEX Q-HEALTH</span>
@@ -156,6 +159,8 @@ export function AuthGate({children}:{children:ReactNode}){
   const [showAccess,setShowAccess]=useState(false);
   const [workspaceReady,setWorkspaceReady]=useState(false);
   const [accessKind,setAccessKind]=useState<'google'|'github'|'guest'|null>(null);
+  const [publicExiting,setPublicExiting]=useState(false);
+  const publicTransitionTimer=useRef<number|null>(null);
 
   useLayoutEffect(()=>{
     applyStoredTheme();
@@ -177,6 +182,7 @@ export function AuthGate({children}:{children:ReactNode}){
     const timer=window.setTimeout(()=>setWorkspaceReady(true),delay);
     return()=>window.clearTimeout(timer);
   },[isAuthenticated,isGuest,accessKind]);
+  useEffect(()=>()=>{if(publicTransitionTimer.current!==null)window.clearTimeout(publicTransitionTimer.current)},[]);
 
   if(loading)return <AuthLoading/>;
   const intro=<LogoIntro/>;
@@ -184,16 +190,23 @@ export function AuthGate({children}:{children:ReactNode}){
   if(!isAuthenticated&&!isGuest){
     const requestAccess=(destination='/')=>{
       if(destination!==window.location.pathname)navigate(destination);
-      setShowAccess(true);
-      window.scrollTo({top:0,behavior:'auto'});
+      if(publicExiting)return;
+      setPublicExiting(true);
+      const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      publicTransitionTimer.current=window.setTimeout(()=>{
+        setShowAccess(true);
+        setPublicExiting(false);
+        window.scrollTo({top:0,behavior:'auto'});
+      },reduced?40:460);
     };
     const backToPublic=()=>{
       if(window.location.pathname!=='/')navigate('/');
       setShowAccess(false);
+      setPublicExiting(false);
       setAccessKind(null);
       window.scrollTo({top:0,behavior:'auto'});
     };
-    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onOAuthStart={setAccessKind}/>:<PublicExperience onRequestAccess={requestAccess}/>}</>;
+    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onOAuthStart={setAccessKind}/>:<PublicExperience exiting={publicExiting} onRequestAccess={requestAccess}/>}</>;
   }
 
   const guestAccess=accessKind==='guest'||isGuest;
