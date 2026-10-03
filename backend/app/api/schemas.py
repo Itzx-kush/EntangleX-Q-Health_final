@@ -309,6 +309,7 @@ class ModelOut(Schema):
     model_type: str
     status: str
     progress: int | None = None
+    artifact_sha256: str | None = None
     details: dict[str, Any]
     metrics: dict[str, Any]
     created_at: datetime

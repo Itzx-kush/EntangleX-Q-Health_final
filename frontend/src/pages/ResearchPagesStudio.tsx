@@ -1,7 +1,7 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,History,RotateCcw,Trash2} from 'lucide-react';
+import {ArrowDown,ArrowLeft,CheckCircle2,Copy,Download,ExternalLink,GitBranch,History,RotateCcw,Trash2} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
 import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
 import {StageNav} from './ResearchPagesCore';
@@ -13,7 +13,7 @@ import { ThresholdAnalysis } from './ThresholdAnalysis';
 import { QuantumDiagnostics } from './QuantumDiagnostics';
 import { AblationLaboratory } from './AblationLaboratory';
 import { BiomedicalSubgroupAnalysisPanel } from './BiomedicalSubgroupAnalysis';
-import type {Experiment,LineageNode} from '../types/qhealth';
+import type {Experiment,LineageNode,TraceabilityEvidence} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
 import {ModelCardPanel} from '../components/ModelCardPanel';
@@ -452,6 +452,41 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
   </Card>;
 }
 
+const recorded=(value:unknown,fallback='Not recorded')=>value===null||value===undefined||value===''?fallback:String(value);
+
+export function ResearchTraceability({value,onReport}:{value:TraceabilityEvidence;onReport:(format:'html'|'json')=>void}){
+  const [details,setDetails]=useState(false);
+  const tone=value.reproducibility.status==='RECORDED'?'green':value.reproducibility.status==='PARTIAL'?'amber':'blue';
+  const chain=[
+    ['Dataset',value.dataset.name||'Not available'],
+    ['Version / hash',value.dataset.version?.label||value.dataset.sha256?.slice(0,12)||'Not recorded'],
+    ['Experiment',shortId(value.experiment.id)],
+    ['Run / job',value.run?shortId(value.run.id):'Not recorded'],
+    ['Model',value.models.length?`${value.models.length} recorded`:'Not recorded'],
+    ['Artifact',value.artifacts.length?`${value.artifacts.length} recorded`:'Not available'],
+    ['Evidence',value.evidence.html_report_available||value.evidence.json_report_available?'Report available':'Not available'],
+  ];
+  return <Card className="mt-5" title="Research traceability" description="Dataset, configuration, experiment, model and evidence linked to this result.">
+    <div className="flex flex-wrap items-center gap-2"><Badge tone={tone}>{value.reproducibility.label.toUpperCase()}</Badge><span className="text-xs muted">{value.reproducibility.claim}</span></div>
+    <div className="mt-4 rounded-xl border p-4">
+      <div className="metric-label">WHAT PRODUCED THIS RESULT?</div>
+      <div className="mt-3 grid gap-2 md:grid-cols-7">{chain.map(([label,item],index)=><div className="min-w-0" key={label}><div className="rounded-xl border p-3"><span className="metric-label">{label}</span><strong className="mt-1 block truncate text-xs" title={item}>{item}</strong></div>{index<chain.length-1&&<ArrowDown className="mx-auto mt-2 md:hidden" size={14}/>}</div>)}</div>
+    </div>
+    <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="rounded-xl border p-4"><span className="metric-label">DATASET</span><strong className="mt-2 block">{recorded(value.dataset.name,'Not available')}</strong><small className="block muted">ID {shortId(value.dataset.id)}</small><small className="mt-2 block mono">Version {recorded(value.dataset.version?.label)}</small><small className="block mono break-all">SHA-256 {recorded(value.dataset.version?.content_sha256||value.dataset.sha256)}</small>{value.dataset.sha256?<small className="mt-2 flex items-center gap-1 text-success"><CheckCircle2 size={12}/>Provenance recorded</small>:<small className="mt-2 block muted">— Dataset hash not recorded</small>}</div>
+      <div className="rounded-xl border p-4"><span className="metric-label">EXPERIMENT / CONFIGURATION</span><strong className="mt-2 block mono">{shortId(value.experiment.id)}</strong><small className="block muted">{value.experiment.parent_id?`Rerun of ${shortId(value.experiment.parent_id)}`:'Original experiment'}</small><small className="mt-2 block mono break-all">Fingerprint {recorded(value.experiment.configuration_fingerprint)}</small><small className="block muted">Seed {recorded(value.experiment.configuration.random_seed)} · CV {recorded(value.experiment.configuration.cv_folds)} · threshold {recorded(value.experiment.configuration.threshold_strategy)}</small></div>
+      <div className="rounded-xl border p-4"><span className="metric-label">RUN / JOB</span><strong className="mt-2 block mono">{value.run?shortId(value.run.id):'Not recorded'}</strong><small className="block muted">{value.run?.job?`Job ${shortId(value.run.job.id)} · ${value.run.job.status}`:'Job not recorded'}</small><small className="mt-2 block">Status {recorded(value.run?.status)}</small><small className="block muted">Duration {value.run?.duration_seconds!=null?`${value.run.duration_seconds} s`:'not recorded'}</small></div>
+    </div>
+    <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="rounded-xl border p-4"><span className="metric-label">MODEL REGISTRY</span>{value.models.length?value.models.map(model=><div className="mt-2 border-t pt-2 first:border-0 first:pt-0" key={model.id}><strong className="block">{modelLabels[model.model_family]}</strong><small className="mono muted">{shortId(model.id)} · {model.status}</small><small className="block muted">{model.artifact_hash?'Artifact hash recorded':'Artifact hash not available'}</small></div>):<small className="mt-2 block muted">— Model not recorded</small>}</div>
+      <div className="rounded-xl border p-4"><span className="metric-label">ARTIFACTS</span>{value.artifacts.length?value.artifacts.slice(0,4).map(artifact=><div className="mt-2 border-t pt-2 first:border-0 first:pt-0" key={artifact.id}><strong className="block text-xs">{artifact.type.replaceAll('_',' ')}</strong><small className="mono muted">{shortId(artifact.id)} · {artifact.integrity_hash?'Integrity hash recorded':'Hash not available'}</small></div>):<small className="mt-2 block muted">— Artifact not available</small>}</div>
+      <div className="rounded-xl border p-4"><span className="metric-label">REPORT / EVIDENCE</span><small className="mt-2 block">{value.evidence.html_report_available?'✓ HTML report available':'— HTML report not available'}</small><small className="block">{value.evidence.json_report_available?'✓ JSON report available':'— JSON report not available'}</small><small className="block">{value.evidence.package_count?`✓ ${value.evidence.package_count} evidence package(s)`:'— Evidence package not available'}</small><small className="mt-2 block muted">{value.audit.events_recorded?'✓ '+value.audit.description:'— Audit events not recorded'}</small><div className="mt-3 flex flex-wrap gap-2">{value.evidence.html_report_available&&<Button variant="outline" onClick={()=>onReport('html')}><Download size={12}/>HTML</Button>}{value.evidence.json_report_available&&<Button variant="outline" onClick={()=>onReport('json')}><Download size={12}/>JSON</Button>}</div></div>
+    </div>
+    <Button className="mt-4" variant="ghost" onClick={()=>setDetails(current=>!current)}>{details?'Hide detailed traceability':'Detailed traceability'}</Button>
+    {details&&<JsonDisclosure label="Exact recorded traceability metadata" value={value}/>}
+  </Card>;
+}
+
 
 export function ExperimentDetail(){
   const {id=''}=useParams();
@@ -478,6 +513,7 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <ResearchTraceability value={detail.traceability} onReport={format=>action.mutate(format)}/>
     <ExperimentProtocolPanel experimentId={id}/>
     <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>

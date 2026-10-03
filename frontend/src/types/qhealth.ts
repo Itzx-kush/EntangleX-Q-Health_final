@@ -39,7 +39,7 @@ export interface OperatingPoint {selection_strategy:'fixed'|'target_sensitivity'
 export interface ModelMetrics {training:Metrics;test:Metrics;validation:{folds:Metrics[];summary:Record<MetricName,{mean:number|null;std:number|null;valid_folds:number}>;std_definition:string};timing:{final_training_seconds:number;cv_total_seconds:number;cv_fold_seconds:number[];test_inference_seconds:number;test_inference_seconds_per_sample:number};calibration:Record<string,unknown>;operating_point?:OperatingPoint}
 export interface HybridMetadata {framework?:string;classical_framework?:string;backend?:string;execution_kind?:string;real_hardware?:boolean;qubits?:number;quantum_layers?:number;classical_parameter_count?:number;quantum_parameter_count?:number;configuration?:{hidden_dimensions?:number[]};[key:string]:unknown}
 export interface ModelDetails extends Record<string,unknown> {quantum?:HybridMetadata;supports_probability?:boolean;probability_status?:string;operating_point?:OperatingPoint;experiment_kind?:string}
-export interface ModelRecord {id:string;experiment_id:string;dataset_id:string;model_type:ModelKind;status:string;progress?:number|null;details:ModelDetails;metrics:Partial<ModelMetrics>;created_at:string}
+export interface ModelRecord {id:string;experiment_id:string;run_id?:string|null;dataset_id:string;model_type:ModelKind;status:string;progress?:number|null;artifact_sha256?:string|null;details:ModelDetails;metrics:Partial<ModelMetrics>;created_at:string}
 export type ModelCardEvidenceStatus='available'|'not_available'|'not_applicable'|'limited'|'not_recorded'|'not_yet_evaluated';
 export interface ModelCard {
   schema_version:'model_card_v1';card_id:string;generated_at:string;
@@ -60,7 +60,17 @@ export interface ModelCard {
   evidence_gaps:{category:string;status:string;description:string}[];
   artifact:{artifact_id:string;integrity_hash:string;immutable:boolean};
 }
-export interface ExperimentDetail {experiment:Experiment;models:ModelRecord[];jobs:Job[]}
+export interface TraceabilityEvidence {
+  dataset:{id:string;name:string|null;domain:string|null;source:string|null;positive_class:string|null;sha256:string|null;created_at:string|null;version:{id:string;label:string;content_sha256:string|null;schema_fingerprint:string|null;created_at:string}|null};
+  experiment:{id:string;name:string|null;status:string;created_at:string;parent_id:string|null;configuration_fingerprint:string|null;configuration:{model_families:ModelKind[]|null;random_seed:number|null;test_size:number|null;cv_folds:number|null;sample_budget:number|null;preprocessing:Record<string,unknown>;feature_configuration:Record<string,unknown>;threshold_strategy:string|null}};
+  run:{id:string;status:string;created_at:string;started_at:string|null;completed_at:string|null;duration_seconds:number|null;reproducibility_status:string|null;reproducibility_metadata:Record<string,unknown>;job:{id:string;status:string;started_at:string|null;completed_at:string|null}|null}|null;
+  models:{id:string;run_id:string|null;model_family:ModelKind;status:string;artifact_hash:string|null;artifact_ids:string[]}[];
+  artifacts:{id:string;type:string;name:string;run_id:string|null;model_id:string|null;integrity_hash:string|null;hash_algorithm:string;storage_status:'recorded'|'metadata_only';immutable:boolean}[];
+  evidence:{html_report_available:boolean;json_report_available:boolean;package_count:number;latest_package_id:string|null};
+  audit:{events_recorded:boolean;description:string};
+  reproducibility:{status:'RECORDED'|'PARTIAL'|'INSUFFICIENT';recorded_fields:string[];label:string;claim:string};
+}
+export interface ExperimentDetail {experiment:Experiment;models:ModelRecord[];jobs:Job[];traceability:TraceabilityEvidence}
 export type EvidenceAvailability='available'|'not_available'|'not_applicable'|'limited'|'incomplete'|'blocked';
 export interface EvidenceInventoryEntry {
   status:EvidenceAvailability;record_count:number;referenced_ids:string[];artifact_ids:string[];

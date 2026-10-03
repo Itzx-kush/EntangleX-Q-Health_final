@@ -17,6 +17,7 @@ from ..evidence_packages.service import (
 from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
 from ..lineage.service import lineage_preflight, lineage_snapshot
+from ..traceability.service import experiment_traceability
 from ..storage.entities import Experiment, ModelRecord, Job
 from ..storage.repository import require
 from ..utils.errors import AppError
@@ -26,6 +27,7 @@ class ExperimentDetailOut(Schema):
     experiment: ExperimentOut
     models: list[ModelOut]
     jobs: list[JobOut]
+    traceability: dict
 
 router = APIRouter(prefix="/experiments", tags=["experiments and reports"])
 
@@ -49,7 +51,8 @@ def get_experiment(identity: UUID):
     with session_scope() as session:
         return {"experiment": require(session, Experiment, str(identity)),
             "models": list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == str(identity)))),
-            "jobs": list(session.scalars(select(Job).where(Job.experiment_id == str(identity))))}
+            "jobs": list(session.scalars(select(Job).where(Job.experiment_id == str(identity)))),
+            "traceability": experiment_traceability(session, str(identity))}
 
 
 @router.get("/{identity}/lineage", response_model=dict)
