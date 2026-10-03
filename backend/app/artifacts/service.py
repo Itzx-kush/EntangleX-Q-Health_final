@@ -101,9 +101,9 @@ def register_file(
 def register_metadata(
     session,
     *,
-    experiment_id: str,
-    run_id: str | None,
-    model_id: str | None,
+    experiment_id: str | None = None,
+    run_id: str | None = None,
+    model_id: str | None = None,
     artifact_type: str,
     name: str,
     description: str,

@@ -223,7 +223,7 @@ class Artifact(Base):
         UniqueConstraint("operation_key", name="uq_artifacts_operation_key"),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    experiment_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True, index=True)
     run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
     model_id: Mapped[str | None] = mapped_column(ForeignKey("models.id"), nullable=True, index=True)
     artifact_type: Mapped[str] = mapped_column(String(40), index=True)
@@ -688,14 +688,16 @@ class ExperimentProtocolVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
-
 class ScientificAuditEvent(Base):
+    """First-class immutable audit record of a meaningful research-platform event."""
+
     __tablename__ = "scientific_audit_events"
     __table_args__ = (
         Index("ix_audit_events_object_type_id", "object_type", "object_id"),
         Index("ix_audit_events_parent_object_id", "parent_object_type", "parent_object_id"),
         Index("ix_audit_events_occurred_at_id", "occurred_at", "id"),
     )
+
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     schema_version: Mapped[str] = mapped_column(String(32), default="scientific_audit_event_v1")
     event_type: Mapped[str] = mapped_column(String(64), index=True)
@@ -716,26 +718,35 @@ class ScientificAuditEvent(Base):
     event_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     metadata_payload: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
 
-class SubgroupAnalysisStudy(Base):
-    __tablename__ = "subgroup_analysis_studies"
+
+class DatasetQualityScorecard(Base):
+    """First-class reproducible assessment of dataset quality and readiness."""
+
+    __tablename__ = "dataset_quality_scorecards"
+    __table_args__ = (
+        Index("ix_scorecard_dataset_version", "dataset_id", "dataset_version_id"),
+        Index("ix_scorecard_created_at_id", "created_at", "id"),
+    )
+
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    schema_version: Mapped[str] = mapped_column(String(32), default="subgroup_analysis_v1")
-    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
-    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
-    run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    schema_version: Mapped[str] = mapped_column(String(32), default="dataset_quality_scorecard_v1")
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    experiment_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True, index=True)
+    protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
+    pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
+
+    status: Mapped[str] = mapped_column(String(24), default="PASS", index=True)
     operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    definition_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
-    subgroup_field: Mapped[str] = mapped_column(String(100), index=True)
+    assessment_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+
     configuration: Mapped[dict] = mapped_column(JSON, default=dict)
-    overall_population: Mapped[dict] = mapped_column(JSON, default=dict)
-    subgroups_results: Mapped[list] = mapped_column(JSON, default=list)
-    comparisons: Mapped[list] = mapped_column(JSON, default=list)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    domains: Mapped[dict] = mapped_column(JSON, default=dict)
+    schema_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
     limitations: Mapped[list] = mapped_column(JSON, default=list)
     provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+
     artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
-    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

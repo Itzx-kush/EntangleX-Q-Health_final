@@ -1,3 +1,5 @@
+
+
 import html
 import json
 from sqlalchemy import select
@@ -6,7 +8,7 @@ from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
-from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion, SubgroupAnalysisStudy
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion
 from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
@@ -18,11 +20,29 @@ def report_data(identity: str) -> dict:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity)))
         explanations = list(session.scalars(select(ExplanationRecord).where(ExplanationRecord.model_id.in_([m.id for m in models])))) if models else []
-        subgroup_studies = list(session.scalars(select(SubgroupAnalysisStudy).where(SubgroupAnalysisStudy.experiment_id == identity).order_by(SubgroupAnalysisStudy.created_at)))
         pipeline = session.get(PipelineVersion, experiment.pipeline_version_id) if experiment.pipeline_version_id else None
         pipeline_data = pipeline_payload(session, pipeline) if pipeline else {
             "status": "LEGACY_UNRESOLVED",
             "message": "No pipeline version was recorded for this experiment.",
+        }
+        protocol = session.get(ExperimentProtocolVersion, experiment.protocol_version_id) if experiment.protocol_version_id else None
+        protocol_data = {
+            "protocol_version_id": protocol.id,
+            "protocol_id": protocol.protocol_id,
+            "version": protocol.version_label,
+            "status": protocol.status,
+            "definition_fingerprint": protocol.definition_fingerprint,
+            "summary": {
+                "study_name": protocol.canonical_definition.get("study", {}).get("name") if protocol.canonical_definition else None,
+                "task_type": protocol.canonical_definition.get("study", {}).get("task_type") if protocol.canonical_definition else None,
+                "primary_metric": protocol.canonical_definition.get("evaluation", {}).get("primary_metric") if protocol.canonical_definition else None,
+                "cv_folds": protocol.canonical_definition.get("split", {}).get("cv_folds") if protocol.canonical_definition else None,
+                "seed_count": len(protocol.canonical_definition.get("randomness", {}).get("seeds", [])) if protocol.canonical_definition and protocol.canonical_definition.get("randomness") else 0,
+            },
+            "canonical_definition": protocol.canonical_definition,
+        } if protocol else {
+            "status": "LEGACY_UNSPECIFIED",
+            "message": "No experiment protocol version was declared or attached to this experiment.",
         }
         from ..audit.service import get_experiment_timeline
         timeline = get_experiment_timeline(session, identity, limit=10)
@@ -32,25 +52,6 @@ def report_data(identity: str) -> dict:
             "recent_events": [e.model_dump(mode="json") for e in timeline.events[:5]],
             "legacy_disclaimer": timeline.legacy_disclaimer,
         }
-        protocol = session.get(ExperimentProtocolVersion, experiment.protocol_version_id) if experiment.protocol_version_id else None
-        protocol_data = {
-            "protocol_version_id": protocol.id,
-            "protocol_id": protocol.protocol_id,
-            "version": protocol.version,
-            "status": protocol.status,
-            "definition_fingerprint": protocol.definition_fingerprint,
-            "summary": {
-                "study_name": protocol.study.get("name") if protocol.study else None,
-                "task_type": protocol.study.get("task_type") if protocol.study else None,
-                "primary_metric": protocol.evaluation.get("primary_metric") if protocol.evaluation else None,
-                "cv_folds": protocol.split.get("cv_folds") if protocol.split else None,
-                "seed_count": len(protocol.randomness.get("seeds", [])) if protocol.randomness and protocol.randomness.get("seeds") else 0,
-            },
-            "canonical_definition": protocol.canonical_definition,
-        } if protocol else {
-            "status": "LEGACY_UNSPECIFIED",
-            "message": "No experiment protocol version was declared or attached to this experiment.",
-        }
     experiment_kind = experiment.summary.get("experiment_kind", "live_experiment")
     for model in models:
         verify_installed_model(model)
@@ -59,11 +60,10 @@ def report_data(identity: str) -> dict:
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
         "pipeline_version": pipeline_data,
-        "audit_summary": audit_summary,
         "protocol": protocol_data,
+        "audit_summary": audit_summary,
         "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": "PennyLane + PyTorch Hybrid" if m.model_type == "hybrid_pennylane_torch" else m.model_type} for m in models],
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
-        "subgroup_analysis": [{"study_id":s.id,"model_id":s.model_id,"subgroup_field":s.subgroup_field,"status":s.status,"definition_fingerprint":s.definition_fingerprint,"overall_population":s.overall_population,"subgroups_results":s.subgroups_results,"comparisons":s.comparisons,"limitations":s.limitations} for s in subgroup_studies],
         "comparison": comparison(identity),
         "scientific_boundary": "Model probabilities, test metrics, and simulation results do not establish diagnosis, clinical validity, regulatory approval, or quantum advantage. Uncomputed measurements remain absent, not zero."}
 
@@ -78,9 +78,9 @@ def html_report(identity: str) -> str:
         "<h2>Preprocessing and feature engineering</h2>" + pre(data["preprocessing"]),
         "<h2>Pipeline version</h2>" + pre(data["pipeline_version"]),
         "<h2>Experiment protocol</h2>" + pre(data["protocol"]),
+        "<h2>Audit timeline</h2>" + pre(data["audit_summary"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
-        "<h2>Model configuration</h2>" + pre(data["experiment"]["config"]),
-        "<h2>Scientific audit timeline</h2>" + pre(data.get("audit_summary", {}))]
+        "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
     for model in data["models"]:
         sections.append("<h2>Model: " + escaped(model.get("display_name", model["model_type"])) + "</h2><p>Model ID: " + escaped(model["id"]) + "; status: " + escaped(model["status"]) + "</p>")
         metrics = model["metrics"]
@@ -91,7 +91,6 @@ def html_report(identity: str) -> str:
         sections.append("<h3>Probability calibration diagnostics</h3>" + pre(metrics.get("calibration", "Not computed")))
         sections.append("<h3>Limitations and warnings</h3>" + pre({"limitations": model["details"].get("limitations", []), "warnings": model["details"].get("warnings", []), "error": model["details"].get("error")}))
     sections.append("<h2>Interpretation: model feature influence / quantum perturbation</h2>" + pre(data["interpretation"] or "Not computed; request an explanation for a trained model."))
-    sections.append("<h2>Biomedical Subgroup Analysis and Stratified Evaluation</h2>" + pre(data.get("subgroup_analysis") or "Not evaluated; run Biomedical Subgroup Analysis to evaluate model behavior across predefined cohorts."))
     controlled = [pair for pair in data["comparison"]["pairs"] if pair.get("benchmark_type") == "fair_controlled_diabetes_benchmark"]
     sections.append("<h2>FAIR CONTROLLED BENCHMARK</h2>" + pre({
         "dataset_and_provenance": data["dataset"],

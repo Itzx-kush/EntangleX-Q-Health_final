@@ -34,7 +34,7 @@ DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
 EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
 SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID = "20261003_14_scientific_audit_timeline"
-BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_15_biomedical_subgroup_analysis"
+DATASET_QUALITY_SCORECARD_MIGRATION_ID = "20261003_15_advanced_dataset_quality_scorecard"
 
 
 
@@ -885,18 +885,33 @@ def apply_migrations() -> None:
                 {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID, "applied_at": utcnow()},
             )
 
-
-        audit_timeline_applied = connection.execute(text("SELECT 1 FROM schema_migrations WHERE id = :id"), {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID}).scalar()
+        audit_timeline_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID},
+        ).scalar()
         if not audit_timeline_applied:
             connection.execute(text("""
                 CREATE TABLE IF NOT EXISTS scientific_audit_events (
-                    id VARCHAR(36) PRIMARY KEY, schema_version VARCHAR(32) NOT NULL, event_type VARCHAR(64) NOT NULL,
-                    event_category VARCHAR(32) NOT NULL, occurred_at DATETIME NOT NULL, recorded_at DATETIME NOT NULL,
-                    actor_type VARCHAR(24) NOT NULL, actor_reference VARCHAR(120), source_component VARCHAR(64) NOT NULL,
-                    operation_key VARCHAR(240), object_type VARCHAR(48) NOT NULL, object_id VARCHAR(64) NOT NULL,
-                    parent_object_type VARCHAR(48), parent_object_id VARCHAR(64), before_fingerprint VARCHAR(64),
-                    after_fingerprint VARCHAR(64), previous_event_fingerprint VARCHAR(64), event_fingerprint VARCHAR(64) NOT NULL,
-                    metadata JSON NOT NULL, CONSTRAINT uq_audit_operation_event UNIQUE(operation_key, event_type)
+                    id VARCHAR(36) PRIMARY KEY,
+                    schema_version VARCHAR(32) NOT NULL,
+                    event_type VARCHAR(64) NOT NULL,
+                    event_category VARCHAR(32) NOT NULL,
+                    occurred_at DATETIME NOT NULL,
+                    recorded_at DATETIME NOT NULL,
+                    actor_type VARCHAR(24) NOT NULL,
+                    actor_reference VARCHAR(120),
+                    source_component VARCHAR(64) NOT NULL,
+                    operation_key VARCHAR(240),
+                    object_type VARCHAR(48) NOT NULL,
+                    object_id VARCHAR(64) NOT NULL,
+                    parent_object_type VARCHAR(48),
+                    parent_object_id VARCHAR(64),
+                    before_fingerprint VARCHAR(64),
+                    after_fingerprint VARCHAR(64),
+                    previous_event_fingerprint VARCHAR(64),
+                    event_fingerprint VARCHAR(64) NOT NULL,
+                    metadata JSON NOT NULL,
+                    CONSTRAINT uq_audit_operation_event UNIQUE(operation_key, event_type)
                 )
             """))
             for statement in [
@@ -910,27 +925,57 @@ def apply_migrations() -> None:
                 "CREATE INDEX IF NOT EXISTS ix_audit_events_source_component ON scientific_audit_events(source_component)",
                 "CREATE INDEX IF NOT EXISTS ix_audit_events_operation_key ON scientific_audit_events(operation_key)",
                 "CREATE INDEX IF NOT EXISTS ix_audit_events_event_fingerprint ON scientific_audit_events(event_fingerprint)",
-            ]: connection.execute(text(statement))
-            connection.execute(text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"), {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()})
-        subgroup_analysis_applied = connection.execute(text("SELECT 1 FROM schema_migrations WHERE id = :id"), {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID}).scalar()
-        if not subgroup_analysis_applied:
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": SCIENTIFIC_AUDIT_TIMELINE_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        scorecard_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID},
+        ).scalar()
+        if not scorecard_applied:
             connection.execute(text("""
-                CREATE TABLE IF NOT EXISTS subgroup_analysis_studies (
-                    id VARCHAR(36) PRIMARY KEY, schema_version VARCHAR(32) NOT NULL, experiment_id VARCHAR(36) NOT NULL REFERENCES experiments(id),
-                    model_id VARCHAR(36) NOT NULL REFERENCES models(id), run_id VARCHAR(36) REFERENCES runs(id), dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
-                    dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id), status VARCHAR(24) NOT NULL, operation_key VARCHAR(128) NOT NULL UNIQUE,
-                    definition_fingerprint VARCHAR(64) NOT NULL, subgroup_field VARCHAR(100) NOT NULL, configuration JSON NOT NULL,
-                    overall_population JSON NOT NULL, subgroups_results JSON NOT NULL, comparisons JSON NOT NULL, limitations JSON NOT NULL,
-                    provenance JSON NOT NULL, artifact_id VARCHAR(36) REFERENCES artifacts(id), failure JSON, created_at DATETIME NOT NULL, completed_at DATETIME
+                CREATE TABLE IF NOT EXISTS dataset_quality_scorecards (
+                    id VARCHAR(36) PRIMARY KEY,
+                    schema_version VARCHAR(32) NOT NULL,
+                    dataset_id VARCHAR(36) NOT NULL REFERENCES datasets(id),
+                    dataset_version_id VARCHAR(36) REFERENCES dataset_versions(id),
+                    experiment_id VARCHAR(36) REFERENCES experiments(id),
+                    protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id),
+                    pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
+                    status VARCHAR(24) NOT NULL DEFAULT 'PASS',
+                    operation_key VARCHAR(128) NOT NULL,
+                    assessment_fingerprint VARCHAR(64) NOT NULL,
+                    configuration JSON NOT NULL,
+                    summary JSON NOT NULL,
+                    domains JSON NOT NULL,
+                    schema_snapshot JSON NOT NULL,
+                    limitations JSON NOT NULL,
+                    provenance JSON NOT NULL,
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME,
+                    CONSTRAINT uq_dataset_quality_operation_key UNIQUE(operation_key)
                 )
             """))
             for statement in [
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_experiment_id ON subgroup_analysis_studies(experiment_id)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_model_id ON subgroup_analysis_studies(model_id)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_dataset_id ON subgroup_analysis_studies(dataset_id)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_field ON subgroup_analysis_studies(subgroup_field)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_operation_key ON subgroup_analysis_studies(operation_key)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_fingerprint ON subgroup_analysis_studies(definition_fingerprint)",
-                "CREATE INDEX IF NOT EXISTS ix_subgroup_studies_created_at ON subgroup_analysis_studies(created_at)",
-            ]: connection.execute(text(statement))
-            connection.execute(text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"), {"id": BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID, "applied_at": utcnow()})
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_id ON dataset_quality_scorecards(dataset_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version_id ON dataset_quality_scorecards(dataset_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_experiment_id ON dataset_quality_scorecards(experiment_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_protocol_version_id ON dataset_quality_scorecards(protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_pipeline_version_id ON dataset_quality_scorecards(pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_status ON dataset_quality_scorecards(status)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_fingerprint ON dataset_quality_scorecards(assessment_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_operation_key ON dataset_quality_scorecards(operation_key)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at ON dataset_quality_scorecards(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_dataset_version ON dataset_quality_scorecards(dataset_id, dataset_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_scorecard_created_at_id ON dataset_quality_scorecards(created_at, id)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": DATASET_QUALITY_SCORECARD_MIGRATION_ID, "applied_at": utcnow()},
+            )
