@@ -67,6 +67,34 @@ def register_file(
     )
     session.add(artifact)
     session.flush()
+    from ..audit.service import record_event
+    record_event(
+        session,
+        event_type="ARTIFACT_REGISTERED",
+        event_category="ARTIFACT",
+        object_type="artifact",
+        object_id=artifact.id,
+        parent_object_type="experiment" if experiment_id else None,
+        parent_object_id=experiment_id,
+        source_component="artifact_registry",
+        operation_key=f"artifact-registered:{artifact.id}",
+        after_fingerprint=artifact.integrity_hash,
+        metadata={"artifact_type": artifact.artifact_type, "name": artifact.name},
+    )
+    if artifact_type == "model" and model_id:
+        record_event(
+            session,
+            event_type="MODEL_REGISTERED",
+            event_category="MODEL",
+            object_type="model",
+            object_id=model_id,
+            parent_object_type="experiment" if experiment_id else None,
+            parent_object_id=experiment_id,
+            source_component="model_registry",
+            operation_key=f"model-registered:{model_id}",
+            after_fingerprint=artifact.integrity_hash,
+            metadata={"name": name},
+        )
     return artifact
 
 
@@ -108,4 +136,18 @@ def register_metadata(
     )
     session.add(artifact)
     session.flush()
+    from ..audit.service import record_event
+    record_event(
+        session,
+        event_type="ARTIFACT_REGISTERED",
+        event_category="ARTIFACT",
+        object_type="artifact",
+        object_id=artifact.id,
+        parent_object_type="experiment" if experiment_id else None,
+        parent_object_id=experiment_id,
+        source_component="artifact_registry",
+        operation_key=f"artifact-registered:{artifact.id}",
+        after_fingerprint=artifact.integrity_hash,
+        metadata={"artifact_type": artifact.artifact_type, "name": artifact.name},
+    )
     return artifact

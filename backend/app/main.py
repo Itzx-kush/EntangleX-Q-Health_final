@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import func, select
-from .api import ablation, ai, alignment, controlled_comparison, datasets, experiments, jobs, model_cards, models, pipeline, pipelines, protocols, quantum, runs, shift, studies, training, validation, threshold, condition_tasks, quantum_diagnostics
+from .api import ablation, ai, alignment, audit, controlled_comparison, datasets, experiments, jobs, model_cards, models, pipeline, pipelines, protocols, quantum, runs, shift, studies, training, validation, threshold, condition_tasks, quantum_diagnostics
 
 from .api.middleware import BodyLimitMiddleware
 from .api.security import authorize

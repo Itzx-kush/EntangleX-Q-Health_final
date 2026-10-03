@@ -233,6 +233,18 @@ class TrainingManager:
                         "limitations": data.quality["warnings"]})
                     session.add(experiment)
                     session.flush()
+                    from ..audit.service import record_event
+                    record_event(
+                        session,
+                        event_type="EXPERIMENT_CREATED",
+                        event_category="EXPERIMENT",
+                        object_type="experiment",
+                        object_id=experiment.id,
+                        source_component="experiment_service",
+                        operation_key=f"experiment-created:{experiment.id}",
+                        after_fingerprint=experiment.summary.get("comparison_fingerprint"),
+                        metadata={"dataset_id": experiment.dataset_id, "name": experiment.name, "pipeline_version_id": experiment.pipeline_version_id},
+                    )
                 job_id = str(uuid4())
                 from ..quantum.service import service as quantum_execution_service
                 run = create_run(
@@ -267,6 +279,20 @@ class TrainingManager:
                     }),
                 )
                 session.add(job)
+                from ..audit.service import record_event
+                record_event(
+                    session,
+                    event_type="JOB_CREATED",
+                    event_category="JOB",
+                    object_type="job",
+                    object_id=job.id,
+                    parent_object_type="experiment",
+                    parent_object_id=experiment.id,
+                    source_component="job_manager",
+                    operation_key=f"job-created:{job.id}",
+                    after_fingerprint=job.configuration_fingerprint,
+                    metadata={"job_type": job.job_type, "total_units": job.total_units},
+                )
                 executions = []
                 for kind in config.models:
                     model = ModelRecord(
@@ -396,6 +422,17 @@ class TrainingManager:
                 transition(session, run, "completed", result_summary={"outcome": status, "models_persisted": successes, "models_failed": failures})
             elif status == "cancelled": transition(session, run, "cancelled")
             else: transition(session, run, "failed", failure={"code": "scientific_execution_failed", "message": "Scientific execution failed; inspect safe job and model failure metadata."})
+            from ..audit.service import record_event
+            exp_event_type = f"EXPERIMENT_{status.upper()}" if status in ("failed", "cancelled") else "EXPERIMENT_COMPLETED"
+            record_event(
+                session,
+                event_type=exp_event_type,
+                event_category="EXPERIMENT",
+                object_type="experiment",
+                object_id=experiment_id,
+                source_component="experiment_service",
+                metadata={"status": status, "successes": successes, "failures": failures},
+            )
 
     def _run(self, job_id: str, experiment_id: str, run_id: str, config: TrainingConfig,
              executions: list[tuple[str, str]], lease_id: str | None = None, checkpoint_id: str | None = None):

@@ -3,6 +3,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Iterable
 from uuid import NAMESPACE_URL, uuid5
+from sqlalchemy import select
+from ..artifacts.service import register_metadata
+from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
+from ..storage.entities import (
+    AblationStudy,
+    Artifact,
+    CalibrationStudy,
+    ControlledComparisonProtocol,
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Iterable
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import select
 
@@ -17,7 +30,6 @@ from ..storage.entities import (
     DatasetVersion,
     DistributionShiftAnalysis,
     Experiment,
-    ExperimentProtocolVersion,
     ExplanationRecord,
     ExternalValidation,
     ModelRecord,
@@ -430,17 +442,6 @@ def preflight_package(session, experiment_id: str) -> dict:
         "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
         "schema_version": pipeline_version.schema_version if pipeline_version else None,
     }
-    protocol_version = (
-        session.get(ExperimentProtocolVersion, experiment.protocol_version_id)
-        if experiment.protocol_version_id else None
-    )
-    protocol_identity = {
-        "status": "available" if protocol_version else "unavailable",
-        "protocol_version_id": protocol_version.id if protocol_version else None,
-        "version": protocol_version.version_label if protocol_version else None,
-        "protocol_fingerprint": protocol_version.definition_fingerprint if protocol_version else None,
-        "schema_version": protocol_version.schema_version if protocol_version else None,
-    }
     fingerprint_basis = {
         "schema_version": PACKAGE_SCHEMA_VERSION,
         "experiment": {
@@ -458,7 +459,6 @@ def preflight_package(session, experiment_id: str) -> dict:
         "artifact_hashes": artifact_hashes,
         "source_context": source_context,
         "pipeline": pipeline_identity,
-        "protocol": protocol_identity,
     }
     package_fingerprint = fingerprint(fingerprint_basis)
     package_id = str(uuid5(NAMESPACE_URL, f"qhealth:evidence-package:{experiment.id}:{package_fingerprint}"))
@@ -473,10 +473,8 @@ def preflight_package(session, experiment_id: str) -> dict:
             "id": experiment.id, "name": experiment.name, "status": experiment.status,
             "configuration_fingerprint": governing_fingerprint,
             "pipeline_version_id": experiment.pipeline_version_id,
-            "protocol_version_id": experiment.protocol_version_id,
         },
         "pipeline": pipeline_identity,
-        "protocol": protocol_identity,
         "dataset": {
             "dataset_id": dataset.id, "name": dataset.name,
             "dataset_version_id": version.id if version else None,

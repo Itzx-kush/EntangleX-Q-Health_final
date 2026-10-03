@@ -48,6 +48,148 @@ export function Experiments(){
   const rows=(list.data||[]).filter(e=>{
     const hay=((e.name||'')+' '+e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
     return hay.includes(query.toLowerCase())&&(status==='all'||e.status===status);
+  return <div>
+    <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
+    <StageNav current="/experiments"/>
+    <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message||(remove.error as Error)?.message}/>
+    {deleteMessage&&<Notice tone="blue">{deleteMessage}</Notice>}
+    <WorkbenchRail items={[{label:'Recorded',value:list.data?.length??'—',detail:'Backend experiment records',tone:'blue'},{label:'Visible',value:rows.length,detail:'Current registry filter',tone:'purple'},{label:'Active filter',value:status==='all'?'All states':status.replaceAll('_',' '),detail:'Status scope',tone:'amber'},{label:'Reproducibility',value:'Tracked',detail:'Seed + configuration retained',tone:'green'}]}/>
+    <div className="mt-3"><DistributionStrip items={statuses.map((value,index)=>({label:value.replaceAll('_',' '),value:(list.data||[]).filter(item=>item.status===value).length,tone:(['green','blue','amber','purple'] as const)[index%4]}))}/></div>
+    <Card title="Experiment registry" description="The main research landscape: searchable, filterable and drillable like a biomedical evidence dashboard.">
+      <div className="controls mb-4">
+        <label className="field min-w-[240px] flex-1"><span>Search</span><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Experiment, dataset, model…"/></label>
+        <label className="field min-w-[180px]"><span>Status</span><Select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All states</option>{statuses.map(s=><option value={s} key={s}>{s.replaceAll('_',' ')}</option>)}</Select></label>
+      </div>
+      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{rows.map((e,i)=>{const canDelete=deletableStatuses.has(e.status);const active=activeStatuses.has(e.status);return <tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{e.name||`Experiment ${shortId(e.id)}`}</button><small className="block muted">{e.summary.experiment_kind==='precomputed_verified_demo'?'Precomputed verified demo experiment':e.parent_id?'Parent '+shortId(e.parent_id):'Live root experiment'} · {shortId(e.id)}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button><Button variant="ghost" disabled={!canDelete||remove.isPending} title={active?'Cancel this experiment and wait for a terminal state before deleting it.':canDelete?'Delete experiment':'This experiment is not in a deletable terminal state.'} onClick={()=>{setDeleteMessage('');setPendingDelete(e)}}><Trash2 size={12}/>Delete</Button></div>{active&&<small className="mt-1 block muted">Cancel and wait for completion before deleting.</small>}</td></tr>})}</tbody></table>{!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
+    </Card>
+    {pendingDelete&&<Card className="mt-5" title="Delete experiment?" description={pendingDelete.name||`Experiment ${shortId(pendingDelete.id)}`}>
+      <p className="text-sm">This will remove the experiment from the active Experiment Registry.</p>
+      <Notice tone="amber">Immutable runs, models, manifests, artifacts, datasets and dataset versions will be preserved for research integrity.</Notice>
+      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={remove.isPending} onClick={()=>setPendingDelete(null)}>Cancel</Button><Button disabled={remove.isPending} onClick={()=>remove.mutate(pendingDelete)}><Trash2 size={13}/>{remove.isPending?'Deleting…':'Delete experiment'}</Button></div>
+    </Card>}
+    {selected&&<div className="mt-5 two-grid"><Card title={selected.name||`Experiment ${shortId(selected.id)}`} description="Registry detail"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="muted">Status</span><StatusBadge value={selected.status}/></div><div className="flex justify-between"><span className="muted">Dataset</span><span className="mono text-xs">{selected.dataset_id}</span></div><div className="flex justify-between"><span className="muted">Created</span><span>{dateTime(selected.created_at)}</span></div><div><span className="muted">Models</span><div className="mt-2 flex flex-wrap gap-1">{selected.config.models.map(m=><Badge key={m}>{modelLabels[m]}</Badge>)}</div></div></div></Card><Card title="Exact configuration"><JsonDisclosure label="Open JSON configuration" value={selected.config}/><Link className="btn btn-outline mt-3" to={'/experiments/'+selected.id}>Open full evidence <ExternalLink size={13}/></Link></Card></div>}
+  </div>
+}
+const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
+export function ExperimentProtocolPanel({experimentId}:{experimentId:string}){
+  const protocol=useQuery({queryKey:['experiment-protocol',experimentId],queryFn:()=>qh.experimentProtocol(experimentId),retry:false});
+  const current=protocol.data?.status==='AVAILABLE'?protocol.data.protocol_version:null;
+  const compliance=useQuery({
+    queryKey:['experiment-protocol-compliance',experimentId],
+    queryFn:()=>qh.experimentProtocolCompliance(experimentId),
+    enabled:Boolean(current),
+    retry:false,
+  const protocols=useQuery({queryKey:['protocols'],queryFn:qh.protocols,enabled:Boolean(protocol.data)});
+  const templates=useQuery({queryKey:['protocol-templates'],queryFn:qh.protocolTemplates,enabled:Boolean(protocol.data)});
+  const [compareTo,setCompareTo]=useState('');
+  const diff=useQuery({
+    queryKey:['protocol-diff',current?.protocol_version_id,compareTo],
+    queryFn:()=>qh.protocolDiff(current!.protocol_version_id,compareTo),
+    enabled:Boolean(current&&compareTo),
+  const [attachId,setAttachId]=useState('');
+  const attach=useMutation({
+    mutationFn:(protoId:string)=>qh.attachProtocol(experimentId,protoId),
+    onSuccess:()=>{
+      qc.invalidateQueries({queryKey:['experiment-protocol',experimentId]});
+      qc.invalidateQueries({queryKey:['experiment-protocol-compliance',experimentId]});
+      qc.invalidateQueries({queryKey:['experiment',experimentId]});
+  const complianceTone=(status:string):'green'|'amber'|'red'|'blue'|'purple'=>{
+    switch(status){
+      case 'MATCHED':return 'green';
+      case 'MISSING':return 'amber';
+      case 'MISMATCHED':return 'red';
+      case 'NOT_APPLICABLE':return 'blue';
+      case 'UNVERIFIABLE':return 'purple';
+      default:return 'blue';
+  };
+  return <Card className="mt-5" title="Experiment Protocol" description="The explicit immutable experimental specification and verification checklist for this experiment.">
+    <ErrorBanner error={(protocol.error as Error)?.message||(compliance.error as Error)?.message||(diff.error as Error)?.message||(attach.error as Error)?.message}/>
+    {protocol.isLoading?<Loading/>:protocol.data?.status==='LEGACY_UNSPECIFIED'?<div>
+      <EmptyState title="Experiment protocol unavailable">{protocol.data.reason} Historical configuration remains accessible, but no protocol version is fabricated.</EmptyState>
+      {protocols.data&&protocols.data.length>0&&<div className="mt-4 rounded-xl border p-4">
+        <div className="metric-label">ATTACH PUBLISHED PROTOCOL</div>
+        <p className="mt-1 text-xs muted">Assign a published protocol version to this legacy experiment to record its experimental rules.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Select className="flex-1 min-w-[220px]" value={attachId} onChange={e=>setAttachId(e.target.value)}>
+            <option value="">Select published protocol</option>
+            {protocols.data.map(p=><option key={p.protocol_version_id} value={p.protocol_version_id}>{p.protocol_name} · {p.version}</option>)}
+          </Select>
+          <Button disabled={!attachId||attach.isPending} onClick={()=>attach.mutate(attachId)}>
+            {attach.isPending?'Attaching…':'Attach Protocol'}
+          </Button>
+        </div>
+      </div>}
+      {templates.data&&templates.data.length>0&&<div className="mt-4">
+        <JsonDisclosure label="Browse reusable research protocol templates" value={templates.data}/>
+    </div>:current?<>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge value={current.status}/>
+        <Badge tone="purple">{current.version}</Badge>
+        <span className="text-sm font-semibold">{current.protocol_name}</span>
+        <span className="mono text-[10px] muted" title={current.definition_fingerprint}>{current.definition_fingerprint.slice(0,20)}…</span>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div><span className="metric-label">PROTOCOL VERSION ID</span><strong className="mono block break-all text-[10px]">{current.protocol_version_id}</strong></div>
+        <div><span className="metric-label">SCHEMA</span><strong className="block text-xs">{current.schema_version}</strong></div>
+        <div><span className="metric-label">USED BY</span><strong className="block text-xs">{current.usage_count} experiment{current.usage_count===1?'':'s'}</strong></div>
+        <div><span className="metric-label">PUBLISHED</span><strong className="block text-xs">{current.published_at?dateTime(current.published_at):'Draft'}</strong></div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border p-3">
+          <div className="metric-label">STUDY &amp; DATASET</div>
+          <div className="mt-1 text-xs font-semibold">{String((current.study as any)?.task_type||'—')}</div>
+          <p className="mt-1 text-[11px] muted line-clamp-2">{String((current.study as any)?.study_purpose||'—')}</p>
+          <div className="mt-2 text-[10px] muted">Target: <span className="font-mono">{String((current.dataset as any)?.required_target_column||'—')}</span></div>
+          <div className="metric-label">SPLIT &amp; RANDOMNESS</div>
+
+import {Link,useNavigate,useParams} from 'react-router-dom';
+import {useState} from 'react';
+import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
+import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,History,RotateCcw,Trash2} from 'lucide-react';
+import {Button,Card,Select,Badge} from '../components/ui';
+import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
+import {StageNav} from './ResearchPagesCore';
+import {qh} from '../lib/api';
+import {useDraft} from '../hooks/useDraft';
+import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
+import { CalibrationLaboratory } from './CalibrationLaboratory';
+import { ThresholdAnalysis } from './ThresholdAnalysis';
+import { QuantumDiagnostics } from './QuantumDiagnostics';
+import { AblationLaboratory } from './AblationLaboratory';
+import type {Experiment,LineageNode} from '../types/qhealth';
+import {GlareHover} from '../components/reactbits';
+import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
+import {ModelCardPanel} from '../components/ModelCardPanel';
+import {useResearchRecorder} from '../research/useResearchHistory';
+import {experimentActivity} from '../research/historyRecords';
+
+export function Experiments(){
+  const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
+  const qc=useQueryClient();
+  const {update}=useDraft();
+  const navigate=useNavigate();
+  const history=useResearchRecorder();
+  const [query,setQuery]=useState('');
+  const [status,setStatus]=useState('all');
+  const [selected,setSelected]=useState<Experiment|null>(null);
+  const [pendingDelete,setPendingDelete]=useState<Experiment|null>(null);
+  const [deleteMessage,setDeleteMessage]=useState('');
+  const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});void history.record(experimentActivity(r.experiment));navigate('/experiments/'+r.experiment.id)}});
+  const remove=useMutation({
+    mutationFn:(experiment:Experiment)=>qh.deleteExperiment(experiment.id),
+    onSuccess:(_result,experiment)=>{
+      qc.setQueryData<Experiment[]>(['experiments'],current=>(current||[]).filter(item=>item.id!==experiment.id));
+      if(selected?.id===experiment.id)setSelected(null);
+      setPendingDelete(null);
+      setDeleteMessage(`${experiment.name||`Experiment ${shortId(experiment.id)}`} was removed from the active registry. Scientific records were preserved.`);
+      void qc.invalidateQueries({queryKey:['experiments']});
+      void qc.invalidateQueries({queryKey:['summary']});
+    }
+  });
+  const deletableStatuses=new Set(['completed','succeeded','partial','failed','cancelled','interrupted']);
+  const activeStatuses=new Set(['queued','running','cancel_requested']);
+  const statuses=Array.from(new Set((list.data||[]).map(e=>e.status)));
+  const rows=(list.data||[]).filter(e=>{
+    const hay=((e.name||'')+' '+e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
+    return hay.includes(query.toLowerCase())&&(status==='all'||e.status===status);
   });
   return <div>
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
@@ -74,162 +216,103 @@ export function Experiments(){
 
 const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
 
-export function ExperimentProtocolPanel({experimentId}:{experimentId:string}){
-  const qc=useQueryClient();
-  const protocol=useQuery({queryKey:['experiment-protocol',experimentId],queryFn:()=>qh.experimentProtocol(experimentId),retry:false});
-  const current=protocol.data?.status==='AVAILABLE'?protocol.data.protocol_version:null;
-  const compliance=useQuery({
-    queryKey:['experiment-protocol-compliance',experimentId],
-    queryFn:()=>qh.experimentProtocolCompliance(experimentId),
-    enabled:Boolean(current),
-    retry:false,
-  });
-  const protocols=useQuery({queryKey:['protocols'],queryFn:qh.protocols,enabled:Boolean(protocol.data)});
-  const templates=useQuery({queryKey:['protocol-templates'],queryFn:qh.protocolTemplates,enabled:Boolean(protocol.data)});
+export function PipelineVersionPanel({experimentId}:{experimentId:string}){
+  const pipeline=useQuery({queryKey:['experiment-pipeline',experimentId],queryFn:()=>qh.experimentPipeline(experimentId),retry:false});
+  const versions=useQuery({queryKey:['pipelines'],queryFn:qh.pipelines,enabled:pipeline.data?.status==='AVAILABLE'});
   const [compareTo,setCompareTo]=useState('');
+  const current=pipeline.data?.status==='AVAILABLE'?pipeline.data.pipeline_version:null;
   const diff=useQuery({
-    queryKey:['protocol-diff',current?.protocol_version_id,compareTo],
-    queryFn:()=>qh.protocolDiff(current!.protocol_version_id,compareTo),
+    queryKey:['pipeline-diff',current?.pipeline_version_id,compareTo],
+    queryFn:()=>qh.pipelineDiff(current!.pipeline_version_id,compareTo),
     enabled:Boolean(current&&compareTo),
     retry:false,
   });
-  const [attachId,setAttachId]=useState('');
-  const attach=useMutation({
-    mutationFn:(protoId:string)=>qh.attachProtocol(experimentId,protoId),
-    onSuccess:()=>{
-      qc.invalidateQueries({queryKey:['experiment-protocol',experimentId]});
-      qc.invalidateQueries({queryKey:['experiment-protocol-compliance',experimentId]});
-      qc.invalidateQueries({queryKey:['experiment',experimentId]});
-    }
-  });
-
-  const complianceTone=(status:string):'green'|'amber'|'red'|'blue'|'purple'=>{
-    switch(status){
-      case 'MATCHED':return 'green';
-      case 'MISSING':return 'amber';
-      case 'MISMATCHED':return 'red';
-      case 'NOT_APPLICABLE':return 'blue';
-      case 'UNVERIFIABLE':return 'purple';
-      default:return 'blue';
-    }
-  };
-
-  return <Card className="mt-5" title="Experiment Protocol" description="The explicit immutable experimental specification and verification checklist for this experiment.">
-    <ErrorBanner error={(protocol.error as Error)?.message||(compliance.error as Error)?.message||(diff.error as Error)?.message||(attach.error as Error)?.message}/>
-    {protocol.isLoading?<Loading/>:protocol.data?.status==='LEGACY_UNSPECIFIED'?<div>
-      <EmptyState title="Experiment protocol unavailable">{protocol.data.reason} Historical configuration remains accessible, but no protocol version is fabricated.</EmptyState>
-      {protocols.data&&protocols.data.length>0&&<div className="mt-4 rounded-xl border p-4">
-        <div className="metric-label">ATTACH PUBLISHED PROTOCOL</div>
-        <p className="mt-1 text-xs muted">Assign a published protocol version to this legacy experiment to record its experimental rules.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Select className="flex-1 min-w-[220px]" value={attachId} onChange={e=>setAttachId(e.target.value)}>
-            <option value="">Select published protocol</option>
-            {protocols.data.map(p=><option key={p.protocol_version_id} value={p.protocol_version_id}>{p.protocol_name} · {p.version}</option>)}
-          </Select>
-          <Button disabled={!attachId||attach.isPending} onClick={()=>attach.mutate(attachId)}>
-            {attach.isPending?'Attaching…':'Attach Protocol'}
-          </Button>
-        </div>
-      </div>}
-      {templates.data&&templates.data.length>0&&<div className="mt-4">
-        <JsonDisclosure label="Browse reusable research protocol templates" value={templates.data}/>
-      </div>}
-    </div>:current?<>
-      <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge value={current.status}/>
-        <Badge tone="purple">{current.version}</Badge>
-        <span className="text-sm font-semibold">{current.protocol_name}</span>
-        <span className="mono text-[10px] muted" title={current.definition_fingerprint}>{current.definition_fingerprint.slice(0,20)}…</span>
-      </div>
+  return <Card className="mt-5" title="Pipeline Version" description="The immutable computational definition recorded for this experiment.">
+    <ErrorBanner error={(pipeline.error as Error)?.message||(versions.error as Error)?.message||(diff.error as Error)?.message}/>
+    {pipeline.isLoading?<Loading/>:pipeline.data?.status==='LEGACY_UNRESOLVED'?<EmptyState title="Pipeline version unavailable">{pipeline.data.reason} Historical configuration remains accessible, but no version is fabricated.</EmptyState>:current?<>
+      <div className="flex flex-wrap items-center gap-2"><StatusBadge value={current.status}/><Badge tone="purple">{current.version}</Badge><span className="text-sm font-semibold">{current.pipeline_name}</span><span className="mono text-[10px] muted" title={current.definition_fingerprint}>{current.definition_fingerprint.slice(0,20)}…</span></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div><span className="metric-label">PROTOCOL VERSION ID</span><strong className="mono block break-all text-[10px]">{current.protocol_version_id}</strong></div>
+        <div><span className="metric-label">VERSION ID</span><strong className="mono block break-all text-[10px]">{current.pipeline_version_id}</strong></div>
         <div><span className="metric-label">SCHEMA</span><strong className="block text-xs">{current.schema_version}</strong></div>
         <div><span className="metric-label">USED BY</span><strong className="block text-xs">{current.usage_count} experiment{current.usage_count===1?'':'s'}</strong></div>
         <div><span className="metric-label">PUBLISHED</span><strong className="block text-xs">{current.published_at?dateTime(current.published_at):'Draft'}</strong></div>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border p-3">
-          <div className="metric-label">STUDY &amp; DATASET</div>
-          <div className="mt-1 text-xs font-semibold">{String((current.study as any)?.task_type||'—')}</div>
-          <p className="mt-1 text-[11px] muted line-clamp-2">{String((current.study as any)?.study_purpose||'—')}</p>
-          <div className="mt-2 text-[10px] muted">Target: <span className="font-mono">{String((current.dataset as any)?.required_target_column||'—')}</span></div>
-        </div>
-        <div className="rounded-xl border p-3">
-          <div className="metric-label">SPLIT &amp; RANDOMNESS</div>
-          <div className="mt-1 text-xs font-semibold">{String((current.split as any)?.strategy||'—')}</div>
-          <div className="mt-1 text-[11px] muted">Folds: {String((current.split as any)?.cv_folds??'—')}</div>
-          <div className="mt-2 text-[10px] muted">Seeds: {Array.isArray((current.randomness as any)?.seed_list)?(current.randomness as any).seed_list.join(', '):String((current.randomness as any)?.primary_seed??'—')}</div>
-        </div>
-        <div className="rounded-xl border p-3">
-          <div className="metric-label">EVALUATION &amp; THRESHOLD</div>
-          <div className="mt-1 text-xs font-semibold">Primary: {String((current.evaluation as any)?.primary_metric||'—')}</div>
-          <div className="mt-1 text-[11px] muted">Threshold: {String((current.threshold as any)?.policy||'—')}</div>
-          <div className="mt-2 text-[10px] muted">Lock: {(current.threshold as any)?.lock?'Locked':'Unlocked'}</div>
-        </div>
-        <div className="rounded-xl border p-3">
-          <div className="metric-label">CALIBRATION &amp; CONTROLS</div>
-          <div className="mt-1 text-xs font-semibold">Calibration: {String((current.calibration as any)?.requirement||((current.calibration as any)?.required?'REQUIRED':'OPTIONAL'))}</div>
-          <div className="mt-1 text-[11px] muted">Quantum Controls: {(current.quantum_controls as any)?.controlled_comparison?'REQUIRED':'DISABLED'}</div>
-          <div className="mt-2 text-[10px] muted">Pipeline: {current.pipeline_version_id?current.pipeline_version_id.slice(0,12)+'…':'None'}</div>
-        </div>
+      <ol className="mt-4 grid gap-2 md:grid-cols-2">{current.stages.map(stage=><li className="rounded-xl border p-3" key={stage.stage_id}><div className="flex items-center justify-between gap-2"><strong className="text-sm">{stage.stage_order}. {stage.stage_name}</strong><Badge tone="blue">{stage.stage_type.replaceAll('_',' ')}</Badge></div><span className="mono mt-1 block truncate text-[10px] muted" title={stage.fingerprint}>{stage.fingerprint.slice(0,18)}…</span><JsonDisclosure label="Inspect stage configuration" value={stage.configuration}/></li>)}</ol>
+      <JsonDisclosure label="Open canonical pipeline definition" value={current.canonical_definition}/>
+      {(versions.data?.filter(item=>item.pipeline_version_id!==current.pipeline_version_id).length||0)>0&&<div className="mt-4 rounded-xl border p-4">
+        <div className="metric-label">COMPARE VERSION</div>
+import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,RotateCcw,Trash2} from 'lucide-react';
+import {Button,Card,Select,Badge} from '../components/ui';
+import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
+import {StageNav} from './ResearchPagesCore';
+import {qh} from '../lib/api';
+import {useDraft} from '../hooks/useDraft';
+import {dateTime,metric,modelLabels,seconds,shortId} from '../utils/format';
+import { CalibrationLaboratory } from './CalibrationLaboratory';
+import { ThresholdAnalysis } from './ThresholdAnalysis';
+import { QuantumDiagnostics } from './QuantumDiagnostics';
+import { AblationLaboratory } from './AblationLaboratory';
+import type {Experiment,LineageNode} from '../types/qhealth';
+import {GlareHover} from '../components/reactbits';
+import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
+import {ModelCardPanel} from '../components/ModelCardPanel';
+import {useResearchRecorder} from '../research/useResearchHistory';
+import {experimentActivity} from '../research/historyRecords';
+
+export function Experiments(){
+  const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
+  const qc=useQueryClient();
+  const {update}=useDraft();
+  const navigate=useNavigate();
+  const history=useResearchRecorder();
+  const [query,setQuery]=useState('');
+  const [status,setStatus]=useState('all');
+  const [selected,setSelected]=useState<Experiment|null>(null);
+  const [pendingDelete,setPendingDelete]=useState<Experiment|null>(null);
+  const [deleteMessage,setDeleteMessage]=useState('');
+  const rerun=useMutation({mutationFn:(id:string)=>qh.rerun(id),onSuccess:r=>{qc.invalidateQueries({queryKey:['experiments']});void history.record(experimentActivity(r.experiment));navigate('/experiments/'+r.experiment.id)}});
+  const remove=useMutation({
+    mutationFn:(experiment:Experiment)=>qh.deleteExperiment(experiment.id),
+    onSuccess:(_result,experiment)=>{
+      qc.setQueryData<Experiment[]>(['experiments'],current=>(current||[]).filter(item=>item.id!==experiment.id));
+      if(selected?.id===experiment.id)setSelected(null);
+      setPendingDelete(null);
+      setDeleteMessage(`${experiment.name||`Experiment ${shortId(experiment.id)}`} was removed from the active registry. Scientific records were preserved.`);
+      void qc.invalidateQueries({queryKey:['experiments']});
+      void qc.invalidateQueries({queryKey:['summary']});
+    }
+  });
+  const deletableStatuses=new Set(['completed','succeeded','partial','failed','cancelled','interrupted']);
+  const activeStatuses=new Set(['queued','running','cancel_requested']);
+  const statuses=Array.from(new Set((list.data||[]).map(e=>e.status)));
+  const rows=(list.data||[]).filter(e=>{
+    const hay=((e.name||'')+' '+e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
+    return hay.includes(query.toLowerCase())&&(status==='all'||e.status===status);
+  });
+  return <div>
+    <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
+    <StageNav current="/experiments"/>
+    <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message||(remove.error as Error)?.message}/>
+    {deleteMessage&&<Notice tone="blue">{deleteMessage}</Notice>}
+    <WorkbenchRail items={[{label:'Recorded',value:list.data?.length??'—',detail:'Backend experiment records',tone:'blue'},{label:'Visible',value:rows.length,detail:'Current registry filter',tone:'purple'},{label:'Active filter',value:status==='all'?'All states':status.replaceAll('_',' '),detail:'Status scope',tone:'amber'},{label:'Reproducibility',value:'Tracked',detail:'Seed + configuration retained',tone:'green'}]}/>
+    <div className="mt-3"><DistributionStrip items={statuses.map((value,index)=>({label:value.replaceAll('_',' '),value:(list.data||[]).filter(item=>item.status===value).length,tone:(['green','blue','amber','purple'] as const)[index%4]}))}/></div>
+    <Card title="Experiment registry" description="The main research landscape: searchable, filterable and drillable like a biomedical evidence dashboard.">
+      <div className="controls mb-4">
+        <label className="field min-w-[240px] flex-1"><span>Search</span><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Experiment, dataset, model…"/></label>
+        <label className="field min-w-[180px]"><span>Status</span><Select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All states</option>{statuses.map(s=><option value={s} key={s}>{s.replaceAll('_',' ')}</option>)}</Select></label>
       </div>
-      <JsonDisclosure label="Open canonical protocol definition" value={current.canonical_definition}/>
-
-      {/* Compliance Checklist */}
-      <div className="mt-5 rounded-xl border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="metric-label">PROTOCOL COMPLIANCE VERIFICATION</div>
-            <p className="mt-0.5 text-xs muted">Factual evaluation against recorded experiment artifacts and metrics.</p>
-          </div>
-          {compliance.data?.compliance_summary&&<div className="flex flex-wrap gap-1">
-            <Badge tone="green">{compliance.data.compliance_summary.matched} MATCHED</Badge>
-            <Badge tone="amber">{compliance.data.compliance_summary.missing} MISSING</Badge>
-            {compliance.data.compliance_summary.mismatched>0&&<Badge tone="red">{compliance.data.compliance_summary.mismatched} MISMATCHED</Badge>}
-            {compliance.data.compliance_summary.not_applicable>0&&<Badge tone="blue">{compliance.data.compliance_summary.not_applicable} N/A</Badge>}
-            {compliance.data.compliance_summary.unverifiable>0&&<Badge tone="purple">{compliance.data.compliance_summary.unverifiable} UNVERIFIABLE</Badge>}
-          </div>}
-        </div>
-        {compliance.isLoading?<div className="mt-3"><Loading/></div>:compliance.data?.status==='AVAILABLE'?<div className="mt-3">
-          <div className="max-h-72 space-y-2 overflow-y-auto">
-            {compliance.data.checks.map((check,index)=><div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2 text-xs last:border-0" key={`${check.rule}-${index}`}>
-              <div className="flex-1 min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <strong className="text-xs">{check.rule.replaceAll('_',' ')}</strong>
-                  <Badge tone={check.requirement==='REQUIRED'?'blue':check.requirement==='OPTIONAL'?'amber':'purple'}>{check.requirement}</Badge>
-                </div>
-                <p className="mt-1 text-[11px] muted">{check.details}</p>
-                <div className="mt-1 text-[10px] mono muted">Expected: {JSON.stringify(check.expected)} | Actual: {JSON.stringify(check.actual)}</div>
-              </div>
-              <Badge tone={complianceTone(check.status)}>{check.status}</Badge>
-            </div>)}
-          </div>
-          <p className="mt-3 text-[11px] muted">{compliance.data.interpretation}</p>
-        </div>:<EmptyState title="Compliance unavailable">{compliance.data?.reason||'No compliance record available.'}</EmptyState>}
-      </div>
-
-      {/* Protocol Version Diff */}
-      {(protocols.data?.filter(item=>item.protocol_version_id!==current.protocol_version_id).length||0)>0&&<div className="mt-4 rounded-xl border p-4">
-        <div className="metric-label">COMPARE PROTOCOL VERSION</div>
-        <Select className="mt-2" value={compareTo} onChange={event=>setCompareTo(event.target.value)}>
-          <option value="">Select a Protocol Version</option>
-          {protocols.data?.filter(item=>item.protocol_version_id!==current.protocol_version_id).map(item=><option key={item.protocol_version_id} value={item.protocol_version_id}>{item.protocol_name} · {item.version}</option>)}
-        </Select>
-        {diff.isLoading&&<Loading/>}
-        {diff.data&&<div className="mt-3">
-          <div className="flex flex-wrap gap-2">{diff.data.category_summaries.map(item=><Badge key={item.category} tone={item.status==='Unchanged'?'green':'amber'}>{item.category.replaceAll('_',' ')} · {item.status}</Badge>)}</div>
-          {diff.data.changes.length?<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{diff.data.changes.map((change,index)=><div className="border-b pb-2 text-xs last:border-0" key={`${change.category}-${change.field}-${index}`}><strong>{change.change_type}: {change.category.replaceAll('_',' ')} · {change.field}</strong><div className="mono mt-1 break-all text-[10px] muted">{JSON.stringify(change.before)} → {JSON.stringify(change.after)}</div></div>)}</div>:<p className="mt-2 text-xs muted">No protocol changes.</p>}
-          <p className="mt-2 text-xs muted">{diff.data.interpretation}</p>
-        </div>}
-      </div>}
-
-      {/* Templates Reference */}
-      {templates.data&&templates.data.length>0&&<JsonDisclosure label="Browse reusable research protocol templates" value={templates.data}/>}
-
-      <div className="mt-4 text-xs muted">{current.scientific_boundary}</div>
-    </>:<EmptyState title="Experiment protocol unavailable">No protocol registry response is available.</EmptyState>}
-  </Card>;
+      {list.isLoading?<Loading/>:<div className="table-wrap"><table className="data-table"><thead><tr><th>Experiment</th><th>Created</th><th>Status</th><th>Models</th><th>Dataset</th><th/></tr></thead><tbody>{rows.map((e,i)=>{const canDelete=deletableStatuses.has(e.status);const active=activeStatuses.has(e.status);return <tr key={e.id} style={{animationDelay:`${i*30}ms`}} className="rb-reveal"><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(e)}>{e.name||`Experiment ${shortId(e.id)}`}</button><small className="block muted">{e.summary.experiment_kind==='precomputed_verified_demo'?'Precomputed verified demo experiment':e.parent_id?'Parent '+shortId(e.parent_id):'Live root experiment'} · {shortId(e.id)}</small></td><td>{dateTime(e.created_at)}</td><td><StatusBadge value={e.status}/></td><td>{(e.config.models||[]).map(m=>modelLabels[m]).join(', ')}<small className="block muted">Seed {e.config.seed}</small></td><td className="mono text-[10px]">{shortId(e.dataset_id)}</td><td className="text-right"><div className="flex justify-end gap-1"><Link className="btn btn-outline px-2" to={'/experiments/'+e.id}>Open</Link><Button variant="outline" disabled={rerun.isPending} onClick={()=>rerun.mutate(e.id)}><RotateCcw size={12}/>Rerun</Button><Button variant="ghost" onClick={()=>{update(e.config);navigate('/training')}}><Copy size={12}/>Draft</Button><Button variant="ghost" disabled={!canDelete||remove.isPending} title={active?'Cancel this experiment and wait for a terminal state before deleting it.':canDelete?'Delete experiment':'This experiment is not in a deletable terminal state.'} onClick={()=>{setDeleteMessage('');setPendingDelete(e)}}><Trash2 size={12}/>Delete</Button></div>{active&&<small className="mt-1 block muted">Cancel and wait for completion before deleting.</small>}</td></tr>})}</tbody></table>{!rows.length&&<div className="p-6"><EmptyState title="No matching experiments">Change the registry filters or start a new run in Model Lab.</EmptyState></div>}</div>}
+    </Card>
+    {pendingDelete&&<Card className="mt-5" title="Delete experiment?" description={pendingDelete.name||`Experiment ${shortId(pendingDelete.id)}`}>
+      <p className="text-sm">This will remove the experiment from the active Experiment Registry.</p>
+      <Notice tone="amber">Immutable runs, models, manifests, artifacts, datasets and dataset versions will be preserved for research integrity.</Notice>
+      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={remove.isPending} onClick={()=>setPendingDelete(null)}>Cancel</Button><Button disabled={remove.isPending} onClick={()=>remove.mutate(pendingDelete)}><Trash2 size={13}/>{remove.isPending?'Deleting…':'Delete experiment'}</Button></div>
+    </Card>}
+    {selected&&<div className="mt-5 two-grid"><Card title={selected.name||`Experiment ${shortId(selected.id)}`} description="Registry detail"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="muted">Status</span><StatusBadge value={selected.status}/></div><div className="flex justify-between"><span className="muted">Dataset</span><span className="mono text-xs">{selected.dataset_id}</span></div><div className="flex justify-between"><span className="muted">Created</span><span>{dateTime(selected.created_at)}</span></div><div><span className="muted">Models</span><div className="mt-2 flex flex-wrap gap-1">{selected.config.models.map(m=><Badge key={m}>{modelLabels[m]}</Badge>)}</div></div></div></Card><Card title="Exact configuration"><JsonDisclosure label="Open JSON configuration" value={selected.config}/><Link className="btn btn-outline mt-3" to={'/experiments/'+selected.id}>Open full evidence <ExternalLink size={13}/></Link></Card></div>}
+  </div>
 }
+
+const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
 
 export function PipelineVersionPanel({experimentId}:{experimentId:string}){
   const pipeline=useQuery({queryKey:['experiment-pipeline',experimentId],queryFn:()=>qh.experimentPipeline(experimentId),retry:false});
@@ -372,7 +455,6 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
-    <ExperimentProtocolPanel experimentId={id}/>
     <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>

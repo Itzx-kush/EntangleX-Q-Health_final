@@ -56,6 +56,39 @@ def _event(session: Session, job: Job, event_type: str, *, from_status=None, che
     session.add(JobEvent(job_id=job.id, event_type=event_type, from_status=from_status,
         to_status=job.status, checkpoint_id=checkpoint_id, worker_id=job.worker_id,
         details=details or {}))
+    audit_type_map = {
+        "checkpoint_validated": "CHECKPOINT_CREATED",
+        "lease_acquired": "JOB_STARTED",
+        "pause_requested": "JOB_PAUSED",
+        "paused": "JOB_PAUSED",
+        "resumed": "JOB_RESUMED",
+        "cancelled": "JOB_CANCELLED",
+        "failed": "JOB_FAILED",
+        "succeeded": "JOB_COMPLETED",
+        "partial": "JOB_COMPLETED",
+    }
+    audit_ev_type = audit_type_map.get(event_type) or (
+        "JOB_STARTED" if job.status in ("running", "resuming") and from_status in ("queued", "paused", "recoverable")
+        else "JOB_PAUSED" if job.status == "paused"
+        else "JOB_COMPLETED" if job.status in ("succeeded", "partial")
+        else "JOB_FAILED" if job.status == "failed"
+        else "JOB_CANCELLED" if job.status == "cancelled"
+        else None
+    )
+    if audit_ev_type:
+        from ..audit.service import record_event
+        record_event(
+            session,
+            event_type=audit_ev_type,
+            event_category="JOB",
+            object_type="job_checkpoint" if audit_ev_type == "CHECKPOINT_CREATED" and checkpoint_id else "job",
+            object_id=checkpoint_id if audit_ev_type == "CHECKPOINT_CREATED" and checkpoint_id else job.id,
+            parent_object_type="experiment",
+            parent_object_id=job.experiment_id,
+            source_component="job_engine",
+            metadata={"from_status": from_status, "to_status": job.status, **(details or {})},
+        )
+
 
 def transition_job(session: Session, job: Job, target: str, *, state=None, event_type="status_transition"):
     source = job.status

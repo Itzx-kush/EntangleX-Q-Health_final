@@ -7,6 +7,96 @@ from ..utils.serialization import utcnow
 
 def new_id() -> str:
     return str(uuid4())
+class Dataset(Base):
+    __tablename__ = "datasets"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    filename: Mapped[str] = mapped_column(String(200))
+    sha256: Mapped[str] = mapped_column(String(64))
+    provenance: Mapped[dict] = mapped_column(JSON)
+    quality: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    current_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+class DatasetVersion(Base):
+    """Immutable concrete snapshot belonging to a logical Dataset."""
+    __tablename__ = "dataset_versions"
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "version_number", name="uq_dataset_versions_number"),
+        UniqueConstraint("dataset_id", "version_signature", name="uq_dataset_versions_signature"),
+    )
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    version_label: Mapped[str] = mapped_column(String(24))
+    content_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    schema_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    version_signature: Mapped[str] = mapped_column(String(64))
+    row_count: Mapped[int] = mapped_column(Integer)
+    feature_count: Mapped[int] = mapped_column(Integer)
+    target: Mapped[str] = mapped_column(String(100))
+    positive_label: Mapped[str] = mapped_column(String(64))
+    negative_label: Mapped[str] = mapped_column(String(64))
+    target_type: Mapped[str] = mapped_column(String(40), default="binary_classification")
+    class_distribution: Mapped[dict] = mapped_column(JSON)
+    source_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    quality_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    storage_reference: Mapped[str] = mapped_column(String(320))
+    status: Mapped[str] = mapped_column(String(24), default="ready", index=True)
+    immutable: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+class Experiment(Base):
+    __tablename__ = "experiments"
+    name: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    parent_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True)
+    pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
+    protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
+    protocol_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="queued")
+    config: Mapped[dict] = mapped_column(JSON)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+
+from datetime import datetime
+from uuid import uuid4
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+from ..database import Base
+from ..utils.serialization import utcnow
+
+def new_id() -> str:
+    return str(uuid4())
+
+class Dataset(Base):
+    __tablename__ = "datasets"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    filename: Mapped[str] = mapped_column(String(200))
+    sha256: Mapped[str] = mapped_column(String(64))
+    provenance: Mapped[dict] = mapped_column(JSON)
+    quality: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    current_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+
+class DatasetVersion(Base):
+    """Immutable concrete snapshot belonging to a logical Dataset."""
+
+    __tablename__ = "dataset_versions"
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "version_number", name="uq_dataset_versions_number"),
+        UniqueConstraint("dataset_id", "version_signature", name="uq_dataset_versions_signature"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    version_label: Mapped[str] = mapped_column(String(24))
+    content_sha256: Mapped[str] = mapped_column(String(64), index=True)
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+from ..database import Base
+from ..utils.serialization import utcnow
+
+def new_id() -> str:
+    return str(uuid4())
 
 class Dataset(Base):
     __tablename__ = "datasets"
@@ -56,8 +146,6 @@ class Experiment(Base):
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     parent_id: Mapped[str | None] = mapped_column(ForeignKey("experiments.id"), nullable=True)
     pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
-    protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
-    protocol_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="queued")
     config: Mapped[dict] = mapped_column(JSON)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -195,8 +283,6 @@ class Run(Base):
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
     pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
-    protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
-    protocol_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="created", index=True)
     operation_key: Mapped[str] = mapped_column(String(128), unique=True)
     config: Mapped[dict] = mapped_column(JSON)
@@ -626,65 +712,4 @@ class PipelineStage(Base):
     component_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stage_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class ProtocolTemplate(Base):
-    """Reusable experimental specification template with configurable parameters."""
-
-    __tablename__ = "protocol_templates"
-    __table_args__ = (UniqueConstraint("name", name="uq_protocol_template_name"),)
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    name: Mapped[str] = mapped_column(String(160), index=True)
-    description: Mapped[str] = mapped_column(Text, default="")
-    version: Mapped[str] = mapped_column(String(24), default="v1")
-    status: Mapped[str] = mapped_column(String(24), default="ACTIVE", index=True)
-    task_type: Mapped[str] = mapped_column(String(64), default="binary_classification")
-    canonical_definition: Mapped[dict] = mapped_column(JSON)
-    parameters_schema: Mapped[dict] = mapped_column(JSON, default=dict)
-    template_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
-
-
-class ExperimentProtocol(Base):
-    """Named research protocol family containing immutable versioned specifications."""
-
-    __tablename__ = "experiment_protocols"
-    __table_args__ = (UniqueConstraint("name", name="uq_experiment_protocol_name"),)
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    name: Mapped[str] = mapped_column(String(160), index=True)
-    description: Mapped[str] = mapped_column(Text, default="")
-    template_id: Mapped[str | None] = mapped_column(ForeignKey("protocol_templates.id"), nullable=True, index=True)
-    source_context: Mapped[str | None] = mapped_column(String(48), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
-
-
-class ExperimentProtocolVersion(Base):
-    """One immutable, fingerprinted research experimental protocol version."""
-
-    __tablename__ = "experiment_protocol_versions"
-    __table_args__ = (
-        UniqueConstraint("protocol_id", "version_number", name="uq_experiment_protocol_version_number"),
-        UniqueConstraint("definition_fingerprint", name="uq_experiment_protocol_version_fingerprint"),
-    )
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    protocol_id: Mapped[str] = mapped_column(ForeignKey("experiment_protocols.id"), index=True)
-    version_number: Mapped[int] = mapped_column(Integer)
-    version_label: Mapped[str] = mapped_column(String(24))
-    schema_version: Mapped[str] = mapped_column(String(48))
-    status: Mapped[str] = mapped_column(String(24), default="DRAFT", index=True)
-    description: Mapped[str] = mapped_column(Text, default="")
-    definition_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
-    canonical_definition: Mapped[dict] = mapped_column(JSON)
-    parent_protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
-    template_id: Mapped[str | None] = mapped_column(ForeignKey("protocol_templates.id"), nullable=True, index=True)
-    pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
-    controlled_comparison_protocol_id: Mapped[str | None] = mapped_column(ForeignKey("controlled_comparison_protocols.id"), nullable=True, index=True)
-    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
-    source_context: Mapped[str | None] = mapped_column(String(48), nullable=True)
-    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
-
 

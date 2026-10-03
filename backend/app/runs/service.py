@@ -1,6 +1,32 @@
 from __future__ import annotations
 
 from uuid import uuid4
+from sqlalchemy import select
+from ..database import session_scope
+from ..storage.entities import Experiment, Run
+from ..storage.repository import require
+from ..utils.errors import AppError
+from ..utils.serialization import utcnow
+TERMINAL = {"completed", "failed", "cancelled"}
+TRANSITIONS = {
+    "created": {"queued", "failed", "cancelled"},
+    "queued": {"running", "failed", "cancelled"},
+    "running": {"completed", "failed", "cancelled"},
+    "completed": set(),
+    "failed": set(),
+    "cancelled": set(),
+}
+def create_run(
+    session,
+    *,
+    experiment: Experiment,
+    config: dict,
+    operation_key: str,
+    execution_metadata: dict,
+    reproducibility_metadata: dict,
+from __future__ import annotations
+
+from uuid import uuid4
 
 from sqlalchemy import select
 
@@ -43,8 +69,6 @@ def create_run(
         dataset_id=experiment.dataset_id,
         dataset_version_id=dataset_version_id,
         pipeline_version_id=experiment.pipeline_version_id,
-        protocol_version_id=experiment.protocol_version_id,
-        protocol_fingerprint=experiment.protocol_fingerprint,
         status="created",
         operation_key=operation_key,
         config=config,
