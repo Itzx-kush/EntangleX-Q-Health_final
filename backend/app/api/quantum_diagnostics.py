@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
 
-from backend.app.database import session_scope
-from backend.app.storage.entities import QuantumDiagnosticReport
-from backend.app.quantum.schemas import QuantumPreflightRequest, QuantumDiagnosticReportOut, QuantumDiagnosticPreflightResponse
-from backend.app.quantum.diagnostics import preflight_quantum_diagnostics, generate_quantum_diagnostics
-from backend.app.utils.errors import AppError
+from ..database import session_scope
+from ..storage.entities import QuantumDiagnosticReport
+from ..quantum.schemas import QuantumPreflightRequest, QuantumDiagnosticReportOut, QuantumDiagnosticPreflightResponse
+from ..quantum.diagnostics import preflight_quantum_diagnostics, generate_quantum_diagnostics
+from ..utils.errors import AppError
 
 router = APIRouter(prefix="/quantum/diagnostics", tags=["Quantum Diagnostics"])
 

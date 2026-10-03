@@ -1,10 +1,10 @@
 from fastapi import APIRouter,HTTPException
 from sqlalchemy import select
 from uuid import UUID
-from backend.app.database import session_scope
-from backend.app.storage.entities import AblationStudy
-from backend.app.ablation.schemas import AblationPreflightResponse,AblationStudyOut,AblationStudyRequest
-from backend.app.ablation.service import enqueue_ablation_studies,get_base_experiment,preflight_ablation_study
+from ..database import session_scope
+from ..storage.entities import AblationStudy
+from ..ablation.schemas import AblationPreflightResponse,AblationStudyOut,AblationStudyRequest
+from ..ablation.service import enqueue_ablation_studies,get_base_experiment,preflight_ablation_study
 
 router=APIRouter(prefix="/ablation-studies",tags=["ablation"])
 

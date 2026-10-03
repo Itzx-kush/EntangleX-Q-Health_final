@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from uuid import UUID
 
-from backend.app.database import session_scope
-from backend.app.storage.entities import ConditionTask
-from backend.app.readiness.schemas import ConditionTaskCreate, ConditionTaskResponse, ReadinessResult
-from backend.app.readiness.service import create_condition_task, evaluate_condition_task_readiness
+from ..database import session_scope
+from ..storage.entities import ConditionTask
+from ..readiness.schemas import ConditionTaskCreate, ConditionTaskResponse, ReadinessResult
+from ..readiness.service import create_condition_task, evaluate_condition_task_readiness
 
 router = APIRouter(prefix="/condition-tasks", tags=["condition-tasks"])
 

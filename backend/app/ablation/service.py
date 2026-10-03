@@ -1,12 +1,12 @@
 import copy
 from typing import Any
 from sqlalchemy import select
-from backend.app.api.schemas import TrainingConfig
-from backend.app.database import session_scope
-from backend.app.jobs.manager import manager
-from backend.app.storage.entities import AblationStudy, Experiment, Run
-from backend.app.utils.errors import AppError
-from backend.app.utils.serialization import fingerprint, utcnow
+from ..api.schemas import TrainingConfig
+from ..database import session_scope
+from ..jobs.manager import manager
+from ..storage.entities import AblationStudy, Experiment, Run
+from ..utils.errors import AppError
+from ..utils.serialization import fingerprint, utcnow
 from .schemas import AblationComponentConfig, AblationPreflightResponse
 
 SUPPORTED_MODELS={"logistic_regression","svm","random_forest","vqc","qsvc","qnn","hybrid_pennylane_torch"}
