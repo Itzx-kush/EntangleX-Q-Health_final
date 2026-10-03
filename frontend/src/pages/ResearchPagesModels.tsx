@@ -51,12 +51,52 @@ function executionLabel(model:ModelRecord){
  }
  return {icon:'○',label:'Queued',tone:'muted'};
 }
+function elapsedSeconds(start:string|null|undefined,end:string|null|undefined){
+ if(!start||!end)return null;
+ const elapsed=(Date.parse(end)-Date.parse(start))/1000;
+ return Number.isFinite(elapsed)&&elapsed>=0?elapsed:null;
+}
+function measuredSeconds(value:number|null|undefined){
+ return typeof value==='number'&&Number.isFinite(value)?seconds(value):'Not measured';
+}
+function recordedValue(value:unknown){
+ return value===null||value===undefined||value===''?'Not recorded':String(value);
+}
+function MeasuredExecutionEvidence({job,models}:{job:Job;models:ModelRecord[]}){
+ const end=job.completed_at||job.cancelled_at;
+ const queueSeconds=elapsedSeconds(job.requested_at,job.started_at);
+ const runSeconds=elapsedSeconds(job.started_at,end);
+ const totalSeconds=elapsedSeconds(job.requested_at,end);
+ const quantumModels=models.filter(model=>Boolean(model.details.quantum));
+ return <details className="mt-3 rounded-lg border px-3 py-2">
+  <summary className="cursor-pointer text-xs font-semibold">Measured execution evidence</summary>
+  <p className="mt-2 text-xs muted">Recorded from this actual experiment run. Runtime evidence is descriptive and does not imply cost, efficiency or scientific superiority.</p>
+  <div className="mt-3 grid gap-3 md:grid-cols-3">
+   <MetricCard label="QUEUE TIME" value={measuredSeconds(queueSeconds)} detail="Requested → started"/>
+   <MetricCard label="RUN TIME" value={measuredSeconds(runSeconds)} detail="Started → completed/cancelled"/>
+   <MetricCard label="TOTAL JOB TIME" value={measuredSeconds(totalSeconds)} detail="Requested → terminal timestamp"/>
+  </div>
+  <div className="table-wrap mt-3"><table className="data-table"><thead><tr><th>Model</th><th>Final training</th><th>Cross-validation</th><th>Held-out inference</th><th>Train / holdout samples</th><th>CV folds</th><th>Features / representation</th></tr></thead><tbody>{models.length?models.map(model=>{
+   const timing=model.metrics.timing;
+   const representation=model.details.common_representation as Record<string,unknown>|undefined;
+   const folds=model.metrics.operating_point?.cv_fold_count??model.details.operating_point?.cv_fold_count;
+   return <tr key={model.id}><td>{modelLabels[model.model_type]}<small className="block muted">{executionLabel(model).label}</small></td><td>{measuredSeconds(timing?.final_training_seconds)}</td><td>{measuredSeconds(timing?.cv_total_seconds)}</td><td>{measuredSeconds(timing?.test_inference_seconds)}</td><td>{recordedValue(model.metrics.training?.sample_count)} / {recordedValue(model.metrics.test?.sample_count)}</td><td>{recordedValue(folds)}</td><td>{recordedValue(representation?.selected_feature_count)} / {recordedValue(representation?.final_representation_dimension)}</td></tr>;
+  }):<tr><td colSpan={7}>No model execution records.</td></tr>}</tbody></table></div>
+  <p className="mt-2 text-[11px] muted">Final evaluation is not timed separately; held-out inference is the independently recorded evaluation-stage measurement. Missing historical values remain “Not measured” or “Not recorded”.</p>
+  {quantumModels.length>0&&<div className="mt-4"><p className="metric-label mb-2">QUANTUM EXECUTION</p><div className="grid gap-3 md:grid-cols-2">{quantumModels.map(model=>{
+   const quantum=model.details.quantum!;
+   const configuration=(quantum.configuration||{}) as Record<string,unknown>;
+   return <div className="rounded-lg border p-3 text-xs" key={model.id}><strong>{modelLabels[model.model_type]}</strong><dl className="demo-dl mt-2"><dt>Execution mode</dt><dd>{recordedValue(quantum.execution_kind)}</dd><dt>Backend</dt><dd>{recordedValue(quantum.backend)}</dd><dt>Qubits</dt><dd>{recordedValue(quantum.qubits)}</dd><dt>Quantum layers</dt><dd>{recordedValue(quantum.quantum_layers)}</dd><dt>Objective evaluations</dt><dd>{recordedValue(quantum.objective_evaluations)}</dd><dt>Epochs</dt><dd>{recordedValue(quantum.epochs)}</dd><dt>Shots</dt><dd>{recordedValue(quantum.shots??configuration.shots)}</dd><dt>Noise probability</dt><dd>{recordedValue(quantum.noise_probability??configuration.noise_probability)}</dd><dt>Hardware execution</dt><dd>{quantum.real_hardware===false?'No — local simulation':recordedValue(quantum.real_hardware)}</dd></dl></div>;
+  })}</div></div>}
+ </details>;
+}
 function TrainingJobCard({job,busy,onAction}:{job:Job;busy:boolean;onAction:(action:'pause'|'resume'|'retry'|'cancel')=>void}){
  const title=job.experiment_name||`Experiment ${shortId(job.experiment_id)}`; const models=job.models||[]; const determinate=job.total_units!==null&&job.total_units!==undefined;
  return <div className="rounded-xl border p-3"><div className="flex items-center justify-between gap-3"><Link className="font-semibold text-primary" to={'/experiments/'+job.experiment_id}>{title}</Link><StatusBadge value={job.status}/></div><p className="mt-1 text-xs muted">{job.state}</p>
   <div className="mt-3 flex items-center justify-between text-xs"><span className="muted">{job.current_phase||'Overall progress'}</span><strong>{determinate?`${job.progress}%`:'In progress'}</strong></div><progress className="job-progress mt-2 w-full" max="100" value={determinate?job.progress:undefined}/>
   <div className="mt-2 flex flex-wrap gap-3 text-xs muted"><span>{job.completed_units??0}/{job.total_units??'—'} units complete</span><span>Attempt {job.attempt_count??0}</span><span>Resumes {job.resume_count??0}</span>{job.current_checkpoint_id&&<span>Checkpoint {shortId(job.current_checkpoint_id)}</span>}</div>
   <details className="mt-3 rounded-lg border px-3 py-2"><summary className="cursor-pointer text-xs font-semibold">Model execution details · {models.length} model{models.length===1?'':'s'} selected</summary><div className="mt-2 divide-y">{models.map(model=>{const state=executionLabel(model);return <div className="flex items-center justify-between gap-3 py-2 text-xs" key={model.id}><span className="flex min-w-0 items-center gap-2"><span aria-hidden className={state.tone}>{state.icon}</span><span className="truncate font-medium">{modelLabels[model.model_type]}</span></span><span className={state.tone}>{state.label}</span></div>})}</div></details>
+  <MeasuredExecutionEvidence job={job} models={models}/>
   <div className="mt-2 flex flex-wrap gap-2">{['running','resuming','checkpointing'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('pause')}>Pause safely</Button>}{['paused','recoverable'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('resume')}>Resume</Button>}{['failed','recoverable','interrupted'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('retry')}>Retry from start</Button>}{!['succeeded','partial','failed','cancelled'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('cancel')}>{busy?'Updating…':'Request cancellation'}</Button>}</div>
   {job.errors.length>0&&<JsonDisclosure label="Recorded model failures" value={job.errors}/>}</div>;
 }
