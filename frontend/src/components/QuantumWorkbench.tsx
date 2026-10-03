@@ -101,6 +101,7 @@ export function QuantumWorkbench(){
   const {draft,update,pipeline,quantum}=useDraft();
   const history=useResearchRecorder();
   const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities});
+  const providers=useQuery({queryKey:['quantum-providers'],queryFn:qh.quantumProviders});
   const models=useQuery({queryKey:['models'],queryFn:qh.models});
   const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:5000});
   const [kind,setKind]=useState<QuantumKind>('vqc');
@@ -128,6 +129,8 @@ export function QuantumWorkbench(){
     update({max_samples:recommendation.sample_count});
   };
   const backend=String(draft.quantum.backend||'Configured backend');
+  const provider=providers.data?.find(item=>item.provider_id===draft.quantum.provider_id);
+  const backendDescriptor=provider?.backends.find(item=>item.backend_id===draft.quantum.backend);
   const selectedModels=(models.data||[]).filter((m:ModelRecord)=>m.status==='ready'&&['vqc','qsvc','qnn'].includes(m.model_type));
 
   return <div className="qb-workbench-page">
@@ -148,7 +151,8 @@ export function QuantumWorkbench(){
     </div>
 
     <WorkbenchRail items={[
-      {label:'Backend',value:backend,detail:'Configured execution target',tone:cap.data?.available?'green':'amber'},
+      {label:'Provider',value:provider?.display_name||draft.quantum.provider_id,detail:provider?.provider_type||draft.quantum.execution_mode,tone:provider?.availability==='AVAILABLE'?'green':'amber'},
+      {label:'Backend',value:backendDescriptor?.display_name||backend,detail:'Configured execution target',tone:backendDescriptor?.available?'green':'amber'},
       {label:'Model family',value:kind.toUpperCase(),detail:'Quantum model selector',tone:'purple'},
       {label:'Logical qubits',value:circuit?.qubits??draft.quantum.qubits,detail:'Configured / backend-returned width',tone:'blue'},
       {label:'Active jobs',value:liveJobs.length,detail:measuredJobs.length+' completed or succeeded',tone:liveJobs.length?'amber':'green'}
@@ -162,7 +166,7 @@ export function QuantumWorkbench(){
       {label:'Evidence',detail:'Persisted job + experiment record',status:measuredJobs.length?'complete':'waiting'}
     ]}/>
 
-    <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/>
+    <ErrorBanner error={(cap.error as Error)?.message||(providers.error as Error)?.message||(models.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/>
 
     <div className="qb-layout mt-4">
       <aside className="qb-sidebar">
@@ -172,7 +176,8 @@ export function QuantumWorkbench(){
         <div className="qb-side-divider"/>
         <div className="qb-side-section">
           <span className="qb-side-label">Execution</span>
-          <div className="qb-side-fact"><Cpu size={13}/><span>Backend</span><strong>{backend}</strong></div>
+          <div className="qb-side-fact"><ServerCog size={13}/><span>Provider</span><strong>{provider?.display_name||draft.quantum.provider_id}</strong></div>
+          <div className="qb-side-fact"><Cpu size={13}/><span>Backend</span><strong>{backendDescriptor?.display_name||backend}</strong></div>
           <div className="qb-side-fact"><Layers3 size={13}/><span>Shots</span><strong>{draft.quantum.shots}</strong></div>
           <div className="qb-side-fact"><Gauge size={13}/><span>Optimizer</span><strong>{draft.quantum.optimizer}</strong></div>
         </div>
@@ -183,7 +188,8 @@ export function QuantumWorkbench(){
         {inspector==='circuit'?<Card className="qb-panel-card qb-hero-panel" title="Circuit canvas" description="A compact engineering view modeled after a browser quantum IDE.">
           <div className="qb-config-row">
             <label className="field"><span>Quantum model</span><Select aria-label="Quantum model" value={kind} onChange={e=>setKind(e.target.value as QuantumKind)}><option value="vqc">VQC</option><option value="qsvc">QSVC</option><option value="qnn">QNN</option></Select></label>
-            <label className="field"><span>Configured backend</span><input className="input" value={backend} readOnly/></label>
+            <label className="field"><span>Provider</span><input className="input" value={provider?.display_name||draft.quantum.provider_id} readOnly/></label>
+            <label className="field"><span>Configured backend</span><input className="input" value={backendDescriptor?.display_name||backend} readOnly/></label>
             <label className="field"><span>Logical width</span><input className="input mono" value={draft.quantum.qubits} readOnly/></label>
           </div>
           <div className="qb-action-strip">

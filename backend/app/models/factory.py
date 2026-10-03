@@ -23,6 +23,7 @@ def build_estimator(kind: str, config: TrainingConfig, features: list[str], nume
     elif kind == "hybrid_pennylane_torch":
         h = config.hybrid
         model = PennyLaneTorchClassifier(
+            provider_id=h.provider_id, execution_mode=h.execution_mode,
             qubits=h.qubits, quantum_layers=h.quantum_layers,
             hidden_dimensions=tuple(h.classical_hidden_dimensions), activation=h.classical_activation,
             optimizer=h.optimizer, learning_rate=h.learning_rate, epochs=h.epochs,

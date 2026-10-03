@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -85,6 +85,9 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
   explain:(id:string,body:unknown)=>api.post<Explanation>(`/models/${id}/explain`,body),
   explanations:(id:string)=>api.get<Explanation[]>(`/models/${id}/explanations`),
   capabilities:()=>api.get<{available:boolean;runtime_verified:boolean;execution:string}>('/quantum/capabilities'),
+  quantumProviders:()=>api.get<QuantumProviderDescriptor[]>('/quantum/providers'),
+  quantumProviderBackends:(providerId:string)=>api.get<QuantumProviderDescriptor['backends']>(`/quantum/providers/${providerId}/backends`),
+  quantumProviderPreflight:(body:{provider_id:string;backend_id:string;requested_capabilities:string[];configuration:Record<string,unknown>})=>api.post<{status:'READY'|'BLOCKED';blockers:string[];warnings:string[];configuration_fingerprint:string}>('/quantum/providers/preflight',body),
   resourcePolicy:()=>api.get<ResourceAdvisorResponse['budget_policy']>('/quantum/resource-policy'),
   resourceAdvisor:(body:{model_type:'vqc'|'qsvc'|'qnn';quantum:TrainingConfig['quantum'];feature_dimension:number;sample_count:number;dataset_id:string|null;experiment_id:string|null})=>api.post<ResourceAdvisorResponse>('/quantum/resource-advisor',body),
   circuit:(body:unknown)=>api.post<Circuit>('/quantum/circuit',body),
