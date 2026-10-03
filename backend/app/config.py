@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     quantum_max_samples: int = Field(default=256, ge=20, le=1024)
     max_queued_jobs: int = Field(default=3, ge=1, le=10)
     max_study_seeds: int = Field(default=20, ge=2, le=50)
+    job_lease_seconds: int = Field(default=120, ge=30, le=3600)
+    job_max_attempts: int = Field(default=3, ge=1, le=20)
+    job_max_resume_attempts: int = Field(default=5, ge=1, le=50)
     log_level: str = "INFO"
 
     groq_api_key: str = ""

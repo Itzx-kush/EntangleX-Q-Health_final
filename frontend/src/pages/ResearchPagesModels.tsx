@@ -40,7 +40,7 @@ function measuredDifference(quantum:number|null|undefined,classical:number|null|
  return quantum===null||quantum===undefined||classical===null||classical===undefined?null:quantum-classical;
 }
 
-const activeJobStatuses=['queued','running','cancel_requested'];
+const activeJobStatuses=['queued','running','resuming','checkpointing','pause_requested','cancel_requested'];
 function executionLabel(model:ModelRecord){
  if(model.status==='ready'||model.status==='completed')return {icon:'✓',label:'Completed',tone:'text-emerald-600'};
  if(model.status==='failed')return {icon:'✕',label:'Failed',tone:'text-red-600'};
@@ -51,21 +51,14 @@ function executionLabel(model:ModelRecord){
  }
  return {icon:'○',label:'Queued',tone:'muted'};
 }
-function TrainingJobCard({job,cancelling,onCancel}:{job:Job;cancelling:boolean;onCancel:()=>void}){
- const title=job.experiment_name||`Experiment ${shortId(job.experiment_id)}`;
- const models=job.models||[];
- return <div className="rounded-xl border p-3">
-  <div className="flex items-center justify-between gap-3"><Link className="font-semibold text-primary" to={'/experiments/'+job.experiment_id}>{title}</Link><StatusBadge value={job.status}/></div>
-  <p className="mt-1 text-xs muted">{job.state}</p>
-  <div className="mt-3 flex items-center justify-between text-xs"><span className="muted">Overall progress</span><strong>{job.progress}%</strong></div>
-  <progress className="job-progress mt-2 w-full" max="100" value={job.progress}/>
-  <details className="mt-3 rounded-lg border px-3 py-2">
-   <summary className="cursor-pointer text-xs font-semibold">Model execution details · {models.length} model{models.length===1?'':'s'} selected</summary>
-   <div className="mt-2 divide-y">{models.map(model=>{const state=executionLabel(model);return <div className="flex items-center justify-between gap-3 py-2 text-xs" key={model.id}><span className="flex min-w-0 items-center gap-2"><span aria-hidden className={state.tone}>{state.icon}</span><span className="truncate font-medium">{modelLabels[model.model_type]}</span></span><span className={state.tone}>{state.label}</span></div>})}</div>
-  </details>
-  {['queued','running'].includes(job.status)&&<Button className="mt-2" variant="outline" disabled={cancelling} onClick={onCancel}>{cancelling?'Requesting cancellation…':'Request cancellation'}</Button>}
-  {job.errors.length>0&&<JsonDisclosure label="Recorded model failures" value={job.errors}/>}
- </div>;
+function TrainingJobCard({job,busy,onAction}:{job:Job;busy:boolean;onAction:(action:'pause'|'resume'|'retry'|'cancel')=>void}){
+ const title=job.experiment_name||`Experiment ${shortId(job.experiment_id)}`; const models=job.models||[]; const determinate=job.total_units!==null&&job.total_units!==undefined;
+ return <div className="rounded-xl border p-3"><div className="flex items-center justify-between gap-3"><Link className="font-semibold text-primary" to={'/experiments/'+job.experiment_id}>{title}</Link><StatusBadge value={job.status}/></div><p className="mt-1 text-xs muted">{job.state}</p>
+  <div className="mt-3 flex items-center justify-between text-xs"><span className="muted">{job.current_phase||'Overall progress'}</span><strong>{determinate?`${job.progress}%`:'In progress'}</strong></div><progress className="job-progress mt-2 w-full" max="100" value={determinate?job.progress:undefined}/>
+  <div className="mt-2 flex flex-wrap gap-3 text-xs muted"><span>{job.completed_units??0}/{job.total_units??'—'} units complete</span><span>Attempt {job.attempt_count??0}</span><span>Resumes {job.resume_count??0}</span>{job.current_checkpoint_id&&<span>Checkpoint {shortId(job.current_checkpoint_id)}</span>}</div>
+  <details className="mt-3 rounded-lg border px-3 py-2"><summary className="cursor-pointer text-xs font-semibold">Model execution details · {models.length} model{models.length===1?'':'s'} selected</summary><div className="mt-2 divide-y">{models.map(model=>{const state=executionLabel(model);return <div className="flex items-center justify-between gap-3 py-2 text-xs" key={model.id}><span className="flex min-w-0 items-center gap-2"><span aria-hidden className={state.tone}>{state.icon}</span><span className="truncate font-medium">{modelLabels[model.model_type]}</span></span><span className={state.tone}>{state.label}</span></div>})}</div></details>
+  <div className="mt-2 flex flex-wrap gap-2">{['running','resuming','checkpointing'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('pause')}>Pause safely</Button>}{['paused','recoverable'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('resume')}>Resume</Button>}{['failed','recoverable','interrupted'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('retry')}>Retry from start</Button>}{!['succeeded','partial','failed','cancelled'].includes(job.status)&&<Button variant="outline" disabled={busy} onClick={()=>onAction('cancel')}>{busy?'Updating…':'Request cancellation'}</Button>}</div>
+  {job.errors.length>0&&<JsonDisclosure label="Recorded model failures" value={job.errors}/>}</div>;
 }
 
 export function Training(){
@@ -75,14 +68,14 @@ export function Training(){
 function LiveTraining(){
  const {draft,update,pipeline,quantum}=useDraft();
  const history=useResearchRecorder();
- const [cancellingId,setCancellingId]=useState('');
+ const [busyJobId,setBusyJobId]=useState('');
  const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:query=>query.state.data?.some(job=>activeJobStatuses.includes(job.status))?3000:false});
  const dataset=useQuery({queryKey:['dataset',draft.dataset_id],queryFn:()=>qh.dataset(draft.dataset_id),enabled:Boolean(draft.dataset_id)});
  const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary,staleTime:300000});
  const alignment=useQuery({queryKey:['alignment'],queryFn:qh.alignment,staleTime:300000});
  const readiness=library.data?.find(item=>item.slug===dataset.data?.provenance.library_slug)?.demo_readiness;
  const mutation=useMutation({mutationFn:()=>qh.createJob(draft),onSuccess:r=>{update({dataset_id:r.experiment.dataset_id});jobs.refetch();void history.record(experimentActivity(r.experiment))}});
- const cancelJob=async(job:Job)=>{setCancellingId(job.id);try{await qh.cancelJob(job.id);await jobs.refetch()}finally{setCancellingId('')}};
+ const controlJob=async(job:Job,action:'pause'|'resume'|'retry'|'cancel')=>{setBusyJobId(job.id);try{if(action==='pause')await qh.pauseJob(job.id);else if(action==='resume')await qh.resumeJob(job.id);else if(action==='retry')await qh.retryJob(job.id);else await qh.cancelJob(job.id);await jobs.refetch()}finally{setBusyJobId('')}};
  const qiskitSelected=draft.models.some(isQiskitQuantumModel);const hybridSelected=draft.models.some(isHybridModel);const quantumFamilySelected=draft.models.some(isQuantumFamilyModel);
  const dimensionsConflict=qiskitSelected&&hybridSelected&&draft.quantum.qubits!==draft.hybrid.qubits;
  const toggle=(kind:ModelKind)=>{const next=draft.models.includes(kind)?draft.models.filter(x=>x!==kind):[...draft.models,kind];const addsQiskit=isQiskitQuantumModel(kind)&&!draft.models.includes(kind);const addsHybrid=isHybridModel(kind)&&!draft.models.includes(kind);update({models:next});if(addsQiskit&&!next.some(isHybridModel))pipeline({pca_components:draft.quantum.qubits,angle_scaling:true});if(addsHybrid&&!next.some(isQiskitQuantumModel))pipeline({pca_components:draft.hybrid.qubits,angle_scaling:true})};
@@ -135,7 +128,7 @@ function LiveTraining(){
    <div className="mt-4 flex flex-wrap gap-4 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={draft.pipeline.angle_scaling} onChange={e=>pipeline({angle_scaling:e.target.checked})}/>Shared angle scaling</label><label className="flex items-center gap-2"><input type="checkbox" checked={draft.pipeline.pca_components!==null} onChange={e=>pipeline({pca_components:e.target.checked?draft.quantum.qubits:null})}/>Enable PCA</label></div>
   </Card></BorderGlow>}
   {hybridSelected&&<BorderGlow className="mt-5"><Card title="PennyLane + PyTorch Hybrid" description="Classical preprocessing → PennyLane trainable quantum feature layer → expectation values → PyTorch classifier."><div className="grid gap-4 md:grid-cols-3"><label className="field"><span>Provider</span><Input disabled value="PennyLane Local Simulator"/></label><label className="field"><span>Hybrid qubits</span><Input type="number" min="2" max="8" value={draft.hybrid.qubits} onChange={e=>{const qubits=Number(e.target.value);update({hybrid:{...draft.hybrid,qubits}});if(!qiskitSelected)pipeline({pca_components:qubits,angle_scaling:true})}}/></label><label className="field"><span>Quantum layers</span><Input type="number" min="1" max="6" value={draft.hybrid.quantum_layers} onChange={e=>update({hybrid:{...draft.hybrid,quantum_layers:Number(e.target.value)}})}/></label><label className="field"><span>Feature map</span><Input disabled value="AngleEmbedding"/></label><label className="field"><span>Hidden dimensions</span><Input value={draft.hybrid.classical_hidden_dimensions.join(",")} onChange={e=>update({hybrid:{...draft.hybrid,classical_hidden_dimensions:e.target.value.split(",").map(value=>Number(value.trim())).filter(Number.isFinite)}})}/></label><label className="field"><span>Activation</span><Select value={draft.hybrid.classical_activation} onChange={e=>update({hybrid:{...draft.hybrid,classical_activation:e.target.value as "relu"|"tanh"}})}><option value="relu">ReLU</option><option value="tanh">Tanh</option></Select></label><label className="field"><span>Optimizer</span><Select value={draft.hybrid.optimizer} onChange={e=>update({hybrid:{...draft.hybrid,optimizer:e.target.value as "adam"|"sgd"}})}><option value="adam">Adam</option><option value="sgd">SGD</option></Select></label><label className="field"><span>Learning rate</span><Input type="number" step="0.0001" value={draft.hybrid.learning_rate} onChange={e=>update({hybrid:{...draft.hybrid,learning_rate:Number(e.target.value)}})}/></label><label className="field"><span>Epochs</span><Input type="number" min="1" max="500" value={draft.hybrid.epochs} onChange={e=>update({hybrid:{...draft.hybrid,epochs:Number(e.target.value)}})}/></label><label className="field"><span>Batch size</span><Input type="number" min="1" max="256" value={draft.hybrid.batch_size} onChange={e=>update({hybrid:{...draft.hybrid,batch_size:Number(e.target.value)}})}/></label><label className="field"><span>Sample cap</span><Input type="number" min="30" max="2000" value={draft.hybrid.sample_cap} onChange={e=>update({hybrid:{...draft.hybrid,sample_cap:Number(e.target.value)}})}/></label><label className="field"><span>Backend</span><Input disabled value={draft.hybrid.backend}/></label></div><Notice tone="amber">CPU local simulation only. Hardware execution is unavailable; quantum advantage is not established.</Notice></Card></BorderGlow>}
-  <Card className="mt-5" title="Execution state" description="Backend-reported jobs refresh automatically while work is active."><div className="space-y-3">{jobs.isLoading?<Loading/>:jobs.data?.length?jobs.data.slice(0,8).map(job=><TrainingJobCard key={job.id} job={job} cancelling={cancellingId===job.id} onCancel={()=>void cancelJob(job)}/>):<EmptyState title="No training jobs">Create an experiment to populate the execution registry.</EmptyState>}</div></Card>
+  <Card className="mt-5" title="Execution state" description="Durable jobs refresh automatically and expose safe pause, resume, retry, and cancellation controls."><div className="space-y-3">{jobs.isLoading?<Loading/>:jobs.data?.length?jobs.data.slice(0,8).map(job=><TrainingJobCard key={job.id} job={job} busy={busyJobId===job.id} onAction={action=>void controlJob(job,action)}/>):<EmptyState title="No training jobs">Create an experiment to populate the execution registry.</EmptyState>}</div></Card>
  </div>;
 }
 

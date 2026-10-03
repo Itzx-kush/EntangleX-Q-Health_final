@@ -313,14 +313,61 @@ class JobOut(Schema):
     id: str
     experiment_id: str
     run_id: str | None = None
+    job_type: str = "training"
     status: str
-    progress: int
+    priority: int = 0
+    progress: int | None = None
+    total_units: int | None = None
+    completed_units: int = 0
+    failed_units: int = 0
+    skipped_units: int = 0
+    active_unit: str | None = None
+    current_phase: str | None = None
     state: str
     errors: list[dict[str, Any]]
+    attempt_count: int = 0
+    resume_count: int = 0
+    current_checkpoint_id: str | None = None
+    configuration_fingerprint: str | None = None
+    input_fingerprint: str | None = None
+    failure_category: str | None = None
+    error_code: str | None = None
+    error_message: str | None = None
+    requested_at: datetime | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     experiment_name: str | None = None
     models: list[ModelOut] = Field(default_factory=list)
+
+class JobCheckpointOut(Schema):
+    id: str
+    job_id: str
+    sequence_number: int
+    checkpoint_type: str
+    status: str
+    logical_unit: str | None = None
+    completed_units: int
+    checkpoint_state: dict[str, Any]
+    state_fingerprint: str
+    artifact_references: list[dict[str, Any]] = Field(default_factory=list)
+    created_at: datetime
+    validated_at: datetime | None = None
+    invalidated_at: datetime | None = None
+
+class JobProgressOut(Schema):
+    job_id: str
+    status: str
+    determinate: bool
+    percentage: int | None = None
+    total_units: int | None = None
+    completed_units: int
+    failed_units: int
+    skipped_units: int
+    active_unit: str | None = None
+    current_phase: str | None = None
 
 class TrainingResponse(Schema):
     job: JobOut
