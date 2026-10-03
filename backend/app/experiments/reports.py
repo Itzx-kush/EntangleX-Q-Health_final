@@ -6,7 +6,7 @@ from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
-from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion
 from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
@@ -23,6 +23,25 @@ def report_data(identity: str) -> dict:
             "status": "LEGACY_UNRESOLVED",
             "message": "No pipeline version was recorded for this experiment.",
         }
+        protocol = session.get(ExperimentProtocolVersion, experiment.protocol_version_id) if experiment.protocol_version_id else None
+        protocol_data = {
+            "protocol_version_id": protocol.id,
+            "protocol_id": protocol.protocol_id,
+            "version": protocol.version,
+            "status": protocol.status,
+            "definition_fingerprint": protocol.definition_fingerprint,
+            "summary": {
+                "study_name": protocol.study.get("name") if protocol.study else None,
+                "task_type": protocol.study.get("task_type") if protocol.study else None,
+                "primary_metric": protocol.evaluation.get("primary_metric") if protocol.evaluation else None,
+                "cv_folds": protocol.split.get("cv_folds") if protocol.split else None,
+                "seed_count": len(protocol.randomness.get("seeds", [])) if protocol.randomness and protocol.randomness.get("seeds") else 0,
+            },
+            "canonical_definition": protocol.canonical_definition,
+        } if protocol else {
+            "status": "LEGACY_UNSPECIFIED",
+            "message": "No experiment protocol version was declared or attached to this experiment.",
+        }
     experiment_kind = experiment.summary.get("experiment_kind", "live_experiment")
     for model in models:
         verify_installed_model(model)
@@ -31,6 +50,7 @@ def report_data(identity: str) -> dict:
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
         "pipeline_version": pipeline_data,
+        "protocol": protocol_data,
         "models": [{**ModelOut.model_validate(m).model_dump(mode="json"), "display_name": "PennyLane + PyTorch Hybrid" if m.model_type == "hybrid_pennylane_torch" else m.model_type} for m in models],
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
         "comparison": comparison(identity),
@@ -46,6 +66,7 @@ def html_report(identity: str) -> str:
         "<h2>Dataset and provenance</h2>" + pre(data["dataset"]),
         "<h2>Preprocessing and feature engineering</h2>" + pre(data["preprocessing"]),
         "<h2>Pipeline version</h2>" + pre(data["pipeline_version"]),
+        "<h2>Experiment protocol</h2>" + pre(data["protocol"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
         "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
     for model in data["models"]:
