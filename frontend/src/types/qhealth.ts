@@ -39,6 +39,26 @@ export interface ModelMetrics {training:Metrics;test:Metrics;validation:{folds:M
 export interface HybridMetadata {framework?:string;classical_framework?:string;backend?:string;execution_kind?:string;real_hardware?:boolean;qubits?:number;quantum_layers?:number;classical_parameter_count?:number;quantum_parameter_count?:number;configuration?:{hidden_dimensions?:number[]};[key:string]:unknown}
 export interface ModelDetails extends Record<string,unknown> {quantum?:HybridMetadata;supports_probability?:boolean;probability_status?:string;operating_point?:OperatingPoint;experiment_kind?:string}
 export interface ModelRecord {id:string;experiment_id:string;dataset_id:string;model_type:ModelKind;status:string;progress?:number|null;details:ModelDetails;metrics:Partial<ModelMetrics>;created_at:string}
+export type ModelCardEvidenceStatus='available'|'not_available'|'not_applicable'|'limited'|'not_recorded'|'not_yet_evaluated';
+export interface ModelCard {
+  schema_version:'model_card_v1';card_id:string;generated_at:string;
+  card_status:'COMPLETE'|'COMPLETE_WITH_LIMITATIONS'|'INCOMPLETE_EVIDENCE'|'UNAVAILABLE';
+  intended_use:Record<string,unknown>;model_identity:Record<string,unknown>;task:Record<string,unknown>;
+  data:Record<string,unknown>;training:Record<string,unknown>;model:Record<string,unknown>;
+  evaluation:{status:ModelCardEvidenceStatus;evidence:Record<string,unknown>[]};
+  multi_seed_evidence:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  calibration:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  threshold:{status:ModelCardEvidenceStatus;studies:Record<string,unknown>[]};
+  robustness:{status:ModelCardEvidenceStatus;records:Record<string,unknown>[]};
+  external_validation:{status:ModelCardEvidenceStatus;validations:Record<string,unknown>[]};
+  distribution_shift:{status:ModelCardEvidenceStatus;analyses:Record<string,unknown>[]};
+  group_validation:Record<string,unknown>&{status:ModelCardEvidenceStatus};
+  quantum:Record<string,unknown>&{status:ModelCardEvidenceStatus};
+  provenance:Record<string,unknown>;reproducibility:Record<string,unknown>;
+  limitations:{category:string;description:string;source:string}[];
+  evidence_gaps:{category:string;status:string;description:string}[];
+  artifact:{artifact_id:string;integrity_hash:string;immutable:boolean};
+}
 export interface ExperimentDetail {experiment:Experiment;models:ModelRecord[];jobs:Job[]}
 export interface Preview {train_count:number;test_count:number;input_features:string[];selected_features:string[];output_features:string[];selection_scores:{feature:string;score:number|null;selected:boolean}[];pca_explained_variance:number[];pca_loadings:number[][];split_hash:string;stages:string[];warnings:string[]}
 export interface Circuit {model_type:string;execution_kind:string;backend:string;qubits:number;logical_depth:number|null;parameter_count:number;gate_counts:Record<string,number>;text:string;gates:{name:string;qubits:number[];parameters:string[]}[];limitation:string}

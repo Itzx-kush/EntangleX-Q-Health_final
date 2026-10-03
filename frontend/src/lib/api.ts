@@ -1,4 +1,4 @@
-import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,Comparison,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,Explanation,Experiment,ExperimentDetail,Health,Job,ModelCard,ModelRecord,Prediction,Preview,Quality,QuantumProviderDescriptor,ResourceAdvisorResponse,RobustnessResponse,RobustnessScenario,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -83,6 +83,7 @@ export const qh={
   pipelinePreview:(config:TrainingConfig,endpoint='/preprocessing/preview')=>api.post<Preview>(endpoint,config),
   models:()=>api.get<ModelRecord[]>('/models'),
   model:(id:string)=>api.get<ModelRecord>(`/models/${id}`),
+  modelCard:(id:string)=>api.get<ModelCard>(`/models/${id}/card`),
   schema:(id:string)=>api.get<{model_id:string;features:{name:string;type:string;nullable:boolean}[];positive_label:string;negative_label:string}>(`/models/${id}/input-schema`),
   sample:(id:string)=>api.get<{features:Record<string,string|number|null>;
 sample:string;source:string}>(`/models/${id}/demo-sample`),
