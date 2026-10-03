@@ -1,10 +1,22 @@
+
+def test_existing_dataset_version_contract_materializes_version_signature(registered):
+    versions = list_versions(registered.id)
+    assert versions
+    assert all(len(version.version_signature) == 64 for version in versions)
+    with session_scope() as session:
+        columns = {
+            row[1]
+            for row in session.execute(select(text("name")).select_from(text("pragma_table_info('dataset_versions')")))
+        }
+        assert "version_signature" in columns
+
 import copy
 import hashlib
 import json
 import time
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.api.schemas import DatasetUploadMetadata, TrainingConfig
 from app.config import get_settings
