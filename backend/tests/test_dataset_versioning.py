@@ -1,15 +1,3 @@
-
-def test_existing_dataset_version_contract_materializes_version_signature(registered):
-    versions = list_versions(registered.id)
-    assert versions
-    assert all(len(version.version_signature) == 64 for version in versions)
-    with session_scope() as session:
-        columns = {
-            row[1]
-            for row in session.execute(select(text("name")).select_from(text("pragma_table_info('dataset_versions')")))
-        }
-        assert "version_signature" in columns
-
 import copy
 import hashlib
 import json
@@ -34,6 +22,17 @@ from app.manifests.service import get_manifest
 from app.storage.entities import Dataset, DatasetVersion, Experiment, Run
 from app.utils.errors import AppError
 
+
+def test_existing_dataset_version_contract_materializes_version_signature(registered):
+    versions = list_versions(registered.id)
+    assert versions
+    assert all(len(version.version_signature) == 64 for version in versions)
+    with session_scope() as session:
+        columns = {
+            row[1]
+            for row in session.execute(select(text("name")).select_from(text("pragma_table_info('dataset_versions')")))
+        }
+        assert "version_signature" in columns
 
 def metadata(name="Synthetic test fixture", target="observed_class", positive="positive", version="source-2"):
     return DatasetUploadMetadata(
