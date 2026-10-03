@@ -209,6 +209,19 @@ describe('active dataset workflow context',()=>{
     await waitFor(()=>expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe(''));
     expect(await screen.findByText(/none is active/i)).toBeInTheDocument();
   });
+
+  it('does not clear the active dataset after a temporary backend failure',async()=>{
+    localStorage.setItem('qhealth-tictac-draft',JSON.stringify({dataset_id:'dataset-temporarily-unavailable'}));
+    vi.mocked(qh.dataset).mockRejectedValue(Object.assign(new Error('Backend unavailable.'),{
+      status:503,
+      code:'backend_unavailable',
+    }));
+
+    renderWithProviders(<App/>,['/preprocessing']);
+
+    await waitFor(()=>expect(qh.dataset).toHaveBeenCalled());
+    expect(JSON.parse(localStorage.getItem('qhealth-tictac-draft')||'{}').dataset_id).toBe('dataset-temporarily-unavailable');
+  });
 });
 
 describe('research shell navigation and commands',()=>{

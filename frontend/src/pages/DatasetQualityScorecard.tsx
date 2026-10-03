@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -39,7 +39,104 @@ interface DatasetQualityScorecardProps {
   pipelineVersionId?: string;
 }
 
-export function DatasetQualityScorecardView({
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isDatasetQualityScorecard(value: unknown): value is DatasetQualityScorecard {
+  if (!isRecord(value)) return false;
+  const summary = value.summary;
+  const schema = value.schema_snapshot;
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.status !== 'string' ||
+    typeof value.assessment_fingerprint !== 'string' ||
+    !Array.isArray(value.limitations) ||
+    !isRecord(summary) ||
+    typeof summary.quality_score !== 'number' ||
+    typeof summary.passed !== 'number' ||
+    typeof summary.warnings !== 'number' ||
+    typeof summary.failed !== 'number' ||
+    !isRecord(value.domains) ||
+    !isRecord(schema) ||
+    typeof schema.total_rows !== 'number' ||
+    typeof schema.total_features !== 'number' ||
+    !Array.isArray(schema.columns)
+  ) {
+    return false;
+  }
+
+  const validCheck = (check: unknown) =>
+    isRecord(check) &&
+    typeof check.name === 'string' &&
+    typeof check.domain === 'string' &&
+    typeof check.status === 'string' &&
+    typeof check.severity === 'string' &&
+    typeof check.message === 'string' &&
+    isRecord(check.details);
+  const validDomain = (domain: unknown) =>
+    isRecord(domain) &&
+    typeof domain.display_name === 'string' &&
+    typeof domain.status === 'string' &&
+    typeof domain.passed_checks === 'number' &&
+    typeof domain.warning_checks === 'number' &&
+    typeof domain.failed_checks === 'number' &&
+    Array.isArray(domain.checks) &&
+    domain.checks.every(validCheck);
+  const validColumn = (column: unknown) =>
+    isRecord(column) &&
+    typeof column.name === 'string' &&
+    typeof column.data_type === 'string' &&
+    typeof column.null_count === 'number' &&
+    typeof column.null_percentage === 'number' &&
+    typeof column.distinct_count === 'number' &&
+    typeof column.is_constant === 'boolean' &&
+    isRecord(column.sample_stats);
+
+  return Object.values(value.domains).every(validDomain) && schema.columns.every(validColumn);
+}
+
+export function DatasetQualityScorecardView(props: DatasetQualityScorecardProps) {
+  return (
+    <QualityScorecardErrorBoundary>
+      <DatasetQualityScorecardContent {...props} />
+    </QualityScorecardErrorBoundary>
+  );
+}
+
+class QualityScorecardErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Keep the failure scoped to this page while preserving the diagnostic in the UI.
+    console.error('Dataset quality scorecard render failed', error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Card title="Quality scorecard unavailable" description="The scorecard response could not be rendered safely.">
+          <Notice tone="amber">
+            <strong className="block mb-1">Quality data is malformed or incomplete.</strong>
+            <span className="text-xs">
+              {this.state.error.message || 'The backend returned an unexpected scorecard payload.'}
+            </span>
+          </Notice>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function DatasetQualityScorecardContent({
   datasetId,
   datasetVersionId,
   experimentId,
@@ -68,6 +165,9 @@ export function DatasetQualityScorecardView({
   });
 
   const scorecard = latestQuery.data;
+  const malformedScorecard =
+    latestQuery.isSuccess && scorecard !== null && !isDatasetQualityScorecard(scorecard);
+  const renderableScorecard = scorecard && !malformedScorecard ? scorecard : null;
 
   // Preflight Query
   const preflightQuery = useQuery({
@@ -99,9 +199,9 @@ export function DatasetQualityScorecardView({
 
   // Compare Query
   const compareQuery = useQuery({
-    queryKey: ['compare-dataset-quality-scorecards', datasetId, scorecard?.id, compareTargetId],
-    queryFn: () => qh.compareDatasetQualityScorecards(datasetId, scorecard?.id || '', compareTargetId),
-    enabled: Boolean(datasetId && scorecard?.id && compareTargetId && showCompare),
+    queryKey: ['compare-dataset-quality-scorecards', datasetId, renderableScorecard?.id, compareTargetId],
+    queryFn: () => qh.compareDatasetQualityScorecards(datasetId, renderableScorecard?.id || '', compareTargetId),
+    enabled: Boolean(datasetId && renderableScorecard?.id && compareTargetId && showCompare),
   });
 
   const copyFingerprint = (fp: string) => {
@@ -110,7 +210,17 @@ export function DatasetQualityScorecardView({
     setTimeout(() => setCopiedFp(false), 2000);
   };
 
-  const domainKeys = scorecard?.domains ? Object.keys(scorecard.domains) : [];
+  const domainKeys = renderableScorecard?.domains ? Object.keys(renderableScorecard.domains) : [];
+  const criticalFindings = renderableScorecard
+    ? Object.values(renderableScorecard.domains).flatMap((domain) =>
+        domain.checks
+          .filter(
+            (check) =>
+              check.status === 'FAIL' && (check.severity === 'CRITICAL' || check.severity === 'HIGH'),
+          )
+          .map((check) => check.message),
+      )
+    : [];
 
   return (
     <div className="space-y-5">
@@ -121,22 +231,31 @@ export function DatasetQualityScorecardView({
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {scorecard ? (
+            {renderableScorecard ? (
               <>
-                <StatusChip status={scorecard.status} />
+                <StatusChip status={renderableScorecard.status} />
                 <span className="mono text-xs muted">
-                  FP: {scorecard.assessment_fingerprint ? shortId(scorecard.assessment_fingerprint) : '—'}
+                  FP: {renderableScorecard.assessment_fingerprint ? shortId(renderableScorecard.assessment_fingerprint) : '—'}
                 </span>
                 <button
                   className="btn btn-ghost py-1 px-2 text-xs"
-                  onClick={() => scorecard.assessment_fingerprint && copyFingerprint(scorecard.assessment_fingerprint)}
+                  onClick={() =>
+                    renderableScorecard.assessment_fingerprint &&
+                    copyFingerprint(renderableScorecard.assessment_fingerprint)
+                  }
                   title="Copy full assessment fingerprint"
                 >
                   <Copy size={12} /> {copiedFp ? 'Copied' : 'Copy FP'}
                 </button>
               </>
-            ) : (
+            ) : malformedScorecard ? (
+              <Badge tone="amber">INVALID SCORECARD</Badge>
+            ) : latestQuery.isLoading ? (
+              <Badge tone="blue">LOADING</Badge>
+            ) : latestQuery.isSuccess && scorecard === null ? (
               <Badge tone="blue">NOT ASSESSED YET</Badge>
+            ) : (
+              <Badge tone="amber">ASSESSMENT UNAVAILABLE</Badge>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -152,19 +271,27 @@ export function DatasetQualityScorecardView({
               onClick={() => assessMutation.mutate()}
             >
               <RefreshCw size={13} className={assessMutation.isPending ? 'animate-spin' : ''} />
-              {assessMutation.isPending ? 'Assessing...' : scorecard ? 'Re-Assess Dataset' : 'Run Quality Assessment'}
+              {assessMutation.isPending
+                ? 'Assessing...'
+                : renderableScorecard
+                ? 'Re-Assess Dataset'
+                : 'Run Quality Assessment'}
             </Button>
-            {scorecard && (
+            {renderableScorecard && (
               <>
                 <Button
                   variant="outline"
-                  onClick={() => qh.exportDatasetQualityScorecard(datasetId, scorecard.id, 'markdown')}
+                  onClick={() =>
+                    qh.exportDatasetQualityScorecard(datasetId, renderableScorecard.id, 'markdown')
+                  }
                 >
                   <FileText size={13} /> Export MD
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => qh.exportDatasetQualityScorecard(datasetId, scorecard.id, 'json')}
+                  onClick={() =>
+                    qh.exportDatasetQualityScorecard(datasetId, renderableScorecard.id, 'json')
+                  }
                 >
                   <Download size={13} /> Export JSON
                 </Button>
@@ -181,7 +308,21 @@ export function DatasetQualityScorecardView({
           </div>
         </div>
 
-        <ErrorBanner error={(assessMutation.error as Error)?.message || (latestQuery.error as Error)?.message || (listQuery.error as Error)?.message} />
+        <ErrorBanner
+          error={
+            (assessMutation.error as Error)?.message ||
+            (latestQuery.error as Error)?.message ||
+            (listQuery.error as Error)?.message
+          }
+        />
+        {malformedScorecard && (
+          <Notice tone="amber">
+            <strong className="block mb-1">Quality scorecard unavailable.</strong>
+            <span className="text-xs">
+              The backend returned an incomplete scorecard payload. No quality findings were rendered.
+            </span>
+          </Notice>
+        )}
         {latestQuery.isSuccess && scorecard === null && (
           <Notice tone="blue">Not assessed yet. No quality scorecard exists for this dataset/version yet.</Notice>
         )}
@@ -209,13 +350,13 @@ export function DatasetQualityScorecardView({
         )}
 
         {/* Compare Drawer */}
-        {showCompare && scorecard && (
+        {showCompare && renderableScorecard && (
           <div className="mt-4 rounded-xl border p-4 bg-muted/20">
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
               <GitCompare size={14} /> Scorecard Cross-Assessment Comparison
             </h4>
             <div className="flex flex-wrap items-center gap-3 mb-3">
-              <label className="text-xs">Compare current ({shortId(scorecard.id)}) against:</label>
+              <label className="text-xs">Compare current ({shortId(renderableScorecard.id)}) against:</label>
               <select
                 className="select text-xs py-1"
                 value={compareTargetId}
@@ -223,7 +364,7 @@ export function DatasetQualityScorecardView({
               >
                 <option value="">Select target assessment...</option>
                 {(listQuery.data || [])
-                  .filter((sc) => sc.id !== scorecard.id)
+                  .filter((sc) => sc.id !== renderableScorecard.id)
                   .map((sc) => (
                     <option key={sc.id} value={sc.id}>
                       Scorecard {shortId(sc.id)} · Score {sc.summary?.quality_score?.toFixed(1) ?? '—'} · {sc.status}
@@ -239,7 +380,7 @@ export function DatasetQualityScorecardView({
 
       {latestQuery.isLoading && <Loading />}
 
-      {scorecard && (
+      {renderableScorecard && (
         <>
           {/* Top Level Summary Scorecard */}
           <div className="grid gap-4 md:grid-cols-4">
@@ -249,14 +390,14 @@ export function DatasetQualityScorecardView({
                 <div className="mt-2 flex items-baseline gap-2">
                   <span
                     className={`text-4xl font-extrabold ${
-                      scorecard.summary.quality_score >= 85
+                      renderableScorecard.summary.quality_score >= 85
                         ? 'text-emerald-600'
-                        : scorecard.summary.quality_score >= 65
+                      : renderableScorecard.summary.quality_score >= 65
                         ? 'text-amber-500'
                         : 'text-rose-600'
                     }`}
                   >
-                    {scorecard.summary.quality_score.toFixed(1)}
+                    {renderableScorecard.summary.quality_score.toFixed(1)}
                   </span>
                   <span className="text-xs muted">/ 100.0</span>
                 </div>
@@ -270,13 +411,13 @@ export function DatasetQualityScorecardView({
               <div>
                 <span className="text-xs uppercase tracking-wider muted font-medium">OVERALL STATUS</span>
                 <div className="mt-2">
-                  <StatusChip status={scorecard.status} large />
+                <StatusChip status={renderableScorecard.status} large />
                 </div>
               </div>
               <p className="mt-2 text-xs muted">
-                {scorecard.status === 'PASS'
+                {renderableScorecard.status === 'PASS'
                   ? 'All critical quality gates passed.'
-                  : scorecard.status === 'WARN'
+                  : renderableScorecard.status === 'WARN'
                   ? 'Non-critical quality warnings detected.'
                   : 'Critical blockers present for ML training.'}
               </p>
@@ -286,13 +427,13 @@ export function DatasetQualityScorecardView({
               <div>
                 <span className="text-xs uppercase tracking-wider muted font-medium">CHECKS PASS RATE</span>
                 <div className="mt-2 text-2xl font-bold">
-                  {scorecard.summary.passed} / {scorecard.summary.total_checks}
+                  {renderableScorecard.summary.passed} / {renderableScorecard.summary.total_checks}
                 </div>
               </div>
               <div className="mt-2 flex gap-3 text-xs">
-                <span className="text-emerald-600 font-semibold">{scorecard.summary.passed} Pass</span>
-                <span className="text-amber-500 font-semibold">{scorecard.summary.warnings} Warn</span>
-                <span className="text-rose-600 font-semibold">{scorecard.summary.failed} Fail</span>
+                <span className="text-emerald-600 font-semibold">{renderableScorecard.summary.passed} Pass</span>
+                <span className="text-amber-500 font-semibold">{renderableScorecard.summary.warnings} Warn</span>
+                <span className="text-rose-600 font-semibold">{renderableScorecard.summary.failed} Fail</span>
               </div>
             </Card>
 
@@ -308,11 +449,11 @@ export function DatasetQualityScorecardView({
           </div>
 
           {/* Blockers & Limitations Notice */}
-          {scorecard.blocking_reasons.length > 0 && (
+          {criticalFindings.length > 0 && (
             <Notice tone="amber">
-              <strong className="block mb-1">Critical Blocking Findings ({scorecard.blocking_reasons.length}):</strong>
+              <strong className="block mb-1">Critical Blocking Findings ({criticalFindings.length}):</strong>
               <ul className="list-disc list-inside space-y-1 text-xs">
-                {scorecard.blocking_reasons.map((r, i) => (
+                {criticalFindings.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}
               </ul>
@@ -328,7 +469,7 @@ export function DatasetQualityScorecardView({
               All Domains (9)
             </button>
             {domainKeys.map((key) => {
-              const dom = scorecard.domains[key];
+              const dom = renderableScorecard.domains[key];
               return (
                 <button
                   key={key}
@@ -338,14 +479,14 @@ export function DatasetQualityScorecardView({
                   onClick={() => setActiveDomain(key)}
                 >
                   <DomainMiniIcon status={dom.status} />
-                  <span>{dom.title}</span>
-                  {dom.failures > 0 ? (
+                  <span>{dom.display_name}</span>
+                  {dom.failed_checks > 0 ? (
                     <span className="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] text-rose-500 font-bold">
-                      {dom.failures}
+                      {dom.failed_checks}
                     </span>
-                  ) : dom.warnings > 0 ? (
+                  ) : dom.warning_checks > 0 ? (
                     <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] text-amber-500 font-bold">
-                      {dom.warnings}
+                      {dom.warning_checks}
                     </span>
                   ) : null}
                 </button>
@@ -358,22 +499,21 @@ export function DatasetQualityScorecardView({
             {domainKeys
               .filter((key) => activeDomain === 'all' || activeDomain === key)
               .map((key) => {
-                const dom = scorecard.domains[key];
+                const dom = renderableScorecard.domains[key];
                 return <DomainCard key={key} domain={dom} />;
               })}
           </div>
 
           {/* Safe Schema Snapshot */}
-          {scorecard.schema_snapshot && (
+          {renderableScorecard.schema_snapshot && (
             <Card
               title="Safe Schema Snapshot & Feature Distribution"
               description="Aggregated metadata profile without exposure of patient-level rows or unaggregated records."
             >
               <div className="mb-4 flex flex-wrap gap-4 text-xs muted">
-                <span>Total Samples: <strong>{scorecard.schema_snapshot.total_rows.toLocaleString()}</strong></span>
-                <span>Total Features: <strong>{scorecard.schema_snapshot.feature_count}</strong></span>
-                <span>Target: <strong>{scorecard.schema_snapshot.target_column || 'None'}</strong></span>
-                <span>Positive Class: <strong>{scorecard.schema_snapshot.positive_label || 'None'}</strong></span>
+                <span>Total Samples: <strong>{renderableScorecard.schema_snapshot.total_rows.toLocaleString()}</strong></span>
+                <span>Total Features: <strong>{renderableScorecard.schema_snapshot.total_features}</strong></span>
+                <span>Target: <strong>{renderableScorecard.schema_snapshot.target_column || '—'}</strong></span>
               </div>
               <div className="table-wrap max-h-[380px] overflow-auto">
                 <table className="data-table text-xs">
@@ -388,22 +528,27 @@ export function DatasetQualityScorecardView({
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(scorecard.schema_snapshot.features).map(([name, prof]) => (
-                      <tr key={name}>
-                        <td className="font-semibold">{name}</td>
+                    {renderableScorecard.schema_snapshot.columns.map((prof) => (
+                      <tr key={prof.name}>
+                        <td className="font-semibold">{prof.name}</td>
                         <td><span className="mono">{prof.data_type}</span></td>
                         <td>
-                          {prof.missing_count} ({(prof.missing_percentage * 100).toFixed(1)}%)
+                          {prof.null_count} ({(prof.null_percentage * 100).toFixed(1)}%)
                         </td>
-                        <td>{prof.unique_count}</td>
+                        <td>{prof.distinct_count}</td>
                         <td>
-                          {prof.mean !== undefined && prof.mean !== null ? (
+                          {typeof prof.sample_stats.mean === 'number' ? (
                             <span className="mono">
-                              µ={prof.mean.toFixed(2)}, σ={prof.std?.toFixed(2) ?? '—'} [{prof.min ?? '—'}, {prof.max ?? '—'}]
+                              µ={prof.sample_stats.mean.toFixed(2)}, σ=
+                              {typeof prof.sample_stats.std === 'number'
+                                ? prof.sample_stats.std.toFixed(2)
+                                : '—'}{' '}
+                              [{String(prof.sample_stats.min ?? '—')}, {String(prof.sample_stats.max ?? '—')}]
                             </span>
-                          ) : prof.top_categories ? (
+                          ) : prof.sample_stats.top_categories &&
+                            typeof prof.sample_stats.top_categories === 'object' ? (
                             <span className="muted truncate max-w-[200px] inline-block">
-                              {Object.entries(prof.top_categories)
+                              {Object.entries(prof.sample_stats.top_categories as Record<string, unknown>)
                                 .slice(0, 3)
                                 .map(([k, v]) => `${k}:${v}`)
                                 .join(', ')}
@@ -414,7 +559,6 @@ export function DatasetQualityScorecardView({
                         </td>
                         <td>
                           {prof.is_constant && <Badge tone="amber">Constant</Badge>}
-                          {prof.is_identifier_candidate && <Badge tone="red">ID Candidate</Badge>}
                         </td>
                       </tr>
                     ))}
@@ -427,7 +571,7 @@ export function DatasetQualityScorecardView({
           {/* Methodological Boundaries */}
           <Card title="Scientific Limitations & Governance Boundary">
             <div className="space-y-2 text-xs">
-              {scorecard.limitations.map((lim, idx) => (
+              {renderableScorecard.limitations.map((lim, idx) => (
                 <div key={idx} className="flex items-start gap-2 text-muted">
                   <span className="text-amber-500">•</span>
                   <span>{lim}</span>
@@ -488,8 +632,8 @@ function SeverityBadge({ severity }: { severity: QualityCheckSeverity }) {
 function DomainCard({ domain }: { domain: QualityDomainResult }) {
   return (
     <Card
-      title={domain.title}
-      description={`Domain assessment: ${domain.passed} passed, ${domain.warnings} warnings, ${domain.failures} failures.`}
+      title={domain.display_name}
+      description={`Domain assessment: ${domain.passed_checks} passed, ${domain.warning_checks} warnings, ${domain.failed_checks} failures.`}
     >
       <div className="space-y-3">
         {domain.checks.map((check) => (
@@ -721,7 +865,7 @@ export function DatasetQualityPanel({
         </div>
         <div className="rounded border p-2">
           <span className="muted block">Features</span>
-          <strong>{sc.schema_snapshot?.feature_count ?? '—'}</strong>
+          <strong>{sc.schema_snapshot?.total_features ?? '—'}</strong>
         </div>
         <div className="rounded border p-2">
           <span className="muted block">Target Column</span>
@@ -730,11 +874,11 @@ export function DatasetQualityPanel({
       </div>
       <div className="space-y-2">
         {Object.values(sc.domains).slice(0, 4).map((dom) => (
-          <div key={dom.name} className="flex justify-between items-center border-b py-1.5 text-xs last:border-0">
-            <span className="font-medium">{dom.title}</span>
+          <div key={dom.domain} className="flex justify-between items-center border-b py-1.5 text-xs last:border-0">
+            <span className="font-medium">{dom.display_name}</span>
             <div className="flex items-center gap-1.5">
               <StatusChip status={dom.status} />
-              <span className="muted">{dom.passed}/{dom.checks.length} passed</span>
+              <span className="muted">{dom.passed_checks}/{dom.checks.length} passed</span>
             </div>
           </div>
         ))}
