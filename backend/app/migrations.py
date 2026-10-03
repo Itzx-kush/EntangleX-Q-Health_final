@@ -7,6 +7,7 @@ rename, or rewrite historical rows.
 
 from __future__ import annotations
 
+import json
 import logging
 from sqlalchemy import inspect, text
 
@@ -31,6 +32,7 @@ CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol
 RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
 DEEP_EXPERIMENT_LINEAGE_MIGRATION_ID = "20261003_11_deep_experiment_lineage"
 PIPELINE_VERSION_REGISTRY_MIGRATION_ID = "20261003_12_pipeline_version_registry"
+EXPERIMENT_PROTOCOLS_MIGRATION_ID = "20261003_13_experiment_protocols"
 
 
 
@@ -750,3 +752,134 @@ def apply_migrations() -> None:
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": PIPELINE_VERSION_REGISTRY_MIGRATION_ID, "applied_at": utcnow()},
             )
+
+        protocols_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID},
+        ).scalar()
+        if not protocols_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS protocol_templates (
+                    id VARCHAR(36) PRIMARY KEY,
+                    name VARCHAR(160) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    version VARCHAR(24) NOT NULL DEFAULT 'v1',
+                    status VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+                    task_type VARCHAR(64) NOT NULL DEFAULT 'binary_classification',
+                    canonical_definition JSON NOT NULL,
+                    parameters_schema JSON NOT NULL DEFAULT '{}',
+                    template_fingerprint VARCHAR(64) NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_protocol_template_name UNIQUE(name)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS experiment_protocols (
+                    id VARCHAR(36) PRIMARY KEY,
+                    name VARCHAR(160) NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    template_id VARCHAR(36) REFERENCES protocol_templates(id),
+                    source_context VARCHAR(48),
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_experiment_protocol_name UNIQUE(name)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS experiment_protocol_versions (
+                    id VARCHAR(36) PRIMARY KEY,
+                    protocol_id VARCHAR(36) NOT NULL REFERENCES experiment_protocols(id),
+                    version_number INTEGER NOT NULL,
+                    version_label VARCHAR(24) NOT NULL,
+                    schema_version VARCHAR(48) NOT NULL,
+                    status VARCHAR(24) NOT NULL DEFAULT 'DRAFT',
+                    description TEXT NOT NULL DEFAULT '',
+                    definition_fingerprint VARCHAR(64) NOT NULL,
+                    canonical_definition JSON NOT NULL,
+                    parent_protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id),
+                    template_id VARCHAR(36) REFERENCES protocol_templates(id),
+                    pipeline_version_id VARCHAR(36) REFERENCES pipeline_versions(id),
+                    controlled_comparison_protocol_id VARCHAR(36) REFERENCES controlled_comparison_protocols(id),
+                    artifact_id VARCHAR(36) REFERENCES artifacts(id),
+                    source_context VARCHAR(48),
+                    published_at DATETIME,
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_experiment_protocol_version_number UNIQUE(protocol_id, version_number),
+                    CONSTRAINT uq_experiment_protocol_version_fingerprint UNIQUE(definition_fingerprint)
+                )
+            """))
+            if "protocol_version_id" not in _columns(connection, "experiments"):
+                connection.execute(text(
+                    "ALTER TABLE experiments ADD COLUMN protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id)"
+                ))
+            if "protocol_fingerprint" not in _columns(connection, "experiments"):
+                connection.execute(text(
+                    "ALTER TABLE experiments ADD COLUMN protocol_fingerprint VARCHAR(64)"
+                ))
+            if "protocol_version_id" not in _columns(connection, "runs"):
+                connection.execute(text(
+                    "ALTER TABLE runs ADD COLUMN protocol_version_id VARCHAR(36) REFERENCES experiment_protocol_versions(id)"
+                ))
+            if "protocol_fingerprint" not in _columns(connection, "runs"):
+                connection.execute(text(
+                    "ALTER TABLE runs ADD COLUMN protocol_fingerprint VARCHAR(64)"
+                ))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_name ON protocol_templates(name)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_status ON protocol_templates(status)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_fingerprint ON protocol_templates(template_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_protocol_templates_created_at ON protocol_templates(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_name ON experiment_protocols(name)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_template_id ON experiment_protocols(template_id)",
+                "CREATE INDEX IF NOT EXISTS ix_experiment_protocols_created_at ON experiment_protocols(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_protocol_id ON experiment_protocol_versions(protocol_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_status ON experiment_protocol_versions(status)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_fingerprint ON experiment_protocol_versions(definition_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_parent_id ON experiment_protocol_versions(parent_protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_template_id ON experiment_protocol_versions(template_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_pipeline_ver_id ON experiment_protocol_versions(pipeline_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_controlled_id ON experiment_protocol_versions(controlled_comparison_protocol_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_artifact_id ON experiment_protocol_versions(artifact_id)",
+                "CREATE INDEX IF NOT EXISTS ix_exp_proto_ver_created_at ON experiment_protocol_versions(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_protocol_version_id ON experiments(protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_protocol_fingerprint ON experiments(protocol_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_runs_protocol_version_id ON runs(protocol_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_runs_protocol_fingerprint ON runs(protocol_fingerprint)",
+            ]:
+                connection.execute(text(statement))
+
+            # Seed default templates
+            from .protocols.templates import BUILTIN_TEMPLATES, _template_id
+            from .protocols.service import canonicalize_definition, definition_fingerprint
+            for tpl in BUILTIN_TEMPLATES:
+                canonical = canonicalize_definition(tpl["definition"])
+                t_fingerprint = definition_fingerprint(canonical)
+                t_id = _template_id(tpl["name"])
+                connection.execute(
+                    text("""
+                        INSERT OR IGNORE INTO protocol_templates (
+                            id, name, description, version, status, task_type,
+                            canonical_definition, parameters_schema, template_fingerprint, created_at
+                        ) VALUES (
+                            :id, :name, :description, :version, :status, :task_type,
+                            :canonical_definition, :parameters_schema, :template_fingerprint, :created_at
+                        )
+                    """),
+                    {
+                        "id": t_id,
+                        "name": tpl["name"],
+                        "description": tpl["description"],
+                        "version": tpl["version"],
+                        "status": "ACTIVE",
+                        "task_type": tpl["task_type"],
+                        "canonical_definition": json.dumps(canonical),
+                        "parameters_schema": json.dumps(tpl["parameters_schema"]),
+                        "template_fingerprint": t_fingerprint,
+                        "created_at": utcnow(),
+                    },
+                )
+
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": EXPERIMENT_PROTOCOLS_MIGRATION_ID, "applied_at": utcnow()},
+            )
+

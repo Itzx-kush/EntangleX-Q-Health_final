@@ -74,6 +74,163 @@ export function Experiments(){
 
 const lineageTone=(type:string):'blue'|'green'|'amber'|'purple'=>type==='experiment'?'purple':type.includes('dataset')?'green':type==='artifact'||type.includes('package')?'amber':'blue';
 
+export function ExperimentProtocolPanel({experimentId}:{experimentId:string}){
+  const qc=useQueryClient();
+  const protocol=useQuery({queryKey:['experiment-protocol',experimentId],queryFn:()=>qh.experimentProtocol(experimentId),retry:false});
+  const current=protocol.data?.status==='AVAILABLE'?protocol.data.protocol_version:null;
+  const compliance=useQuery({
+    queryKey:['experiment-protocol-compliance',experimentId],
+    queryFn:()=>qh.experimentProtocolCompliance(experimentId),
+    enabled:Boolean(current),
+    retry:false,
+  });
+  const protocols=useQuery({queryKey:['protocols'],queryFn:qh.protocols,enabled:Boolean(protocol.data)});
+  const templates=useQuery({queryKey:['protocol-templates'],queryFn:qh.protocolTemplates,enabled:Boolean(protocol.data)});
+  const [compareTo,setCompareTo]=useState('');
+  const diff=useQuery({
+    queryKey:['protocol-diff',current?.protocol_version_id,compareTo],
+    queryFn:()=>qh.protocolDiff(current!.protocol_version_id,compareTo),
+    enabled:Boolean(current&&compareTo),
+    retry:false,
+  });
+  const [attachId,setAttachId]=useState('');
+  const attach=useMutation({
+    mutationFn:(protoId:string)=>qh.attachProtocol(experimentId,protoId),
+    onSuccess:()=>{
+      qc.invalidateQueries({queryKey:['experiment-protocol',experimentId]});
+      qc.invalidateQueries({queryKey:['experiment-protocol-compliance',experimentId]});
+      qc.invalidateQueries({queryKey:['experiment',experimentId]});
+    }
+  });
+
+  const complianceTone=(status:string):'green'|'amber'|'red'|'blue'|'purple'=>{
+    switch(status){
+      case 'MATCHED':return 'green';
+      case 'MISSING':return 'amber';
+      case 'MISMATCHED':return 'red';
+      case 'NOT_APPLICABLE':return 'blue';
+      case 'UNVERIFIABLE':return 'purple';
+      default:return 'blue';
+    }
+  };
+
+  return <Card className="mt-5" title="Experiment Protocol" description="The explicit immutable experimental specification and verification checklist for this experiment.">
+    <ErrorBanner error={(protocol.error as Error)?.message||(compliance.error as Error)?.message||(diff.error as Error)?.message||(attach.error as Error)?.message}/>
+    {protocol.isLoading?<Loading/>:protocol.data?.status==='LEGACY_UNSPECIFIED'?<div>
+      <EmptyState title="Experiment protocol unavailable">{protocol.data.reason} Historical configuration remains accessible, but no protocol version is fabricated.</EmptyState>
+      {protocols.data&&protocols.data.length>0&&<div className="mt-4 rounded-xl border p-4">
+        <div className="metric-label">ATTACH PUBLISHED PROTOCOL</div>
+        <p className="mt-1 text-xs muted">Assign a published protocol version to this legacy experiment to record its experimental rules.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Select className="flex-1 min-w-[220px]" value={attachId} onChange={e=>setAttachId(e.target.value)}>
+            <option value="">Select published protocol</option>
+            {protocols.data.map(p=><option key={p.protocol_version_id} value={p.protocol_version_id}>{p.protocol_name} · {p.version}</option>)}
+          </Select>
+          <Button disabled={!attachId||attach.isPending} onClick={()=>attach.mutate(attachId)}>
+            {attach.isPending?'Attaching…':'Attach Protocol'}
+          </Button>
+        </div>
+      </div>}
+      {templates.data&&templates.data.length>0&&<div className="mt-4">
+        <JsonDisclosure label="Browse reusable research protocol templates" value={templates.data}/>
+      </div>}
+    </div>:current?<>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge value={current.status}/>
+        <Badge tone="purple">{current.version}</Badge>
+        <span className="text-sm font-semibold">{current.protocol_name}</span>
+        <span className="mono text-[10px] muted" title={current.definition_fingerprint}>{current.definition_fingerprint.slice(0,20)}…</span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div><span className="metric-label">PROTOCOL VERSION ID</span><strong className="mono block break-all text-[10px]">{current.protocol_version_id}</strong></div>
+        <div><span className="metric-label">SCHEMA</span><strong className="block text-xs">{current.schema_version}</strong></div>
+        <div><span className="metric-label">USED BY</span><strong className="block text-xs">{current.usage_count} experiment{current.usage_count===1?'':'s'}</strong></div>
+        <div><span className="metric-label">PUBLISHED</span><strong className="block text-xs">{current.published_at?dateTime(current.published_at):'Draft'}</strong></div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border p-3">
+          <div className="metric-label">STUDY &amp; DATASET</div>
+          <div className="mt-1 text-xs font-semibold">{String((current.study as any)?.task_type||'—')}</div>
+          <p className="mt-1 text-[11px] muted line-clamp-2">{String((current.study as any)?.study_purpose||'—')}</p>
+          <div className="mt-2 text-[10px] muted">Target: <span className="font-mono">{String((current.dataset as any)?.required_target_column||'—')}</span></div>
+        </div>
+        <div className="rounded-xl border p-3">
+          <div className="metric-label">SPLIT &amp; RANDOMNESS</div>
+          <div className="mt-1 text-xs font-semibold">{String((current.split as any)?.strategy||'—')}</div>
+          <div className="mt-1 text-[11px] muted">Folds: {String((current.split as any)?.cv_folds??'—')}</div>
+          <div className="mt-2 text-[10px] muted">Seeds: {Array.isArray((current.randomness as any)?.seed_list)?(current.randomness as any).seed_list.join(', '):String((current.randomness as any)?.primary_seed??'—')}</div>
+        </div>
+        <div className="rounded-xl border p-3">
+          <div className="metric-label">EVALUATION &amp; THRESHOLD</div>
+          <div className="mt-1 text-xs font-semibold">Primary: {String((current.evaluation as any)?.primary_metric||'—')}</div>
+          <div className="mt-1 text-[11px] muted">Threshold: {String((current.threshold as any)?.policy||'—')}</div>
+          <div className="mt-2 text-[10px] muted">Lock: {(current.threshold as any)?.lock?'Locked':'Unlocked'}</div>
+        </div>
+        <div className="rounded-xl border p-3">
+          <div className="metric-label">CALIBRATION &amp; CONTROLS</div>
+          <div className="mt-1 text-xs font-semibold">Calibration: {String((current.calibration as any)?.requirement||((current.calibration as any)?.required?'REQUIRED':'OPTIONAL'))}</div>
+          <div className="mt-1 text-[11px] muted">Quantum Controls: {(current.quantum_controls as any)?.controlled_comparison?'REQUIRED':'DISABLED'}</div>
+          <div className="mt-2 text-[10px] muted">Pipeline: {current.pipeline_version_id?current.pipeline_version_id.slice(0,12)+'…':'None'}</div>
+        </div>
+      </div>
+      <JsonDisclosure label="Open canonical protocol definition" value={current.canonical_definition}/>
+
+      {/* Compliance Checklist */}
+      <div className="mt-5 rounded-xl border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="metric-label">PROTOCOL COMPLIANCE VERIFICATION</div>
+            <p className="mt-0.5 text-xs muted">Factual evaluation against recorded experiment artifacts and metrics.</p>
+          </div>
+          {compliance.data?.compliance_summary&&<div className="flex flex-wrap gap-1">
+            <Badge tone="green">{compliance.data.compliance_summary.matched} MATCHED</Badge>
+            <Badge tone="amber">{compliance.data.compliance_summary.missing} MISSING</Badge>
+            {compliance.data.compliance_summary.mismatched>0&&<Badge tone="red">{compliance.data.compliance_summary.mismatched} MISMATCHED</Badge>}
+            {compliance.data.compliance_summary.not_applicable>0&&<Badge tone="blue">{compliance.data.compliance_summary.not_applicable} N/A</Badge>}
+            {compliance.data.compliance_summary.unverifiable>0&&<Badge tone="purple">{compliance.data.compliance_summary.unverifiable} UNVERIFIABLE</Badge>}
+          </div>}
+        </div>
+        {compliance.isLoading?<div className="mt-3"><Loading/></div>:compliance.data?.status==='AVAILABLE'?<div className="mt-3">
+          <div className="max-h-72 space-y-2 overflow-y-auto">
+            {compliance.data.checks.map((check,index)=><div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2 text-xs last:border-0" key={`${check.rule}-${index}`}>
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  <strong className="text-xs">{check.rule.replaceAll('_',' ')}</strong>
+                  <Badge tone={check.requirement==='REQUIRED'?'blue':check.requirement==='OPTIONAL'?'amber':'purple'}>{check.requirement}</Badge>
+                </div>
+                <p className="mt-1 text-[11px] muted">{check.details}</p>
+                <div className="mt-1 text-[10px] mono muted">Expected: {JSON.stringify(check.expected)} | Actual: {JSON.stringify(check.actual)}</div>
+              </div>
+              <Badge tone={complianceTone(check.status)}>{check.status}</Badge>
+            </div>)}
+          </div>
+          <p className="mt-3 text-[11px] muted">{compliance.data.interpretation}</p>
+        </div>:<EmptyState title="Compliance unavailable">{compliance.data?.reason||'No compliance record available.'}</EmptyState>}
+      </div>
+
+      {/* Protocol Version Diff */}
+      {(protocols.data?.filter(item=>item.protocol_version_id!==current.protocol_version_id).length||0)>0&&<div className="mt-4 rounded-xl border p-4">
+        <div className="metric-label">COMPARE PROTOCOL VERSION</div>
+        <Select className="mt-2" value={compareTo} onChange={event=>setCompareTo(event.target.value)}>
+          <option value="">Select a Protocol Version</option>
+          {protocols.data?.filter(item=>item.protocol_version_id!==current.protocol_version_id).map(item=><option key={item.protocol_version_id} value={item.protocol_version_id}>{item.protocol_name} · {item.version}</option>)}
+        </Select>
+        {diff.isLoading&&<Loading/>}
+        {diff.data&&<div className="mt-3">
+          <div className="flex flex-wrap gap-2">{diff.data.category_summaries.map(item=><Badge key={item.category} tone={item.status==='Unchanged'?'green':'amber'}>{item.category.replaceAll('_',' ')} · {item.status}</Badge>)}</div>
+          {diff.data.changes.length?<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{diff.data.changes.map((change,index)=><div className="border-b pb-2 text-xs last:border-0" key={`${change.category}-${change.field}-${index}`}><strong>{change.change_type}: {change.category.replaceAll('_',' ')} · {change.field}</strong><div className="mono mt-1 break-all text-[10px] muted">{JSON.stringify(change.before)} → {JSON.stringify(change.after)}</div></div>)}</div>:<p className="mt-2 text-xs muted">No protocol changes.</p>}
+          <p className="mt-2 text-xs muted">{diff.data.interpretation}</p>
+        </div>}
+      </div>}
+
+      {/* Templates Reference */}
+      {templates.data&&templates.data.length>0&&<JsonDisclosure label="Browse reusable research protocol templates" value={templates.data}/>}
+
+      <div className="mt-4 text-xs muted">{current.scientific_boundary}</div>
+    </>:<EmptyState title="Experiment protocol unavailable">No protocol registry response is available.</EmptyState>}
+  </Card>;
+}
+
 export function PipelineVersionPanel({experimentId}:{experimentId:string}){
   const pipeline=useQuery({queryKey:['experiment-pipeline',experimentId],queryFn:()=>qh.experimentPipeline(experimentId),retry:false});
   const versions=useQuery({queryKey:['pipelines'],queryFn:qh.pipelines,enabled:pipeline.data?.status==='AVAILABLE'});
@@ -215,6 +372,7 @@ export function ExperimentDetail(){
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <ExperimentProtocolPanel experimentId={id}/>
     <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>
     <ResearchEvidencePackagePanel experimentId={id}/>

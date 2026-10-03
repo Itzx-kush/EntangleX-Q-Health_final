@@ -287,6 +287,8 @@ class ExperimentOut(Schema):
     dataset_id: str
     parent_id: str | None
     pipeline_version_id: str | None = None
+    protocol_version_id: str | None = None
+    protocol_fingerprint: str | None = None
     status: str
     config: dict[str, Any]
     summary: dict[str, Any]
@@ -520,6 +522,8 @@ class RunOut(Schema):
     dataset_id: str
     dataset_version_id: str | None = None
     pipeline_version_id: str | None = None
+    protocol_version_id: str | None = None
+    protocol_fingerprint: str | None = None
     status: Literal["created", "queued", "running", "completed", "failed", "cancelled"]
     config: dict[str, Any]
     execution_metadata: dict[str, Any]

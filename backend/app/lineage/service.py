@@ -16,6 +16,8 @@ from ..storage.entities import (
     DatasetVersion,
     DistributionShiftAnalysis,
     Experiment,
+    ExperimentProtocol,
+    ExperimentProtocolVersion,
     ExplanationRecord,
     ExternalValidation,
     Job,
@@ -28,6 +30,7 @@ from ..storage.entities import (
     PipelineDefinition,
     PipelineStage,
     PipelineVersion,
+    ProtocolTemplate,
     QuantumDiagnosticReport,
     ResearchEvidencePackage,
     RobustnessRecord,
@@ -76,21 +79,28 @@ MODEL_BY_TYPE = {
     "pipeline_definition": PipelineDefinition,
     "pipeline_version": PipelineVersion,
     "pipeline_stage": PipelineStage,
+    "protocol_template": ProtocolTemplate,
+    "experiment_protocol": ExperimentProtocol,
+    "protocol_version": ExperimentProtocolVersion,
 }
 
 TYPE_BY_MODEL = {model: object_type for object_type, model in MODEL_BY_TYPE.items()}
 
 ALLOWED_RELATIONSHIPS = {
-    "has_version": {("dataset", "dataset_version")},
+    "has_version": {("dataset", "dataset_version"), ("experiment_protocol", "protocol_version")},
     "has_pipeline_version": {("pipeline_definition", "pipeline_version")},
     "has_stage": {("pipeline_version", "pipeline_stage")},
-    "derived_from": {("pipeline_version", "pipeline_version")},
+    "derived_from": {("pipeline_version", "pipeline_version"), ("protocol_version", "protocol_version")},
+    "instantiated_as": {("protocol_template", "protocol_version"), ("protocol_template", "experiment_protocol")},
+    "applied_to": {("protocol_version", "experiment"), ("protocol_version", "run")},
     "defines_pipeline": {("dataset_version", "pipeline_version")},
     "uses_pipeline": {
         ("pipeline_version", "experiment"), ("pipeline_version", "run"),
+        ("protocol_version", "pipeline_version"),
     },
     "references_protocol": {
         ("pipeline_version", "controlled_comparison_protocol"),
+        ("protocol_version", "controlled_comparison_protocol"),
     },
     "selected_by": {
         ("dataset", "experiment"), ("dataset_version", "experiment"),
@@ -133,6 +143,7 @@ ALLOWED_RELATIONSHIPS = {
     "included_in": {
         ("artifact", "research_evidence_package"),
         ("pipeline_version", "research_evidence_package"),
+        ("protocol_version", "research_evidence_package"),
         *((object_type, "research_evidence_package") for object_type in EVIDENCE_TYPES if object_type != "research_evidence_package"),
     },
     "represented_by": {("research_evidence_package", "artifact")},
@@ -283,16 +294,28 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
         add("pipeline_version", value.id, "controlled_comparison_protocol", value.controlled_comparison_protocol_id, "references_protocol")
     elif isinstance(value, PipelineStage):
         add("pipeline_version", value.pipeline_version_id, "pipeline_stage", value.id, "has_stage")
+    elif isinstance(value, ProtocolTemplate):
+        pass
+    elif isinstance(value, ExperimentProtocol):
+        add("protocol_template", value.template_id, "experiment_protocol", value.id, "instantiated_as")
+    elif isinstance(value, ExperimentProtocolVersion):
+        add("experiment_protocol", value.protocol_id, "protocol_version", value.id, "has_version")
+        add("protocol_template", value.template_id, "protocol_version", value.id, "instantiated_as")
+        add("protocol_version", value.parent_protocol_version_id, "protocol_version", value.id, "derived_from")
+        add("protocol_version", value.id, "pipeline_version", value.pipeline_version_id, "uses_pipeline")
+        add("protocol_version", value.id, "controlled_comparison_protocol", value.controlled_comparison_protocol_id, "references_protocol")
     elif isinstance(value, Experiment):
         version_id = (value.config or {}).get("dataset_version_id")
         add("dataset", value.dataset_id, "experiment", value.id, "selected_by")
         add("dataset_version", version_id, "experiment", value.id, "selected_by")
         add("pipeline_version", value.pipeline_version_id, "experiment", value.id, "uses_pipeline")
+        add("protocol_version", value.protocol_version_id, "experiment", value.id, "applied_to")
         add("experiment", value.parent_id, "experiment", value.id, "rerun_of", {"target_is_rerun": True})
     elif isinstance(value, Run):
         add("experiment", value.experiment_id, "run", value.id, "produced_run")
         add("dataset_version", value.dataset_version_id, "run", value.id, "selected_by")
         add("pipeline_version", value.pipeline_version_id, "run", value.id, "uses_pipeline")
+        add("protocol_version", value.protocol_version_id, "run", value.id, "applied_to")
     elif isinstance(value, Job):
         add("experiment", value.experiment_id, "job", value.id, "scheduled_as")
         add("run", value.run_id, "job", value.id, "scheduled_as")
@@ -368,6 +391,8 @@ def specs_for_object(value: Any) -> tuple[list[dict], list[dict]]:
         add("research_evidence_package", value.id, "artifact", value.artifact_id, "represented_by")
         pipeline_version_id = (value.manifest or {}).get("pipeline", {}).get("pipeline_version_id")
         add("pipeline_version", pipeline_version_id, "research_evidence_package", value.id, "included_in")
+        protocol_version_id = (value.manifest or {}).get("protocol", {}).get("protocol_version_id")
+        add("protocol_version", protocol_version_id, "research_evidence_package", value.id, "included_in")
         for artifact_id_value in (value.provenance or {}).get("artifact_ids", []):
             if artifact_id_value != value.artifact_id:
                 add("artifact", artifact_id_value, "research_evidence_package", value.id, "included_in")

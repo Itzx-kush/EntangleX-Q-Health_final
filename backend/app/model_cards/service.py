@@ -16,6 +16,7 @@ from ..storage.entities import (
     DatasetVersion,
     DistributionShiftAnalysis,
     Experiment,
+    ExperimentProtocolVersion,
     ExternalValidation,
     ModelRecord,
     MultiSeedStudy,
@@ -413,6 +414,10 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
         session.get(PipelineVersion, experiment.pipeline_version_id)
         if experiment and experiment.pipeline_version_id else None
     )
+    protocol_version = (
+        session.get(ExperimentProtocolVersion, experiment.protocol_version_id)
+        if experiment and experiment.protocol_version_id else None
+    )
     source_context_type = "live_run" if run else (
         "verified_demo_experiment"
         if (model.details or {}).get("experiment_kind") == "precomputed_verified_demo"
@@ -523,6 +528,12 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
             "version": pipeline_version.version_label if pipeline_version else None,
             "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
         },
+        "protocol": {
+            "status": "available" if protocol_version else MISSING,
+            "protocol_version_id": protocol_version.id if protocol_version else None,
+            "version": protocol_version.version_label if protocol_version else None,
+            "protocol_fingerprint": protocol_version.definition_fingerprint if protocol_version else None,
+        },
         "run_provenance": {
             "id": run.id,
             "configuration_fingerprint": run.configuration_fingerprint,
@@ -614,6 +625,8 @@ def assemble_card(session, model_id: str) -> tuple[dict, dict, list[Any]]:
             ),
             "pipeline_version_id": _value(pipeline_version.id if pipeline_version else None),
             "pipeline_fingerprint": _value(pipeline_version.definition_fingerprint if pipeline_version else None),
+            "protocol_version_id": _value(protocol_version.id if protocol_version else None),
+            "protocol_fingerprint": _value(protocol_version.definition_fingerprint if protocol_version else None),
             "run_id": _value(model.run_id), "experiment_id": model.experiment_id,
             "dataset_id": dataset.id, "dataset_version_id": _value(version.id if version else None),
             "dataset_hash": version.content_sha256 if version else dataset.sha256,

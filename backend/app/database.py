@@ -40,3 +40,5 @@ def init_db():
     install_lineage_capture()
     from .pipelines.immutability import install_pipeline_immutability
     install_pipeline_immutability()
+    from .protocols.immutability import install_protocol_immutability
+    install_protocol_immutability()

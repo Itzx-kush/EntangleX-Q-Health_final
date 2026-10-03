@@ -14,7 +14,7 @@ from ..api.schemas import TrainingConfig
 from ..data.splitting import PreparedData
 from ..database import session_scope
 from ..evaluation.metrics import METRIC_NAMES
-from ..storage.entities import Artifact, Dataset, DatasetVersion, Experiment, Job, ModelRecord, PipelineVersion, Run
+from ..storage.entities import Artifact, Dataset, DatasetVersion, Experiment, Job, ModelRecord, PipelineVersion, Run, ExperimentProtocolVersion
 from ..storage.repository import require
 from ..utils.errors import AppError
 from ..utils.serialization import canonical_json_bytes, fingerprint, software_versions, utcnow
@@ -129,6 +129,12 @@ def build_manifest(
         if bound_session is not None and pipeline_version_id
         else None
     )
+    protocol_version_id = run.protocol_version_id or experiment.protocol_version_id
+    protocol_version = (
+        bound_session.get(ExperimentProtocolVersion, protocol_version_id)
+        if bound_session is not None and protocol_version_id
+        else None
+    )
     schema_fingerprint = fingerprint({
         "features": data.features,
         "numeric": data.numeric,
@@ -155,6 +161,8 @@ def build_manifest(
             "parent_experiment_id": experiment.parent_id,
             "pipeline_version_id": pipeline_version_id,
             "pipeline_fingerprint": pipeline_version.definition_fingerprint if pipeline_version else None,
+            "protocol_version_id": protocol_version_id,
+            "protocol_fingerprint": protocol_version.definition_fingerprint if protocol_version else None,
         },
         "dataset": {
             "dataset_id": data.dataset.id,
