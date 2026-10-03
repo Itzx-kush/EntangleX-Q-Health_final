@@ -17,6 +17,7 @@ from ..runs.service import create_run, transition
 from ..storage.entities import Experiment, Job, ModelRecord, Run
 from ..storage.files import atomic_bytes, safe_path, save_model
 from ..storage.repository import require
+from backend.app.readiness.service import evaluate_condition_task_readiness
 from ..utils.errors import AppError, CancelledError
 from ..utils.serialization import clean_json, fingerprint, software_versions, utcnow
 
@@ -100,6 +101,15 @@ class TrainingManager:
                 }
 
     def enqueue(self, config: TrainingConfig, parent_id: str | None = None, idempotency_key: str | None = None):
+        if config.condition_task_id:
+            with session_scope() as session:
+                readiness = evaluate_condition_task_readiness(session, str(config.condition_task_id))
+                if readiness.status in ("BLOCKED", "INCOMPLETE_CONFIGURATION"):
+                    raise AppError(
+                        "task_blocked",
+                        f"ConditionTask is not ready for training. Status: {readiness.status}",
+                        422,
+                    )
         job, experiment, _run = self._enqueue(config, parent_id=parent_id, idempotency_key=idempotency_key)
         return job, experiment
 
