@@ -7,6 +7,13 @@ from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_pac
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
 from ..experiments.lifecycle import archive_experiment
+from ..evidence_packages.service import (
+    create_package,
+    latest_package,
+    package_payload,
+    preflight_package,
+    specific_package,
+)
 from ..evaluation.robustness import evaluate_robustness, list_robustness
 from ..jobs.manager import manager
 from ..storage.entities import Experiment, ModelRecord, Job
@@ -66,6 +73,63 @@ def verified_evidence(identity: UUID):
                 "evidence": checked["evidence"],
             }
     raise AppError("verified_evidence_not_found", "This experiment is not a packaged verified demonstration.", 404)
+
+
+@router.post("/{identity}/evidence-package/preflight", response_model=dict)
+def evidence_package_preflight(identity: UUID):
+    """Validate package feasibility without creating records or artifacts."""
+    with session_scope() as session:
+        return preflight_package(session, str(identity))
+
+
+@router.post("/{identity}/evidence-package", response_model=dict)
+def generate_evidence_package(identity: UUID):
+    """Create or return the immutable package for the current evidence state."""
+    with session_scope() as session:
+        package, created = create_package(session, str(identity))
+        return {**package_payload(session, package), "created": created}
+
+
+@router.get("/{identity}/evidence-package", response_model=dict)
+def get_latest_evidence_package(identity: UUID):
+    with session_scope() as session:
+        return package_payload(session, latest_package(session, str(identity)))
+
+
+@router.get("/{identity}/evidence-package/{package_id}", response_model=dict)
+def get_evidence_package(identity: UUID, package_id: UUID):
+    with session_scope() as session:
+        return package_payload(session, specific_package(session, str(identity), str(package_id)))
+
+
+@router.get("/{identity}/evidence-package/{package_id}/provenance", response_model=dict)
+def get_evidence_package_provenance(identity: UUID, package_id: UUID):
+    with session_scope() as session:
+        package = specific_package(session, str(identity), str(package_id))
+        payload = package_payload(session, package)
+        return {
+            "package_id": package.id,
+            "package_fingerprint": package.package_fingerprint,
+            "source_context": payload["source_context"],
+            "provenance": package.provenance,
+            "integrity": payload["integrity"],
+            "artifact": payload["artifact"],
+        }
+
+
+@router.get("/{identity}/evidence-package/{package_id}/download")
+def download_evidence_package(identity: UUID, package_id: UUID):
+    import json
+    with session_scope() as session:
+        payload = package_payload(session, specific_package(session, str(identity), str(package_id)))
+    return Response(
+        json.dumps(payload, indent=2),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="qhealth-evidence-package-{package_id}.json"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 @router.post("/{identity}/robustness", response_model=dict)
 def run_robustness(identity: UUID, request: RobustnessRequest):

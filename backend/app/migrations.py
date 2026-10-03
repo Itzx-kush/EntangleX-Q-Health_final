@@ -28,6 +28,7 @@ EXPERIMENT_LIFECYCLE_MIGRATION_ID = "20261003_06_experiment_registry_lifecycle"
 RESUMABLE_JOBS_MIGRATION_ID = "20261003_07_resumable_job_execution"
 EVALUATION_CONTEXT_MIGRATION_ID = "20261003_08_evaluation_context_provenance"
 CONTROLLED_COMPARISON_MIGRATION_ID = "20261003_09_controlled_comparison_protocol"
+RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID = "20261003_10_research_evidence_packages"
 
 
 
@@ -577,4 +578,44 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": CONTROLLED_COMPARISON_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        evidence_package_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID},
+        ).scalar()
+        if not evidence_package_applied:
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS research_evidence_packages (
+                    id VARCHAR(36) PRIMARY KEY,
+                    experiment_id VARCHAR(36) NOT NULL REFERENCES experiments(id),
+                    schema_version VARCHAR(48) NOT NULL,
+                    status VARCHAR(24) NOT NULL,
+                    package_fingerprint VARCHAR(64) NOT NULL,
+                    configuration_fingerprint VARCHAR(64),
+                    source_context_type VARCHAR(40) NOT NULL,
+                    evidence_inventory JSON NOT NULL DEFAULT '{}',
+                    provenance JSON NOT NULL DEFAULT '{}',
+                    limitations JSON NOT NULL DEFAULT '[]',
+                    evidence_gaps JSON NOT NULL DEFAULT '[]',
+                    manifest JSON NOT NULL DEFAULT '{}',
+                    artifact_id VARCHAR(36) NOT NULL REFERENCES artifacts(id),
+                    created_at DATETIME NOT NULL,
+                    CONSTRAINT uq_research_evidence_package_snapshot
+                        UNIQUE(experiment_id, package_fingerprint)
+                )
+            """))
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_experiment_id ON research_evidence_packages(experiment_id)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_fingerprint ON research_evidence_packages(package_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_status ON research_evidence_packages(status)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_configuration_fingerprint ON research_evidence_packages(configuration_fingerprint)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_source_context_type ON research_evidence_packages(source_context_type)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_artifact_id ON research_evidence_packages(artifact_id)",
+                "CREATE INDEX IF NOT EXISTS ix_research_evidence_packages_created_at ON research_evidence_packages(created_at)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": RESEARCH_EVIDENCE_PACKAGE_MIGRATION_ID, "applied_at": utcnow()},
             )
