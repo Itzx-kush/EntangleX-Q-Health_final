@@ -1,34 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
-from ..database import Base
-from ..utils.serialization import utcnow
-
-def new_id() -> str:
-    return str(uuid4())
-class Dataset(Base):
-    __tablename__ = "datasets"
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    name: Mapped[str] = mapped_column(String(160))
-    filename: Mapped[str] = mapped_column(String(200))
-    sha256: Mapped[str] = mapped_column(String(64))
-    provenance: Mapped[dict] = mapped_column(JSON)
-    quality: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    current_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
-class DatasetVersion(Base):
-    """Immutable concrete snapshot belonging to a logical Dataset."""
-    __tablename__ = "dataset_versions"
-    __table_args__ = (
-        UniqueConstraint("dataset_id", "version_number", name="uq_dataset_versions_number"),
-        UniqueConstraint("dataset_id", "version_signature", name="uq_dataset_versions_signature"),
-    )
-    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
-    version_number: Mapped[int] = mapped_column(Integer)
-from datetime import datetime
-from uuid import uuid4
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from ..database import Base
 from ..utils.serialization import utcnow
@@ -716,3 +688,54 @@ class ExperimentProtocolVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
+
+class ScientificAuditEvent(Base):
+    __tablename__ = "scientific_audit_events"
+    __table_args__ = (
+        Index("ix_audit_events_object_type_id", "object_type", "object_id"),
+        Index("ix_audit_events_parent_object_id", "parent_object_type", "parent_object_id"),
+        Index("ix_audit_events_occurred_at_id", "occurred_at", "id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    schema_version: Mapped[str] = mapped_column(String(32), default="scientific_audit_event_v1")
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    event_category: Mapped[str] = mapped_column(String(32), index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    actor_type: Mapped[str] = mapped_column(String(24), default="SYSTEM")
+    actor_reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source_component: Mapped[str] = mapped_column(String(64), index=True)
+    operation_key: Mapped[str | None] = mapped_column(String(240), nullable=True, index=True)
+    object_type: Mapped[str] = mapped_column(String(48), index=True)
+    object_id: Mapped[str] = mapped_column(String(64), index=True)
+    parent_object_type: Mapped[str | None] = mapped_column(String(48), nullable=True, index=True)
+    parent_object_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    before_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    after_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    previous_event_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    event_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    metadata_payload: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+
+class SubgroupAnalysisStudy(Base):
+    __tablename__ = "subgroup_analysis_studies"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    schema_version: Mapped[str] = mapped_column(String(32), default="subgroup_analysis_v1")
+    experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
+    model_id: Mapped[str] = mapped_column(ForeignKey("models.id"), index=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="created", index=True)
+    operation_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    definition_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    subgroup_field: Mapped[str] = mapped_column(String(100), index=True)
+    configuration: Mapped[dict] = mapped_column(JSON, default=dict)
+    overall_population: Mapped[dict] = mapped_column(JSON, default=dict)
+    subgroups_results: Mapped[list] = mapped_column(JSON, default=list)
+    comparisons: Mapped[list] = mapped_column(JSON, default=list)
+    limitations: Mapped[list] = mapped_column(JSON, default=list)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True, index=True)
+    failure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

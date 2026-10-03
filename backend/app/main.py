@@ -1,5 +1,3 @@
-
-
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -101,7 +99,7 @@ def health():
 
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
 from .api import calibration, threshold, subgroups
-for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router]:
+for router in [ai.router, audit.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, subgroups.router]:
     api.include_router(router)
 
 @api.get("/summary", tags=["dashboard"])
