@@ -281,7 +281,8 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       </section>
 
       <section id="about" className="public-final public-shell" data-public-reveal>
-        <div>
+        <div className="public-final-copy">
+          <BorderGlow className="public-final-access-badge"><span>RESEARCH ACCESS / CONTROLLED ENTRY</span></BorderGlow>
           <p className="public-eyebrow"><span>07</span> Enter the platform</p>
           <h2>Enter the EntangleX Research Workspace.</h2>
           <p>Explore the existing research environment, authenticated workspace features and verified workflows.</p>
