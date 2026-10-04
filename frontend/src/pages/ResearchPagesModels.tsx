@@ -453,7 +453,7 @@ export function Quantum(){
 
 export function Explainability(){
  const demo=useVerifiedDemo();
- return demo.active?<VerifiedExplainability/>:<LiveExplainability/>;
+ return <div className="layer3-final-workspace layer3-explainability-workspace">{demo.active?<VerifiedExplainability/>:<LiveExplainability/>}</div>;
 }
 function LiveExplainability(){
  const {draft}=useDraft();
@@ -484,7 +484,7 @@ function LiveExplainability(){
 
 export function PredictionPage(){
  const demo=useVerifiedDemo();
- return demo.active?<VerifiedPrediction/>:<LivePredictionPage/>;
+ return <div className="layer3-final-workspace layer3-prediction-workspace">{demo.active?<VerifiedPrediction/>:<LivePredictionPage/>}</div>;
 }
 function LivePredictionPage(){
  const {draft}=useDraft();
