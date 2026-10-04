@@ -482,7 +482,7 @@
 .public-final-access-badge>span{display:block;padding:7px 11px;border-radius:999px;background:rgba(8,8,12,.82);color:#b9afda;font-size:8px;font-weight:780;letter-spacing:.17em}
 
 @keyframes public-network-node{to{transform:translate3d(5px,-4px,0) scale(.72);opacity:.44}}
-@keyframes public-network-link{50%{opacity:.3;transform:translate3d(7px,-4px,0) rotate(var(--link-rotate,0deg))}100%{opacity:.7}}
+@keyframes public-network-link{50%{opacity:.3;transform:translate3d(7px,-4px,0)}100%{opacity:.7}}
 @keyframes public-mark-breathe{50%{transform:scale(1.035);filter:drop-shadow(0 0 12px rgba(155,135,255,.18))}}
 @keyframes public-signal-travel{0%{transform:translate3d(-8px,0,0);opacity:.15}22%{opacity:.92}100%{transform:translate3d(18px,-8px,0);opacity:.08}}
 @keyframes public-pipeline-pulse{0%{box-shadow:0 0 0 0 rgba(155,135,255,.35)}70%{box-shadow:0 0 0 10px rgba(155,135,255,0)}100%{box-shadow:0 0 0 0 rgba(155,135,255,0)}}
