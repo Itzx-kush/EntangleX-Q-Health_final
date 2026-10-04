@@ -179,7 +179,7 @@ export function QuantumCircuitExplorer({
             >
               {multi&&<line x1={x} x2={x} y1={upper} y2={lower} className="ql-gate-connector"/>}
               {controls.length>0&&targets.length>0?<>
-                {controls.map(qubit=><circle key={'control-'+qubit} cx={x} cy={yFor(qubit)} r="5" className="ql-gate-control"/>}
+                {controls.map(qubit=><circle key={'control-'+qubit} cx={x} cy={yFor(qubit)} r="5" className="ql-gate-control"/>)}
                 {targets.map((qubit,targetIndex)=><g key={'target-'+qubit}>
                   <rect x={x-20} y={yFor(qubit)-13} width="40" height="26" rx="5" className="ql-gate-box"/>
                   <text x={x} y={yFor(qubit)+3} textAnchor="middle" className="ql-gate-name">{targetIndex===0?displayGateName(gate.name):'×'}</text>
