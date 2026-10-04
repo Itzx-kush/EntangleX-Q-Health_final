@@ -3,6 +3,7 @@ import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {MemoryRouter} from 'react-router-dom';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {DraftProvider} from '../hooks/useDraft';
+import {VerifiedDemoProvider} from '../hooks/useVerifiedDemo';
 import {Quantum} from '../pages/ResearchPagesModels';
 import {qh} from '../lib/api';
 import {QuantumCircuitExplorer} from '../components/quantum/QuantumCircuitExplorer';
@@ -146,5 +147,28 @@ describe('Quantum Lab visualization contract components',()=>{
   fireEvent.change(modelSelect,{target:{value:'model-1'}});
   const reportLink=await screen.findByRole('link',{name:'Experiment report'});
   expect(reportLink).toHaveAttribute('href','/experiments/experiment-1');
+ });
+ it('automatically surfaces the verified demo circuit in the shared Quantum Lab workspace',async()=>{
+  localStorage.clear();
+  localStorage.setItem('qhealth-verified-demo-context',JSON.stringify({active:true,experimentId:'experiment-verified',datasetId:'dataset-verified'}));
+  vi.clearAllMocks();
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([{
+   id:'model-vqc',experiment_id:'experiment-verified',dataset_id:'dataset-verified',model_type:'vqc',status:'ready',
+   details:{quantum:{circuit:{model_type:'vqc',execution_kind:'exact local quantum simulation',backend:'statevector',qubits:4,logical_depth:2,parameter_count:1,gate_counts:{H:1,CX:1},text:'H q[0] · CX q[0],q[1]',limitation:'Persisted logical circuit evidence.',gates:[{name:'H',qubits:[0],parameters:[]},{name:'CX',qubits:[0,1],parameters:[]}]}}},
+   metrics:{test:{},validation:{summary:{}},timing:{}}
+  }] as never);
+  vi.mocked(qh.experiments).mockResolvedValue([{id:'experiment-verified',dataset_id:'dataset-verified',created_at:'2026-10-01T00:00:00Z',config:{quantum:{qubits:4,shots:1024},hybrid:{}}}] as never);
+  vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-verified',name:'Early Stage Diabetes Risk Prediction'}] as never);
+  vi.mocked(qh.dataset).mockResolvedValue({id:'dataset-verified',name:'Early Stage Diabetes Risk Prediction',provenance:{name:'Early Stage Diabetes Risk Prediction'}} as never);
+  vi.mocked(qh.quantum_diagnostics_by_run).mockResolvedValue(null as never);
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><VerifiedDemoProvider><Quantum/></VerifiedDemoProvider></DraftProvider></MemoryRouter></QueryClientProvider>);
+  expect(await screen.findByText('VERIFIED DEMO')).toBeInTheDocument();
+  expect(screen.getByText('PRECOMPUTED / REPRODUCIBLE')).toBeInTheDocument();
+  expect(await screen.findByRole('region',{name:'Interactive backend circuit explorer'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/Operation 1: H/})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/Operation 2: CX/})).toBeInTheDocument();
+  expect(screen.getByText(/Persisted fitted circuit · operation order from backend|Fitted model · operation order from backend/)).toBeInTheDocument();
  });
 });
