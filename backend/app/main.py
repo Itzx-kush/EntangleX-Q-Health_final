@@ -42,7 +42,13 @@ logger.propagate = False
 async def lifespan(app: FastAPI):
     validate_readiness_configuration()
     init_db()
-    install_verified_demo_artifacts()
+    try:
+        install_verified_demo_artifacts()
+    except AppError as exc:
+        # A persistent Render disk may contain stale verified-demo registry state.
+        # Do not brick the entire API process; request-time recovery can reconcile
+        # the immutable packaged demo after the database is available.
+        logger.warning("verified_demo_startup_recovery_required code=%s", exc.code)
     ensure_legacy_versions()
     manager.start()
     logger.info("application_started mode=single_workstation_research")
