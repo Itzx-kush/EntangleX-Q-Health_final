@@ -101,4 +101,4 @@ def test_render_blueprint_declares_persistent_runtime_disk():
     assert "setpriv" in script and "setuid" in script
     assert ".qhealth_permissions_initialized" in script
     assert "chown -R" in script
-    assert "chown "$+"APP_USER:$APP_USER" "$+"RUNTIME" "$+"RUNTIME/data"" in script
+    assert 'chown "$APP_USER:$APP_USER" "$RUNTIME" "$RUNTIME/data"' in script
