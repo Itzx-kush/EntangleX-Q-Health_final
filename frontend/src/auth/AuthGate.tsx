@@ -7,7 +7,7 @@ import {LogoIntro} from '../components/LogoIntro';
 import {PublicExperience} from '../components/PublicExperience';
 import {QuantumNetworkBackground} from '../components/QuantumNetworkBackground';
 import {usePointerMotion} from '../components/motion/usePointerMotion';
-import {DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,SplitReveal} from '../components/reactbits';
+import {BorderGlow,DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,ShinyText,SplitReveal} from '../components/reactbits';
 import './auth.css';
 
 function applyStoredTheme(){
@@ -48,6 +48,42 @@ function AccessTransition({guest}:{guest:boolean}){
     <p>{guest?'Preparing the existing research prototype.':'Restoring your research environment…'}</p>
     <div className="auth-transition-lockup"><img src="/entanglex-logo-dark.svg" alt="EntangleX"/><b>Q-HEALTH</b></div>
     <div className="auth-transition-line" aria-hidden="true"><i/></div>
+  </div>;
+}
+
+type PublicTransitionPhase='idle'|'intent'|'accelerate'|'converge'|'core'|'handoff';
+
+function ResearchEntryTransition({phase}:{phase:Exclude<PublicTransitionPhase,'idle'>}){
+  return <div className={'research-entry-transition is-'+phase} role="status" aria-live="polite" aria-label="Entering EntangleX Q-Health research access" aria-busy="true">
+    <OuterAurora/>
+    <div className="research-entry-grid" aria-hidden="true"/>
+    <div className="research-entry-vignette" aria-hidden="true"/>
+    <div className="research-entry-network" aria-hidden="true">
+      {Array.from({length:20},(_,index)=><i key={index}/>)}
+      <span className="entry-network-line line-a"/>
+      <span className="entry-network-line line-b"/>
+      <span className="entry-network-line line-c"/>
+      <span className="entry-network-line line-d"/>
+      <span className="entry-network-line line-e"/>
+    </div>
+    <div className="research-entry-core-field" aria-hidden="true">
+      <span className="core-orbit orbit-a"/>
+      <span className="core-orbit orbit-b"/>
+      <span className="core-orbit orbit-c"/>
+      <span className="core-pulse"/>
+    </div>
+    <BorderGlow className="research-entry-core">
+      <div className="research-entry-core-inner">
+        <img src="/entanglex-mark.svg" alt="" aria-hidden="true"/>
+        <ShinyText>ENTANGLEX CORE</ShinyText>
+      </div>
+    </BorderGlow>
+    <div className="research-entry-copy">
+      <span><DecryptedText text="PUBLIC DISCOVERY / RESEARCH ACCESS"/></span>
+      <h2>Entering the research system.</h2>
+      <p>Converging the public research field into EntangleX access.</p>
+    </div>
+    <div className="research-entry-handoff" aria-hidden="true"><i/></div>
   </div>;
 }
 
@@ -162,7 +198,8 @@ export function AuthGate({children}:{children:ReactNode}){
   const [workspaceReady,setWorkspaceReady]=useState(false);
   const [accessKind,setAccessKind]=useState<'google'|'github'|'guest'|null>(null);
   const [publicExiting,setPublicExiting]=useState(false);
-  const publicTransitionTimer=useRef<number|null>(null);
+  const [publicTransitionPhase,setPublicTransitionPhase]=useState<PublicTransitionPhase>('idle');
+  const publicTransitionTimers=useRef<number[]>([]);
 
   useLayoutEffect(()=>{
     applyStoredTheme();
@@ -184,31 +221,63 @@ export function AuthGate({children}:{children:ReactNode}){
     const timer=window.setTimeout(()=>setWorkspaceReady(true),delay);
     return()=>window.clearTimeout(timer);
   },[isAuthenticated,isGuest,accessKind]);
-  useEffect(()=>()=>{if(publicTransitionTimer.current!==null)window.clearTimeout(publicTransitionTimer.current)},[]);
+  useEffect(()=>()=>{publicTransitionTimers.current.forEach(timer=>window.clearTimeout(timer));publicTransitionTimers.current=[]},[]);
 
   if(loading)return <AuthLoading/>;
   const intro=<LogoIntro/>;
 
   if(!isAuthenticated&&!isGuest){
     const requestAccess=(destination='/')=>{
-      if(destination!==window.location.pathname)navigate(destination);
       if(publicExiting)return;
+      publicTransitionTimers.current.forEach(timer=>window.clearTimeout(timer));
+      publicTransitionTimers.current=[];
+      if(destination!==window.location.pathname)navigate(destination);
       setPublicExiting(true);
+      setPublicTransitionPhase('intent');
       const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      publicTransitionTimer.current=window.setTimeout(()=>{
-        setShowAccess(true);
-        setPublicExiting(false);
-        window.scrollTo({top:0,behavior:'auto'});
-      },reduced?40:460);
+      if(reduced){
+        publicTransitionTimers.current=[
+          window.setTimeout(()=>setPublicTransitionPhase('handoff'),60),
+          window.setTimeout(()=>{
+            setShowAccess(true);
+            window.scrollTo({top:0,behavior:'auto'});
+          },120),
+          window.setTimeout(()=>{
+            setPublicExiting(false);
+            setPublicTransitionPhase('idle');
+          },220),
+        ];
+        return;
+      }
+      publicTransitionTimers.current=[
+        window.setTimeout(()=>setPublicTransitionPhase('accelerate'),100),
+        window.setTimeout(()=>setPublicTransitionPhase('converge'),270),
+        window.setTimeout(()=>setPublicTransitionPhase('core'),440),
+        window.setTimeout(()=>setPublicTransitionPhase('handoff'),590),
+        window.setTimeout(()=>{
+          setShowAccess(true);
+          window.scrollTo({top:0,behavior:'auto'});
+        },650),
+        window.setTimeout(()=>{
+          setPublicExiting(false);
+          setPublicTransitionPhase('idle');
+        },820),
+      ];
     };
     const backToPublic=()=>{
+      publicTransitionTimers.current.forEach(timer=>window.clearTimeout(timer));
+      publicTransitionTimers.current=[];
       if(window.location.pathname!=='/')navigate('/');
       setShowAccess(false);
       setPublicExiting(false);
+      setPublicTransitionPhase('idle');
       setAccessKind(null);
       window.scrollTo({top:0,behavior:'auto'});
     };
-    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onOAuthStart={setAccessKind}/>:<PublicExperience exiting={publicExiting} onRequestAccess={requestAccess}/>}</>;
+    const showResearchEntryTransition=publicExiting||publicTransitionPhase!=='idle';
+    return <>{intro}{showAccess?<Welcome onBack={backToPublic} onOAuthStart={setAccessKind}/>:<PublicExperience exiting={publicExiting} onRequestAccess={requestAccess}/>}
+      {showResearchEntryTransition&&publicTransitionPhase!=='idle'&&<ResearchEntryTransition phase={publicTransitionPhase}/>}
+    </>;
   }
 
   const guestAccess=accessKind==='guest'||isGuest;
