@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, Query, Response
 from sqlalchemy import select
 from ..database import session_scope
-from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
+from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, ensure_verified_demo_installed, validate_packaged_dataset
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
 from ..experiments.pdf_reports import pdf_report
@@ -47,10 +47,16 @@ def delete_experiment(identity: UUID):
 
 @router.get("/{identity}", response_model=ExperimentDetailOut)
 def get_experiment(identity: UUID):
+    identity_str = str(identity)
     with session_scope() as session:
-        return {"experiment": require(session, Experiment, str(identity)),
-            "models": list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == str(identity)))),
-            "jobs": list(session.scalars(select(Job).where(Job.experiment_id == str(identity))))}
+        exists = session.get(Experiment, identity_str) is not None
+    if not exists:
+        ensure_verified_demo_installed(identity_str)
+    with session_scope() as session:
+        experiment = require(session, Experiment, identity_str)
+        return {"experiment": experiment,
+            "models": list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity_str))),
+            "jobs": list(session.scalars(select(Job).where(Job.experiment_id == identity_str)))}
 
 
 @router.get("/{identity}/lineage", response_model=dict)
@@ -205,6 +211,11 @@ def rerun(identity: UUID):
 def export_report(identity: UUID, format: Literal["html", "json", "pdf"] = "html"):
     import json
     from ..utils.serialization import clean_json
+    identity_str = str(identity)
+    with session_scope() as session:
+        exists = session.get(Experiment, identity_str) is not None
+    if not exists:
+        ensure_verified_demo_installed(identity_str)
     if format == "json":
         content, media_type, suffix = json.dumps(clean_json(report_data(str(identity))), indent=2), "application/json", "json"
     elif format == "pdf":

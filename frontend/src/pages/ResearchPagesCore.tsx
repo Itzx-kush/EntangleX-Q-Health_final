@@ -105,8 +105,8 @@ export function Overview(){
 export function Datasets(){
  const {draft,selectDataset,clearDataset}=useDraft();
  const demo=useVerifiedDemo();
- const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets});
- const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary});
+ const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,retry:2,refetchOnReconnect:true});
+ const library=useQuery({queryKey:['dataset-library'],queryFn:qh.datasetLibrary,retry:2,refetchOnReconnect:true});
  const qc=useQueryClient();
  const [selected,setSelected]=useState<Dataset|null>(null);
  const [file,setFile]=useState<File|null>(null);
@@ -122,7 +122,8 @@ export function Datasets(){
 };
  const builtIn=useMutation({
   mutationFn:(slug:string)=>qh.registerBuiltIn(slug),
-  onSuccess:dataset=>{choose(dataset);qc.invalidateQueries({queryKey:['datasets']})},
+  retry:2,
+  onSuccess:dataset=>{choose(dataset);qc.invalidateQueries({queryKey:['datasets']});qc.invalidateQueries({queryKey:['summary']});qc.invalidateQueries({queryKey:['system-status']})},
  });
  const remove=useMutation({mutationFn:qhDelete,onSuccess:id=>{clearDataset(id);setSelected(current=>current?.id===id?null:current);qc.invalidateQueries({queryKey:['datasets']})}});
  async function qhDelete(id:string){await api.remove('/datasets/' + id);return id}
