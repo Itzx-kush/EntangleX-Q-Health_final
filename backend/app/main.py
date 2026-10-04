@@ -130,16 +130,28 @@ def summary():
 @api.get("/system/status", tags=["dashboard"])
 def system_status():
     """Expose safe, read-only runtime facts for the research workspace shell."""
-    with session_scope() as session:
-        jobs = list(session.scalars(select(Job)))
-        database_available = True
+    jobs = []
+    database_available = True
+    database_error = None
+    try:
+        with session_scope() as session:
+            jobs = list(session.scalars(select(Job)))
+    except Exception as exc:
+        database_available = False
+        database_error = type(exc).__name__
+        logger.warning("system_status_database_unavailable exception_type=%s", type(exc).__name__)
     root = settings.root
-    storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
+    try:
+        storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
+    except OSError:
+        storage_available = False
+    status = "ok" if database_available and storage_available else "degraded"
     return {
-        "status": "ok",
+        "status": status,
         "version": "0.1.0",
         "mode": "single-workstation research prototype",
         "database_available": database_available,
+        "database_error": database_error,
         "storage_available": storage_available,
         "quantum": availability(),
         "model_capabilities": alignment_contract()["models"],
