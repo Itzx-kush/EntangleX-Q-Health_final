@@ -84,3 +84,17 @@ def test_missing_runtime_model_file_returns_truthful_integrity_error(client):
         assert response.json()["error"]["code"] in {"demo_artifact_integrity", "integrity_error"}
     finally:
         path.write_bytes(original)
+
+
+def test_render_blueprint_declares_persistent_runtime_disk():
+    rendered = (ROOT / "render.yaml").read_text(encoding="utf-8")
+    assert "disk:\n      name: qhealth-runtime\n      mountPath: /runtime" in rendered
+    assert "QHEALTH_STORAGE_ROOT\n        value: /runtime" in rendered
+    dockerfile = (ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")
+    assert "entrypoint.sh" in dockerfile
+    assert 'ENTRYPOINT ["/app/entrypoint.sh"]' in dockerfile
+    assert "USER qhealth" not in dockerfile
+    entrypoint = ROOT / "backend" / "entrypoint.sh"
+    assert entrypoint.is_file()
+    script = entrypoint.read_text(encoding="utf-8")
+    assert "setpriv" in script and "setuid" in script
