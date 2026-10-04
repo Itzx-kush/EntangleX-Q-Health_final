@@ -1,4 +1,4 @@
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -178,7 +178,7 @@ export const qh={
   models:()=>api.get<ModelRecord[]>('/models'),
   model:(id:string)=>api.get<ModelRecord>(`/models/${id}`),
   modelCard:(id:string)=>api.get<ModelCard>(`/models/${id}/card`),
-  schema:(id:string)=>api.get<{model_id:string;features:{name:string;type:string;nullable:boolean}[];positive_label:string;negative_label:string}>(`/models/${id}/input-schema`),
+  schema:(id:string)=>api.get<ModelInputSchema>(`/models/${id}/input-schema`),
   sample:(id:string)=>api.get<{features:Record<string,string|number|null>;
 sample:string;source:string}>(`/models/${id}/demo-sample`),
   predict:(id:string,body:unknown)=>api.post<Prediction>(`/models/${id}/predict`,body),

@@ -11,6 +11,7 @@ import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
 import {ResearchResultsCenter} from './ResearchResultsCenter';
 import {ExplainabilityResearchLab} from './ExplainabilityResearchLab';
+import {ResearchPredictionLab} from './ResearchPredictionLab';
 import type {MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
@@ -167,9 +168,14 @@ export function VerifiedExplainability(){
 }
 
 export function VerifiedPrediction(){
-  return <DemoBoundary>{data=><div><PageHeader eyebrow="Representative research cases · precomputed" title="Research model output" description="Deterministic packaged examples from the verified hybrid artifact—not real-time clinical diagnoses."/><EvidenceStrip source="Packaged prediction evidence" scope={`${data.evidence.predictions.cases.length} representative cases`} limitation="Research category · not diagnosis"/><StageNav current="/prediction"/><Notice tone="amber"><strong>Research use only — not a clinical diagnosis.</strong> Benchmark output from a public biomedical tabular dataset; not clinical validation.</Notice><div className="two-grid mt-5">{data.evidence.predictions.cases.map(value=><PredictionCase key={value.case_id} value={value}/>)}</div><Notice tone="amber">These cases demonstrate model behavior on the public research dataset. They are not patient identities, diagnoses, or screening cutoffs.</Notice></div>}</DemoBoundary>;
-}
-
-function PredictionCase({value}:{value:VerifiedPredictionCase}){
-  return <Card title={value.case_label==='flagged'?'Flagged research case':'Not-flagged research case'} description={value.case_id}><div className="flex gap-2"><Badge tone={value.case_label==='flagged'?'amber':'green'}>{value.predicted_class}</Badge><Badge tone="purple">PennyLane + PyTorch Hybrid</Badge></div><ProbabilityBand probability={value.probability_positive} threshold={value.threshold} label="Positive-class model probability"/><dl className="demo-dl mt-4"><dt>Predicted class</dt><dd>{value.predicted_class}</dd><dt>Positive-class model probability</dt><dd>{metric(value.probability_positive)}</dd><dt>Decision score</dt><dd>Not recorded for this probability output</dd><dt>Research risk category</dt><dd>{value.case_label.replaceAll('_',' ')}</dd><dt>Research threshold</dt><dd>{value.threshold.toFixed(4)}</dd><dt>Threshold source</dt><dd>{value.threshold_source.replaceAll('_',' ')}</dd></dl><p className="mt-3 text-xs muted">The research category is derived from the recorded model threshold. It is not a clinically validated risk score.</p><JsonDisclosure label="Reproducible input context" value={value.input}/></Card>;
+  return <DemoBoundary>{data=>{
+    const evidence=data.evidence.predictions;
+    const model=data.models.find(item=>item.id===evidence.model_id);
+    return <div>
+      <PageHeader eyebrow="Verified / precomputed representative cases" title="Research Prediction Lab" description="Traceable packaged research inputs and hybrid outputs from the verified experiment; no live prediction is executed."/>
+      <EvidenceStrip source="Packaged prediction evidence" scope={`${evidence.cases.length} representative cases`} limitation="Research model output · not diagnosis"/>
+      <StageNav current="/prediction"/>
+      <div className="mt-5"><ResearchPredictionLab mode="verified" model={model} models={data.models} experiment={data.experiment} dataset={data.dataset} verifiedCases={evidence.cases}/></div>
+    </div>;
+  }}</DemoBoundary>;
 }
