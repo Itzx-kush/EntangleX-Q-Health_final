@@ -39,20 +39,22 @@ describe('hybrid SHAP presentation',()=>{
  });
  it('answers why the exact case was flagged with probability, threshold, directions, values, and limitation',async()=>{
   renderPage(<PredictionPage/>);
-  fireEvent.change(await screen.findByLabelText('Registered model'),{target:{value:hybrid.id}});
-  await screen.findByText('age');
+  const modelSelect=await screen.findByLabelText('Registered model');
+  await within(modelSelect).findByRole('option',{name:/PennyLane \+ PyTorch Hybrid/i});
+  fireEvent.change(modelSelect,{target:{value:hybrid.id}});
+  await screen.findByLabelText('age');
   fireEvent.change(screen.getByLabelText('age'),{target:{value:'52'}});
   fireEvent.change(screen.getByLabelText('polyuria'),{target:{value:'Yes'}});
   fireEvent.click(screen.getByRole('button',{name:'Generate research prediction'}));
   expect(await screen.findByText(/Research use only — not a clinical diagnosis/i)).toBeInTheDocument();
   expect(screen.getByText('Research model output')).toBeInTheDocument();
   expect(screen.getAllByText('Positive-class model probability').length).toBeGreaterThan(0);
-  expect(screen.getByText('Decision score')).toBeInTheDocument();
-  expect(screen.getByText('Research risk category')).toBeInTheDocument();
+  expect(screen.getByText('DECISION SCORE')).toBeInTheDocument();
+  expect(screen.getByText('RESEARCH CATEGORY')).toBeInTheDocument();
   expect(screen.getByRole('heading',{name:'Post-hoc model explanation',level:3})).toBeInTheDocument();
   expect(screen.getByText('SHAP — Final Hybrid Output')).toBeInTheDocument();
     expect(screen.getAllByText('73.0%').length).toBeGreaterThan(0);
-  expect(screen.getByText('0.4800')).toBeInTheDocument();
+  expect(screen.getAllByText('0.4800').length).toBeGreaterThan(0);
   expect(screen.getByText('Pushed toward positive class')).toBeInTheDocument();
   expect(screen.getByText('Pushed toward negative class')).toBeInTheDocument();
   expect(screen.getByText('Original value: Yes')).toBeInTheDocument();
@@ -63,11 +65,13 @@ describe('hybrid SHAP presentation',()=>{
  it('keeps decision scores distinct when model probability is unavailable',async()=>{
   vi.mocked(qh.predict).mockResolvedValueOnce({model_id:hybrid.id,model_type:'hybrid_pennylane_torch',positive_label:'positive',negative_label:'negative',probability_status:'Decision score only; no model probability or risk category is available.',decision_rule:'Positive decision score >= 0',operating_threshold:0,threshold_source:'estimator_default',risk_thresholds:[.33,.66],predictions:[{sample:'Sample #1',predicted_class:'positive',probability_positive:null,decision_score:1.2345,research_risk_category:null}],influence:null,explanation:null,limitations:[],disclaimer:'Research only'});
   renderPage(<PredictionPage/>);
-  fireEvent.change(await screen.findByLabelText('Registered model'),{target:{value:hybrid.id}});
-  await screen.findByText('age');
+  const modelSelect=await screen.findByLabelText('Registered model');
+  await within(modelSelect).findByRole('option',{name:/PennyLane \+ PyTorch Hybrid/i});
+  fireEvent.change(modelSelect,{target:{value:hybrid.id}});
+  await screen.findByLabelText('age');
   fireEvent.change(screen.getByLabelText('age'),{target:{value:'52'}});
   fireEvent.click(screen.getByRole('button',{name:'Generate research prediction'}));
-  expect(await screen.findByText('Not available for this estimator')).toBeInTheDocument();
+  expect(await screen.findByText('Probability not available for this model')).toBeInTheDocument();
   expect(screen.getByText('1.2345')).toBeInTheDocument();
   expect(screen.getByText('Not assigned')).toBeInTheDocument();
   expect(screen.queryByText('123.5%')).not.toBeInTheDocument();
