@@ -95,16 +95,28 @@
 }
 .public-hero::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent,var(--public-line) 18%,var(--public-line) 82%,transparent)}
 .public-quantum-field{
-  position:absolute;
-  left:50%;
-  top:-76px;
-  z-index:-1;
-  width:100vw;
-  height:calc(100% + 76px);
-  transform:translateX(-50%);
+  position:fixed;
+  inset:0;
+  z-index:0;
+  width:100%;
+  height:100%;
+  display:block;
   pointer-events:none;
-  opacity:.92;
-  mask-image:linear-gradient(to bottom,#000 0%,#000 78%,transparent 100%);
+  opacity:.86;
+  mix-blend-mode:screen;
+  transform:translateZ(0);
+  contain:strict;
+  mask-image:linear-gradient(to bottom,#000 0%,#000 88%,rgba(0,0,0,.55) 100%);
+}
+.public-background-vignette{
+  position:fixed;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 18%,transparent 0%,rgba(7,7,10,.08) 48%,rgba(7,7,10,.42) 100%),
+    linear-gradient(180deg,rgba(7,7,10,.12),transparent 22%,transparent 78%,rgba(7,7,10,.26));
+  mix-blend-mode:normal;
 }
 .public-hero-copy{position:relative;z-index:2;max-width:720px}
 .particle-text{position:relative}
@@ -396,7 +408,7 @@
 @media(prefers-reduced-motion:reduce){
   .public-experience{scroll-behavior:auto}
   .public-glow,.public-system-node,.public-evidence-map i,.public-header,.public-system-core,.public-system-orbit,.public-demo-rings i,.public-hero-copy.is-visible>*{animation:none!important}
-  .public-quantum-field{opacity:.48}
+  .public-quantum-field{opacity:.52;mask-image:none}
   [data-public-reveal]{opacity:1;transform:none;transition:none}
   .particle-text>h1{color:inherit!important}.particle-text>canvas{display:none!important}
   .public-research-sequence.is-visible article,.public-pipeline.is-visible .public-pipeline-step,.public-platform-flow.is-visible>div{animation:none}
@@ -413,16 +425,6 @@
 .public-experience{--public-scroll-progress:0}
 .public-scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:90;pointer-events:none;background:transparent;opacity:.9}
 .public-scroll-progress i{display:block;height:100%;width:calc(var(--public-scroll-progress,0)*100%);transform-origin:left center;background:linear-gradient(90deg,var(--public-cyan),var(--public-violet));box-shadow:0 0 16px rgba(155,135,255,.35);transition:width 120ms linear}
-
-.public-background-network{position:absolute;inset:6% 3%;opacity:.58}
-.public-background-network .network-node{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--public-violet);box-shadow:0 0 16px rgba(155,135,255,.46);animation:public-network-node 4.8s ease-in-out infinite alternate}
-.public-background-network .network-node:nth-child(2n){background:var(--public-cyan);box-shadow:0 0 16px rgba(113,190,210,.34)}
-.network-node-a{left:12%;top:18%}.network-node-b{left:34%;top:42%;animation-delay:-1.3s}.network-node-c{right:16%;top:24%;animation-delay:-2.5s}.network-node-d{right:30%;bottom:18%;animation-delay:-3.6s}.network-node-e{left:20%;bottom:11%;animation-delay:-.7s}
-.public-background-network .network-link{position:absolute;height:1px;background:linear-gradient(90deg,transparent,rgba(161,140,255,.18),transparent);transform-origin:left center;animation:public-network-link 7.5s ease-in-out infinite}
-.network-link.link-a{left:12%;top:18%;width:25%;transform:rotate(26deg)}
-.network-link.link-b{left:34%;top:42%;width:32%;transform:rotate(-20deg);animation-delay:-2s}
-.network-link.link-c{right:15%;top:24%;width:25%;transform:rotate(72deg);animation-delay:-4s}
-.network-link.link-d{left:20%;bottom:11%;width:34%;transform:rotate(-30deg);animation-delay:-5.2s}
 
 .public-hero-system{box-shadow:0 26px 90px rgba(0,0,0,.2),inset 0 0 0 1px rgba(255,255,255,.01)}
 .public-system-core{overflow:hidden}
@@ -497,7 +499,6 @@
 @keyframes public-final-aura{to{transform:translate3d(-38px,-20px,0) scale(1.08)}}
 
 @media(max-width:767px){
-  .public-background-network{opacity:.34;inset:4% 0}
   .public-pipeline-pulse{left:14px;bottom:13px}
   .public-system-signal{width:82%;height:44%}
   .public-evidence-orbit.orbit-a{width:76%;height:50%}
@@ -506,7 +507,6 @@
 }
 @media(max-width:560px){
   .public-scroll-progress{height:1px}
-  .public-background-network{display:none}
   .public-system-signal{opacity:.75}
   .public-system-core{width:112px;height:112px}
   .public-final-access-badge>span{font-size:7px;letter-spacing:.12em}
