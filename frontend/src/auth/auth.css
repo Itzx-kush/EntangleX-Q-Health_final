@@ -1138,3 +1138,401 @@
   .auth-product-label{animation:none!important}
   .auth-button-progress::after{animation:none!important}
 }
+
+
+/* Final Layer 2 precision polish — presentation only. */
+.auth-entry{
+  --auth-focus:rgba(155,135,255,.58);
+  --auth-cyan-soft:rgba(113,190,210,.12);
+  --auth-quantum-soft:rgba(155,135,255,.1);
+}
+.auth-entry .auth-depth-vignette{
+  position:absolute;
+  inset:-12%;
+  overflow:hidden;
+}
+.auth-depth-vignette::before,
+.auth-depth-vignette::after{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+}
+.auth-depth-vignette::before{
+  left:calc(50% - min(24vw,310px));
+  top:calc(50% - min(22vw,285px));
+  width:min(48vw,570px);
+  aspect-ratio:1;
+  border-radius:50%;
+  border:1px solid rgba(155,135,255,.075);
+  box-shadow:
+    0 0 0 44px rgba(113,190,210,.018),
+    0 0 0 92px rgba(155,135,255,.012);
+  transform:rotateX(66deg) rotateZ(-11deg);
+  animation:auth-orbit-a 22s linear infinite;
+}
+.auth-depth-vignette::after{
+  left:50%;
+  top:50%;
+  width:min(68vw,820px);
+  height:1px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 8%,
+      rgba(155,135,255,.16) 14%,
+      rgba(113,190,210,.08) 29%,
+      transparent 39% 55%,
+      rgba(155,135,255,.1) 67%,
+      transparent 80%);
+  transform:translate(-50%,-50%) rotate(-14deg) scaleX(.72);
+  transform-origin:center;
+  opacity:.45;
+  animation:auth-vector-scan 9s ease-in-out infinite;
+}
+.auth-entry .auth-atmosphere{
+  perspective:1100px;
+}
+.auth-entry .auth-atmosphere::before{
+  animation-duration:24s;
+}
+.auth-entry .auth-atmosphere::after{
+  animation-duration:11s;
+  opacity:.12;
+}
+.auth-quantum-network{
+  opacity:.82;
+  mix-blend-mode:screen;
+  filter:saturate(.86) contrast(1.02);
+}
+.auth-panel-stage{
+  position:relative;
+  z-index:2;
+  will-change:transform;
+  translate:calc(var(--motion-x,0)*1.6px) calc(var(--motion-y,0)*1.1px);
+  transition:filter 500ms ease;
+}
+.auth-panel-stage::before{
+  content:"";
+  position:absolute;
+  inset:8% -11%;
+  z-index:-2;
+  border-radius:28px;
+  background:
+    radial-gradient(ellipse at center,
+      rgba(155,135,255,.09),
+      rgba(113,190,210,.028) 34%,
+      transparent 70%);
+  filter:blur(28px);
+  opacity:.68;
+  transition:opacity 520ms ease,transform 700ms cubic-bezier(.16,1,.3,1);
+}
+.auth-panel-stage:hover::before{
+  opacity:.92;
+  transform:scale(1.025);
+}
+.auth-panel-stage:focus-within::before{
+  opacity:1;
+}
+.auth-panel-border{
+  box-shadow:
+    0 34px 110px rgba(0,0,0,.46),
+    0 0 70px rgba(107,78,215,.075),
+    inset 0 1px rgba(255,255,255,.02);
+}
+.auth-panel-border::before{
+  animation:auth-border-trace 7.8s linear infinite;
+}
+.auth-panel-border::after{
+  background:
+    radial-gradient(circle at 12% 0%,rgba(190,176,255,.075),transparent 27%),
+    linear-gradient(110deg,transparent 34%,rgba(255,255,255,.028) 49%,transparent 65%);
+}
+.auth-panel{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+.auth-panel:focus-within{
+  border-color:rgba(190,176,255,.36);
+  box-shadow:
+    0 36px 108px rgba(0,0,0,.5),
+    0 0 76px rgba(107,78,215,.1),
+    inset 0 1px rgba(255,255,255,.05);
+}
+.auth-panel-heading h2{
+  opacity:0;
+  animation:auth-heading-settle 700ms 250ms cubic-bezier(.16,1,.3,1) forwards;
+}
+.auth-panel-heading p{
+  opacity:0;
+  animation:auth-copy-settle 620ms 360ms cubic-bezier(.16,1,.3,1) forwards;
+}
+.auth-step{
+  display:inline-flex;
+  min-height:12px;
+  align-items:center;
+}
+.auth-research-rail span{
+  position:relative;
+  overflow:hidden;
+  transition:
+    border-color 260ms ease,
+    background 260ms ease,
+    transform 320ms cubic-bezier(.16,1,.3,1);
+}
+.auth-research-rail span::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(105deg,transparent 26%,rgba(255,255,255,.05) 49%,transparent 68%);
+  transform:translateX(-120%);
+  animation:auth-rail-sweep 8.5s ease-in-out infinite;
+}
+.auth-research-rail span:hover{
+  border-color:rgba(190,176,255,.18);
+  background:linear-gradient(135deg,rgba(155,135,255,.065),rgba(113,190,210,.025));
+  transform:translateY(-1px);
+}
+.auth-research-rail span:nth-child(2)::after{animation-delay:-2.1s}
+.auth-research-rail span:nth-child(3)::after{animation-delay:-4.2s}
+.auth-research-rail span:nth-child(4)::after{animation-delay:-6.3s}
+.auth-oauth-actions{
+  box-shadow:inset 0 1px rgba(255,255,255,.018),0 12px 32px rgba(0,0,0,.12);
+}
+.auth-oauth-button:hover:not(:disabled){
+  border-color:rgba(255,255,255,.96);
+}
+.auth-oauth-button:focus-visible,
+.auth-guest-button:focus-visible,
+.auth-back:focus-visible{
+  outline:2px solid transparent;
+  box-shadow:
+    0 0 0 2px #07070a,
+    0 0 0 4px var(--auth-focus),
+    0 14px 36px rgba(107,78,215,.16);
+}
+.auth-oauth-button:active:not(:disabled),
+.auth-guest-button:active:not(:disabled){
+  transform:translateY(1px) scale(.985);
+  transition-duration:90ms;
+}
+.auth-oauth-button[aria-busy="true"]{
+  cursor:wait;
+}
+.auth-oauth-button[aria-busy="true"] .auth-google-mark,
+.auth-oauth-button[aria-busy="true"] .auth-github-mark{
+  animation:auth-provider-wait 1.25s ease-in-out infinite;
+}
+.auth-guest-button[aria-busy="true"]::after{
+  content:"";
+  position:absolute;
+  right:16px;
+  width:9px;
+  height:9px;
+  border:1px solid rgba(190,176,255,.28);
+  border-top-color:#a895ff;
+  border-radius:50%;
+  animation:auth-guest-spinner 800ms linear infinite;
+}
+.auth-back{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  transition:
+    color 220ms ease,
+    transform 260ms cubic-bezier(.16,1,.3,1);
+}
+.auth-back::after{
+  content:"";
+  position:absolute;
+  left:23px;
+  right:0;
+  bottom:5px;
+  height:1px;
+  background:linear-gradient(90deg,rgba(155,135,255,.42),transparent);
+  transform:scaleX(0);
+  transform-origin:left center;
+  transition:transform 360ms cubic-bezier(.16,1,.3,1);
+}
+.auth-back:hover::after,
+.auth-back:focus-visible::after{
+  transform:scaleX(1);
+}
+.auth-error{
+  position:relative;
+  overflow:hidden;
+  animation:auth-panel-item 620ms cubic-bezier(.22,1,.36,1) both,auth-error-pulse 3.8s 700ms ease-in-out infinite;
+}
+.auth-error::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,175,175,.34),transparent);
+  opacity:.7;
+}
+.auth-notice{
+  position:relative;
+  overflow:hidden;
+}
+.auth-notice::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(105deg,transparent 24%,rgba(255,255,255,.035) 50%,transparent 72%);
+  transform:translateX(-120%);
+  animation:auth-notice-sweep 7s ease-in-out infinite;
+}
+.auth-footnote{
+  letter-spacing:.035em;
+}
+.auth-entry .outer-rb-magnet{
+  transition:filter 300ms ease;
+}
+.auth-entry .outer-rb-magnet:hover{
+  filter:drop-shadow(0 7px 22px rgba(107,78,215,.1));
+}
+.auth-entry .outer-rb-spotlight{
+  position:relative;
+}
+.auth-entry .outer-rb-spotlight::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  background:
+    radial-gradient(
+      circle 180px at var(--spotlight-x,50%) var(--spotlight-y,50%),
+      rgba(155,135,255,.055),
+      transparent 72%
+    );
+  opacity:.72;
+  mix-blend-mode:screen;
+  transition:opacity 240ms ease;
+}
+.auth-entry .outer-rb-spotlight:hover::after{
+  opacity:1;
+}
+
+@keyframes auth-orbit-a{
+  to{transform:rotateX(66deg) rotateZ(349deg)}
+}
+@keyframes auth-vector-scan{
+  0%,12%{opacity:.18;transform:translate(-50%,-50%) rotate(-14deg) scaleX(.55)}
+  34%{opacity:.42}
+  60%,100%{opacity:.06;transform:translate(50%,-50%) rotate(-14deg) scaleX(.82)}
+}
+@keyframes auth-border-trace{
+  0%,62%{opacity:.6;transform:rotate(0deg)}
+  82%{opacity:.95;transform:rotate(90deg)}
+  100%{opacity:.6;transform:rotate(180deg)}
+}
+@keyframes auth-heading-settle{
+  from{opacity:0;transform:translateY(12px);filter:blur(7px)}
+  to{opacity:1;transform:none;filter:none}
+}
+@keyframes auth-copy-settle{
+  from{opacity:0;transform:translateY(8px);filter:blur(4px)}
+  to{opacity:1;transform:none;filter:none}
+}
+@keyframes auth-rail-sweep{
+  0%,60%{transform:translateX(-120%)}
+  82%,100%{transform:translateX(120%)}
+}
+@keyframes auth-provider-wait{
+  0%,100%{transform:scale(1);filter:none}
+  50%{transform:scale(1.06);filter:drop-shadow(0 0 6px rgba(116,94,255,.16))}
+}
+@keyframes auth-guest-spinner{
+  to{transform:rotate(360deg)}
+}
+@keyframes auth-error-pulse{
+  0%,82%,100%{box-shadow:none}
+  88%{box-shadow:0 0 0 3px rgba(255,145,145,.035)}
+}
+@keyframes auth-notice-sweep{
+  0%,72%{transform:translateX(-120%)}
+  90%,100%{transform:translateX(120%)}
+}
+
+@media(max-width:780px){
+  .auth-depth-vignette::before{
+    width:76vw;
+    left:12%;
+    top:28%;
+  }
+  .auth-depth-vignette::after{
+    width:100vw;
+  }
+  .auth-entry .outer-rb-spotlight::after{
+    display:none;
+  }
+  .auth-panel-stage{
+    translate:0 0;
+  }
+}
+@media(max-width:560px){
+  .auth-depth-vignette::before{
+    width:96vw;
+    left:2%;
+    top:34%;
+    opacity:.65;
+  }
+  .auth-depth-vignette::after{
+    opacity:.22;
+    transform:translate(-50%,-50%) rotate(-10deg) scaleX(.62);
+  }
+  .auth-panel-border{
+    box-shadow:0 25px 75px rgba(0,0,0,.45),0 0 44px rgba(107,78,215,.055);
+  }
+  .auth-research-rail{
+    gap:5px;
+  }
+  .auth-research-rail span{
+    min-height:25px;
+    padding-inline:8px;
+    font-size:6.5px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .auth-depth-vignette::before,
+  .auth-depth-vignette::after,
+  .auth-panel-border::before,
+  .auth-research-rail span::after,
+  .auth-notice::after,
+  .auth-error,
+  .auth-oauth-button[aria-busy="true"] .auth-google-mark,
+  .auth-oauth-button[aria-busy="true"] .auth-github-mark,
+  .auth-guest-button[aria-busy="true"]::after{
+    animation:none!important;
+  }
+  .auth-depth-vignette::before{
+    transform:rotateX(66deg) rotateZ(-11deg)!important;
+    opacity:.42;
+  }
+  .auth-depth-vignette::after{
+    opacity:.16;
+    transform:translate(-50%,-50%) rotate(-14deg) scaleX(.45)!important;
+  }
+  .auth-panel-stage{
+    translate:none!important;
+  }
+  .auth-panel-stage::before{
+    transition:none!important;
+  }
+  .auth-panel-heading h2,
+  .auth-panel-heading p{
+    animation:none!important;
+    opacity:1;
+    transform:none;
+    filter:none;
+  }
+  .auth-entry .outer-rb-magnet,
+  .auth-entry .outer-rb-spotlight::after{
+    filter:none;
+    transition:none;
+  }
+}
