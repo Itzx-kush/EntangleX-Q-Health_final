@@ -63,7 +63,7 @@ async function request(path:string,options:RequestInit={},authToken?:string){
   try{
     response=await fetch(`${base}${path}`,{...options,headers,credentials:'omit',cache:'no-store'});
   }catch(error){
-    throw new ApiTransportError(undefined,{cause:error});
+    throw new ApiTransportError(`Unable to reach the Q-Health backend while requesting ${path}. Check the backend connection and try again.`,{cause:error});
   }
   if(!response.ok){
     const body=await response.json().catch(()=>({})) as ApiErrorBody;
