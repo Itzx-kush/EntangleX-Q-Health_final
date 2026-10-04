@@ -1,5 +1,6 @@
 import json
 import logging
+from threading import Thread
 from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import APIRouter, Depends, FastAPI, Request
@@ -38,19 +39,26 @@ logger.handlers = [handler]
 logger.setLevel(settings.log_level.upper())
 logger.propagate = False
 
+def _background_runtime_bootstrap():
+    try:
+        install_verified_demo_artifacts()
+    except AppError as exc:
+        # Request-time recovery remains available for the immutable packaged demo.
+        logger.warning("verified_demo_startup_recovery_required code=%s", exc.code)
+    except OSError as exc:
+        logger.warning("verified_demo_startup_filesystem_unavailable exception_type=%s", type(exc).__name__)
+    try:
+        ensure_legacy_versions()
+    except Exception as exc:
+        logger.warning("legacy_version_backfill_deferred exception_type=%s", type(exc).__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_readiness_configuration()
     init_db()
-    try:
-        install_verified_demo_artifacts()
-    except AppError as exc:
-        # A persistent Render disk may contain stale verified-demo registry state.
-        # Do not brick the entire API process; request-time recovery can reconcile
-        # the immutable packaged demo after the database is available.
-        logger.warning("verified_demo_startup_recovery_required code=%s", exc.code)
-    ensure_legacy_versions()
     manager.start()
+    Thread(target=_background_runtime_bootstrap, name="qhealth-runtime-bootstrap", daemon=True).start()
     logger.info("application_started mode=single_workstation_research")
     try:
         yield
