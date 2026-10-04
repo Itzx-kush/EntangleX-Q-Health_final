@@ -270,6 +270,9 @@ export function Quantum(){
  const [circuitSource,setCircuitSource]=useState<'preview'|'fitted'|null>(null);
  const [modelId,setModelId]=useState('');
  const [datasetId,setDatasetId]=useState(demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id);
+ const [selectedQubit,setSelectedQubit]=useState<number|null>(null);
+ const [selectedFeatureIndex,setSelectedFeatureIndex]=useState<number|null>(null);
+ const [selectedGateIndex,setSelectedGateIndex]=useState<number|null>(null);
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,staleTime:30000});
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
@@ -306,7 +309,14 @@ export function Quantum(){
   setDemoHydrated(true);
  },[demo.active,demo.datasetId,demo.experimentId,demoHydrated,models.data]);
  useEffect(()=>{advisor.reset()},[kind,draft.quantum,draft.pipeline.pca_components,draft.max_samples,draft.dataset_id,datasetId]);
- useEffect(()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ useEffect(()=>{
+  setContract(null);
+  setCircuit(undefined);
+  setCircuitSource(null);
+  setSelectedQubit(null);
+  setSelectedFeatureIndex(null);
+  setSelectedGateIndex(null);
+ },[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
  useEffect(()=>{
   if(!demo.active||!demoHydrated||!selectedModel)return;
   const quantumDetails=(selectedModel.details?.quantum||{}) as Record<string,unknown>;
@@ -324,6 +334,11 @@ export function Quantum(){
   if(kind==='hybrid_pennylane_torch')preview.mutate({...context,model_type:kind,hybrid:draft.hybrid});
   else preview.mutate({...context,model_type:kind,quantum:draft.quantum});
  };
+ const handleGateSelection=(gate:{qubits:number[]},position:number)=>{
+  setSelectedGateIndex(position);
+  const nextQubit=gate.qubits.find(qubit=>Number.isInteger(qubit))??null;
+  if(nextQubit!==null)setSelectedQubit(nextQubit);
+ };
  return <div className="quantum-lab-page">
   <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
   {demo.active&&<div className="ql-verified-banner" role="status" aria-label="Verified quantum demo status"><Badge tone="green">VERIFIED DEMO</Badge><Badge tone="blue">PRECOMPUTED / REPRODUCIBLE</Badge><span>Read-only packaged quantum evidence is surfaced through the same Quantum Lab workspace.</span></div>}
@@ -336,8 +351,23 @@ export function Quantum(){
   ]}/>
   <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/>
 
-  <QuantumContextPanel contract={contract} datasetName={dataset.data?.provenance.name} modelType={kind} capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution} circuitSource={circuitSource}/>
+  <QuantumContextPanel
+    contract={contract}
+    datasetName={dataset.data?.provenance.name}
+    modelType={kind}
+    capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution}
+    circuitSource={circuitSource}
+    selectedFeatureIndex={selectedFeatureIndex}
+    onFeatureSelect={setSelectedFeatureIndex}
+  />
   <QuantumPipeline contract={contract} hasPersistedEvidence={Boolean(selectedModel)} hasDatasetContext={Boolean(dataset.data?.id)} hasCircuitStructure={Boolean(circuit?.gates.length)}/>
+  {(selectedQubit!==null||selectedFeatureIndex!==null||selectedGateIndex!==null)&&<div className="ql-linked-selection" role="status" aria-label="Quantum cross-visual selection">
+    <span className="ql-eyebrow">LINKED SELECTION</span>
+    {selectedQubit!==null&&<strong>Qubit q[{selectedQubit}]</strong>}
+    {selectedFeatureIndex!==null&&<strong>Feature {selectedFeatureIndex+1}</strong>}
+    {selectedGateIndex!==null&&<strong>Gate step {selectedGateIndex+1}</strong>}
+    <span>Selection is scoped to Quantum Lab and highlights only relationships returned or structurally supported by the backend contract.</span>
+  </div>}
 
   <section className="ql-setup-grid" aria-label="Quantum Lab configuration">
    <Card title="Quantum capability and preview" description="Generate a bounded structural contract from the current quantum configuration. Preview does not train, create jobs, or simulate a state.">
@@ -362,9 +392,21 @@ export function Quantum(){
   <section className="ql-main-grid" aria-label="Quantum visualization panels">
    <div className="ql-main-primary">
     <Card title="Circuit explorer" description={contract?.circuit.limitation||circuit?.limitation||'Backend-ordered gates are interactive. Structural playback highlights operations only; it does not evolve or invent a quantum state.'}>
-     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer circuit={contract?.circuit||circuit!} sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}/>:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
+     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer
+       circuit={contract?.circuit||circuit!}
+       sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}
+       selectedQubit={selectedQubit}
+       selectedFeatureIndex={selectedFeatureIndex}
+       featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
+       onSelectionChange={handleGateSelection}
+      />:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
     </Card>
-    <QuantumStatePanel contract={contract} unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulation was run. Generate a preview for structure, or use an explicitly supported backend simulation with a valid encoded representation.'}/>
+    <QuantumStatePanel
+      contract={contract}
+      selectedQubit={selectedQubit}
+      onQubitSelect={setSelectedQubit}
+      unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulation was run. Generate a preview for structure, or use an explicitly supported backend simulation with a valid encoded representation.'}
+     />
    </div>
    <div className="ql-main-secondary">
     <QuantumResourcePanel contract={contract}/>
