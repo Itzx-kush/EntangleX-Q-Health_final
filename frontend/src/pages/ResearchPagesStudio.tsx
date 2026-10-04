@@ -471,6 +471,7 @@ export function ExperimentDetail(){
   const {id=''}=useParams();
   const result=useQuery({queryKey:['experiment',id],queryFn:()=>qh.experiment(id),enabled:Boolean(id),refetchInterval:query=>['queued','running','cancel_requested'].includes(query.state.data?.experiment.status||'')?5000:false});
   const action=useMutation({mutationFn:(format:'html'|'json')=>qh.report(id,format)});
+  const pdfAction=useMutation({mutationFn:()=>qh.report(id,'pdf')});
   const [expanded,setExpanded]=useState<string|null>(null);
   const detail=result.data;
   if(result.isLoading)return <div><PageHeader eyebrow="Research Studio · Evidence" title="Experiment detail" description="Loading the selected research record."/><Loading/></div>;
@@ -506,5 +507,19 @@ export function ExperimentDetail(){
     <div className="two-grid mt-5"><Card title="Experiment provenance"><JsonDisclosure label="Summary / split / provenance" value={detail.experiment.summary}/><JsonDisclosure label="Exact training configuration" value={detail.experiment.config}/></Card><Card title="Execution records"><div className="space-y-2">{detail.jobs.map(job=><div className="rounded-xl border p-3" key={job.id}><div className="flex justify-between"><StatusBadge value={job.status}/><span className="text-xs muted">{job.progress}%</span></div><p className="mt-1 text-xs">{job.state}</p>{job.errors.length>0&&<JsonDisclosure label="Recorded failures" value={job.errors}/>}</div>)}</div></Card></div>
     <AblationLaboratory experiment={detail.experiment} />
     <Notice tone="amber">Research prototype boundary: measured benchmark outputs do not establish clinical validation, diagnosis or treatment efficacy.</Notice>
+    <section className="mt-5" aria-label="Research Report">
+      <Card title="Research Report" description="Export the persisted research evidence for this experiment as a formatted PDF.">
+        <p className="text-sm muted">Generate a professionally formatted PDF containing the persisted results, evidence, provenance, limitations, and reproducibility information for this experiment.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <MetricCard label="STATUS" value={pdfAction.isPending?'Generating report…':'PDF report available'} detail="Generated read-only by the backend"/>
+          <MetricCard label="EXPERIMENT ID" value={shortId(id)} detail="Included in every page footer"/>
+          <MetricCard label="REPORT SCOPE" value="Persisted evidence" detail="No training or scientific recomputation"/>
+        </div>
+        <ErrorBanner error={(pdfAction.error as Error)?.message}/>
+        {pdfAction.isSuccess&&<Notice tone="blue">PDF downloaded successfully.</Notice>}
+        <div className="mt-4"><Button disabled={pdfAction.isPending} onClick={()=>pdfAction.mutate()}><Download size={14}/>{pdfAction.isPending?'Generating report…':'Download PDF Report'}</Button></div>
+        <p className="mt-3 text-xs muted">Research use only. The report does not establish diagnosis, clinical validation, causality, statistical significance, or quantum advantage.</p>
+      </Card>
+    </section>
   </div>
 }

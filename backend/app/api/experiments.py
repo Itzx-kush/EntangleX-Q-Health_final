@@ -6,6 +6,7 @@ from ..database import session_scope
 from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
 from ..experiments.comparison import comparison
 from ..experiments.reports import html_report, report_data
+from ..experiments.pdf_reports import pdf_report
 from ..experiments.lifecycle import archive_experiment
 from ..evidence_packages.service import (
     create_package,
@@ -201,11 +202,18 @@ def rerun(identity: UUID):
     return {"job": job, "experiment": experiment}
 
 @router.get("/{identity}/report")
-def export_report(identity: UUID, format: Literal["html", "json"] = "html"):
+def export_report(identity: UUID, format: Literal["html", "json", "pdf"] = "html"):
     import json
     from ..utils.serialization import clean_json
     if format == "json":
         content, media_type, suffix = json.dumps(clean_json(report_data(str(identity))), indent=2), "application/json", "json"
+    elif format == "pdf":
+        data = report_data(str(identity))
+        try:
+            content = pdf_report(data)
+        except Exception as error:
+            raise AppError("pdf_generation_failed", "The PDF report could not be generated from the persisted evidence.", 500) from error
+        media_type, suffix = "application/pdf", "pdf"
     else:
         content, media_type, suffix = html_report(str(identity)), "text/html", "html"
     return Response(content, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="qhealth-{identity}.{suffix}"', "Cache-Control": "no-store"})
