@@ -80,11 +80,34 @@ def create_completed_experiment(config, registered):
         return experiment.id, model.id
 
 
+
+def attach_evidence_package(experiment_id):
+    from app.database import session_scope
+    from app.storage.entities import Artifact, ResearchEvidencePackage
+    with session_scope() as session:
+        artifact = Artifact(
+            experiment_id=experiment_id, artifact_type="research_evidence_package", name="Saved-report traceability fixture",
+            description="Synthetic metadata-only test fixture.", integrity_hash="e" * 64, content_type="application/json",
+            details={}, immutable=True, operation_key=f"saved-report-test-package:{experiment_id}",
+        )
+        session.add(artifact); session.flush()
+        package = ResearchEvidencePackage(
+            experiment_id=experiment_id, schema_version="research_evidence_package_v1", status="COMPLETE",
+            package_fingerprint="f" * 64, configuration_fingerprint="c" * 64, source_context_type="live_run",
+            evidence_inventory={}, provenance={"experiment_id": experiment_id}, limitations=[], evidence_gaps=[],
+            manifest={"package_fingerprint": "f" * 64}, artifact_id=artifact.id,
+        )
+        session.add(package); session.flush()
+        return package.id, artifact.id
+
 def test_saved_report_end_to_end_owner_isolation_and_scientific_immutability(client, config, registered, saved_report_auth):
     from app.database import session_scope
-    from app.storage.entities import Experiment, ModelRecord
+    from app.storage.entities import Artifact, Experiment, ModelRecord, ResearchEvidencePackage
+    from app.experiments.reports import report_data
+    from app.saved_reports.service import _source_fingerprint
 
     experiment_id, model_id = create_completed_experiment(config, registered)
+    package_id, package_artifact_id = attach_evidence_package(experiment_id)
     assert client.get("/api/me/research-reports").status_code == 401
 
     headers_a = {"Authorization": "Bearer token-a"}
@@ -95,10 +118,18 @@ def test_saved_report_end_to_end_owner_isolation_and_scientific_immutability(cli
     assert report["experiment_id"] == experiment_id
     assert report["already_saved"] is False
     assert report["content_type"] == "application/pdf"
+    assert report["evidence_package_id"] == package_id
+    assert report["evidence_package_fingerprint"] == "f" * 64
+    assert report["report_version"] == "1"
     assert report["size_bytes"] > 5000
     assert "owner_user_id" not in report and "storage_reference" not in report and "access_token" not in report
     saved_id = report["saved_report_id"]
-    assert saved_report_auth.rows[saved_id]["owner_user_id"] == saved_report_auth.users["token-a"]
+    stored = saved_report_auth.rows[saved_id]
+    assert stored["owner_user_id"] == saved_report_auth.users["token-a"]
+    assert stored["report_fingerprint"] == _source_fingerprint(report_data(experiment_id))
+    assert stored["integrity_hash"] == __import__("hashlib").sha256(saved_report_auth.files[stored["storage_reference"]]).hexdigest()
+    assert stored["storage_reference"].startswith(f"{saved_report_auth.users['token-a']}/{experiment_id}/")
+    assert "://" not in stored["storage_reference"] and "/runtime" not in stored["storage_reference"]
 
     duplicate = client.post("/api/me/research-reports", json={"experiment_id": experiment_id}, headers=headers_a)
     assert duplicate.status_code == 201
@@ -125,6 +156,8 @@ def test_saved_report_end_to_end_owner_isolation_and_scientific_immutability(cli
     with session_scope() as session:
         assert session.get(Experiment, experiment_id) is not None
         assert session.get(ModelRecord, model_id) is not None
+        assert session.get(ResearchEvidencePackage, package_id) is not None
+        assert session.get(Artifact, package_artifact_id) is not None
 
     for format_name, content_type in (("html", "text/html"), ("json", "application/json"), ("pdf", "application/pdf")):
         response = client.get(f"/api/experiments/{experiment_id}/report?format={format_name}")

@@ -44,6 +44,13 @@ services:
         value: https://entanglex-q-health.onrender.com
       - key: QHEALTH_TRUSTED_HOSTS
         value: entanglex-q-health-api.onrender.com,localhost,127.0.0.1
+      # Saved research reports: backend-only Supabase persistence and JWT verification.
+      - key: QHEALTH_SUPABASE_URL
+        sync: false
+      - key: QHEALTH_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: QHEALTH_SUPABASE_JWT_AUDIENCE
+        value: authenticated
       - key: QHEALTH_GROQ_API_KEY
         sync: false
       - key: QHEALTH_GROQ_MODEL

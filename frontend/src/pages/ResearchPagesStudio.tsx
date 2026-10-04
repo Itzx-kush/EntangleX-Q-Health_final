@@ -13,7 +13,7 @@ import { ThresholdAnalysis } from './ThresholdAnalysis';
 import { QuantumDiagnostics } from './QuantumDiagnostics';
 import { AblationLaboratory } from './AblationLaboratory';
 import { BiomedicalSubgroupAnalysisPanel } from './BiomedicalSubgroupAnalysis';
-import type {Experiment,LineageNode} from '../types/qhealth';
+import type {Experiment,LineageNode,SavedResearchReport} from '../types/qhealth';
 import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
 import {ModelCardPanel} from '../components/ModelCardPanel';
@@ -468,6 +468,41 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
 }
 
 
+type ResearchReportSectionProps={
+  id:string;
+  isAuthenticated:boolean;
+  savedReport?:SavedResearchReport;
+  savedLoading:boolean;
+  pdfBusy:boolean;
+  pdfSuccess:boolean;
+  saveBusy:boolean;
+  saveSuccess:boolean;
+  error?:string;
+  onDownload:()=>void;
+  onSave:()=>void;
+  onSignIn:()=>void;
+};
+
+export function ResearchReportSection({id,isAuthenticated,savedReport,savedLoading,pdfBusy,pdfSuccess,saveBusy,saveSuccess,error,onDownload,onSave,onSignIn}:ResearchReportSectionProps){
+  return <section className="mt-5" aria-label="Research Report">
+    <Card title="Research Report" description="Export the persisted research evidence for this experiment as a formatted PDF.">
+      <p className="text-sm muted">Generate a professionally formatted PDF containing the persisted results, evidence, provenance, limitations, and reproducibility information for this experiment.</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <MetricCard label="STATUS" value={pdfBusy?'Generating report…':'PDF report available'} detail="Generated read-only by the backend"/>
+        <MetricCard label="EXPERIMENT ID" value={shortId(id)} detail="Included in every page footer"/>
+        <MetricCard label="REPORT SCOPE" value="Persisted evidence" detail="No training or scientific recomputation"/>
+      </div>
+      <ErrorBanner error={error}/>
+      {pdfSuccess&&<Notice tone="blue">PDF downloaded successfully.</Notice>}
+      {saveSuccess&&<Notice tone="blue">Research report saved to My Research.</Notice>}
+      <div className="mt-4 flex flex-wrap gap-2"><Button disabled={pdfBusy} onClick={onDownload}><Download size={14}/>{pdfBusy?'Generating report…':'Download PDF Report'}</Button>{isAuthenticated?<Button variant="outline" disabled={Boolean(savedReport)||savedLoading||saveBusy} onClick={onSave}><BookmarkPlus size={14}/>{saveBusy?'Saving…':savedReport?'Saved to My Research':'Save to My Research'}</Button>:<Button variant="outline" onClick={onSignIn}><LogIn size={14}/>Sign in to save</Button>}</div>
+      {savedReport&&<p className="mt-3 text-xs muted">Saved to My Research {dateTime(savedReport.saved_at)} · <Link className="text-primary hover:underline" to={`/my-research/reports/${savedReport.saved_report_id}`}>View saved report</Link></p>}
+      {!isAuthenticated&&<p className="mt-3 text-xs muted">Sign in with Google or GitHub to save this report to My Research. Guest PDF download remains available.</p>}
+      <p className="mt-3 text-xs muted">Research use only. The report does not establish diagnosis, clinical validation, causality, statistical significance, or quantum advantage.</p>
+    </Card>
+  </section>;
+}
+
 export function ExperimentDetail(){
   const {id=''}=useParams();
   const {session,isAuthenticated,leaveGuestMode}=useAuth();
@@ -514,22 +549,6 @@ export function ExperimentDetail(){
     <div className="two-grid mt-5"><Card title="Experiment provenance"><JsonDisclosure label="Summary / split / provenance" value={detail.experiment.summary}/><JsonDisclosure label="Exact training configuration" value={detail.experiment.config}/></Card><Card title="Execution records"><div className="space-y-2">{detail.jobs.map(job=><div className="rounded-xl border p-3" key={job.id}><div className="flex justify-between"><StatusBadge value={job.status}/><span className="text-xs muted">{job.progress}%</span></div><p className="mt-1 text-xs">{job.state}</p>{job.errors.length>0&&<JsonDisclosure label="Recorded failures" value={job.errors}/>}</div>)}</div></Card></div>
     <AblationLaboratory experiment={detail.experiment} />
     <Notice tone="amber">Research prototype boundary: measured benchmark outputs do not establish clinical validation, diagnosis or treatment efficacy.</Notice>
-    <section className="mt-5" aria-label="Research Report">
-      <Card title="Research Report" description="Export the persisted research evidence for this experiment as a formatted PDF.">
-        <p className="text-sm muted">Generate a professionally formatted PDF containing the persisted results, evidence, provenance, limitations, and reproducibility information for this experiment.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <MetricCard label="STATUS" value={pdfAction.isPending?'Generating report…':'PDF report available'} detail="Generated read-only by the backend"/>
-          <MetricCard label="EXPERIMENT ID" value={shortId(id)} detail="Included in every page footer"/>
-          <MetricCard label="REPORT SCOPE" value="Persisted evidence" detail="No training or scientific recomputation"/>
-        </div>
-        <ErrorBanner error={(pdfAction.error as Error)?.message||(savedState.error as Error)?.message||(saveReport.error as Error)?.message}/>
-        {pdfAction.isSuccess&&<Notice tone="blue">PDF downloaded successfully.</Notice>}
-        {saveReport.isSuccess&&<Notice tone="blue">Research report saved to My Research.</Notice>}
-        <div className="mt-4 flex flex-wrap gap-2"><Button disabled={pdfAction.isPending} onClick={()=>pdfAction.mutate()}><Download size={14}/>{pdfAction.isPending?'Generating report…':'Download PDF Report'}</Button>{isAuthenticated?<Button variant="outline" disabled={Boolean(savedReport)||savedState.isLoading||saveReport.isPending} onClick={()=>saveReport.mutate()}><BookmarkPlus size={14}/>{saveReport.isPending?'Saving…':savedReport?'Saved to My Research':'Save to My Research'}</Button>:<Button variant="outline" onClick={leaveGuestMode}><LogIn size={14}/>Sign in to save</Button>}</div>
-        {savedReport&&<p className="mt-3 text-xs muted">Saved to My Research {dateTime(savedReport.saved_at)} · <Link className="text-primary hover:underline" to={`/my-research/reports/${savedReport.saved_report_id}`}>View saved report</Link></p>}
-        {!isAuthenticated&&<p className="mt-3 text-xs muted">Sign in with Google or GitHub to save this report to My Research. Guest PDF download remains available.</p>}
-        <p className="mt-3 text-xs muted">Research use only. The report does not establish diagnosis, clinical validation, causality, statistical significance, or quantum advantage.</p>
-      </Card>
-    </section>
+    <ResearchReportSection id={id} isAuthenticated={isAuthenticated} savedReport={savedReport} savedLoading={savedState.isLoading} pdfBusy={pdfAction.isPending} pdfSuccess={pdfAction.isSuccess} saveBusy={saveReport.isPending} saveSuccess={saveReport.isSuccess} error={(pdfAction.error as Error)?.message||(savedState.error as Error)?.message||(saveReport.error as Error)?.message} onDownload={()=>pdfAction.mutate()} onSave={()=>saveReport.mutate()} onSignIn={leaveGuestMode}/>
   </div>
 }

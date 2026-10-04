@@ -47,16 +47,18 @@ Indexes support the actual query patterns:
 Apply `migrations/20261004133000_create_saved_research_reports.sql` after the research-activity migrations. It creates:
 
 - `saved_research_reports`, a private user-owned metadata table with RLS;
-- a private `saved-research-reports` Storage bucket;
-- owner-scoped table and object policies based on `auth.uid()`;
+- owner-scoped table RLS with browser mutation grants revoked;
+- a backend-only private `saved-research-reports` Storage bucket;
 - an active-snapshot uniqueness rule to prevent duplicate saves.
 
 The backend cryptographically verifies the Supabase access token, derives the owner from its `sub` claim, and uses a backend-only service-role credential for the owner-filtered PostgREST and private Storage operations. The service-role credential is never returned to or exposed in the browser.
 
 Backend-only Render variables required for this feature:
 
-- `QHEALTH_SUPABASE_URL` — the same Supabase project URL used by the frontend;
-- `QHEALTH_SUPABASE_SERVICE_ROLE_KEY` — the project service-role key; configure it only on the backend and never in any `VITE_` variable;
-- `QHEALTH_SUPABASE_JWT_AUDIENCE` — optional, defaults to `authenticated`;
+| Variable | Purpose | Scope | Secret | Local | Render |
+| --- | --- | --- | --- | --- | --- |
+| `QHEALTH_SUPABASE_URL` | Supabase issuer, JWKS, PostgREST, and Storage base URL | Backend | No | Required for saved reports | Required |
+| `QHEALTH_SUPABASE_SERVICE_ROLE_KEY` | Owner-filtered metadata and private-object persistence after JWT verification | Backend only | **Yes** | Required for saved reports | Required, `sync: false` |
+| `QHEALTH_SUPABASE_JWT_AUDIENCE` | Expected access-token audience; defaults to `authenticated` | Backend | No | Optional | Set to `authenticated` |
 
 The existing frontend variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) remain unchanged. Never configure a Supabase service-role key in the browser.
