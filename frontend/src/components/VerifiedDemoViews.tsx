@@ -9,6 +9,7 @@ import {InfluenceBars,MetricBars,RocChart,ThresholdTradeoffChart,ValueBars} from
 import {StageNav} from '../pages/ResearchPagesCore';
 import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
+import {ResearchResultsCenter} from './ResearchResultsCenter';
 import type {MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
@@ -117,102 +118,29 @@ export function VerifiedComparison(){
     const models=data.models.map(model=>{
       const evidence=benchmarkById.get(model.id);
       const evidenceMetrics=(evidence?.metrics||{}) as Record<string,any>;
-      return {
-        ...model,
-        metrics:{
-          ...model.metrics,
-          training:model.metrics.training||evidenceMetrics.training,
-          test:model.metrics.test?.roc_curve?.fpr?.length?model.metrics.test:{
-            ...(model.metrics.test||{}),
-            ...(evidenceMetrics.test||{})
-          },
-          validation:model.metrics.validation||evidenceMetrics.validation,
-          timing:model.metrics.timing||evidenceMetrics.timing,
-          calibration:model.metrics.calibration||evidenceMetrics.calibration,
-          operating_point:model.metrics.operating_point||evidence?.operating_point||evidenceMetrics.operating_point
-        }
-      } as ModelRecord;
+      return {...model,metrics:{
+        ...model.metrics,
+        training:model.metrics.training||evidenceMetrics.training,
+        test:model.metrics.test?.roc_curve?.fpr?.length?model.metrics.test:{...(model.metrics.test||{}),...(evidenceMetrics.test||{})},
+        validation:model.metrics.validation||evidenceMetrics.validation,
+        timing:model.metrics.timing||evidenceMetrics.timing,
+        calibration:model.metrics.calibration||evidenceMetrics.calibration,
+        operating_point:model.metrics.operating_point||evidence?.operating_point||evidenceMetrics.operating_point
+      }} as ModelRecord;
     });
-    const featuredModel=models.find(model=>model.model_type==='hybrid_pennylane_torch')||models.find(model=>model.model_type==='random_forest')||models[0];
-    const featuredOperating=featuredModel?.metrics.operating_point||benchmarkById.get(featuredModel?.id||'')?.operating_point;
-    const rows=models.map(model=>({name:modelLabels[model.model_type],f1:Number(model.metrics.test?.f1??0)}));
-    const validation=(featuredModel?.metrics.validation?.summary||{}) as Partial<Record<MetricName,{mean:number|null;std:number|null}>>;
-    const test=featuredModel?.metrics.test;
-    const timing=featuredModel?.metrics.timing;
+    const preprocessing=data.evidence.preprocessing;
+    const comparison={
+      split:preprocessing.split,
+      controlled_protocol:null,
+      comparison_fingerprint:data.manifest_sha256,
+      limitations:['Verified precomputed package; no live computation is executed.','The package records no quantum-advantage or real-hardware claim.']
+    };
     return <div>
-      <PageHeader eyebrow="Hero analytics · controlled seven-model comparison" title="Classical, quantum & hybrid evidence" description="All models share the packaged dataset identity, sample pool, split, preprocessing representation, seed, and threshold protocol."/>
-      <EvidenceStrip source="Controlled benchmark record" scope={`${models.length} models · one experiment`}/>
+      <PageHeader eyebrow="Verified result view · no live computation" title="Research Results Center" description="A complete, read-only interpretation of the packaged experiment, its measured model evidence, variability, conditions, and next investigation paths."/>
+      <EvidenceStrip source="Controlled benchmark record" scope={`${models.length} models · one verified experiment`}/>
       <StageNav current="/comparison"/>
-      <WorkbenchRail items={[
-        {label:'Models',value:models.length,detail:'One experiment',tone:'blue'},
-        {label:'Classical',value:models.filter(m=>family(m.model_type)==='Classical').length,detail:'Measured artifacts',tone:'green'},
-        {label:'Quantum',value:models.filter(m=>family(m.model_type)==='Quantum').length,detail:'Local simulation',tone:'purple'},
-        {label:'Hybrid',value:models.filter(m=>family(m.model_type)==='Hybrid').length,detail:'PennyLane + PyTorch',tone:'amber'}
-      ]}/>
-
-      <Card className="mt-5" title="Measured model comparison" description="Persisted held-out results from the same verified experiment. Selectable live controls are intentionally omitted in verified mode.">
-        <ModelTable models={models}/>
-      </Card>
-
-      <div className="mt-5 tremor-grid-main">
-        <Card title="Measured F1 overview" description="Held-out F1 across all seven persisted model artifacts.">
-          <TremorBarChart data={rows} category="name" value="f1" height={300} showGrid/>
-        </Card>
-        {featuredModel&&test&&<Card title={`${modelLabels[featuredModel.model_type]} · held-out metric profile`} description="Detailed metrics for the featured hybrid research path.">
-          <MetricBars metrics={test}/>
-        </Card>}
-      </div>
-
-      {featuredOperating&&<div className="two-grid mt-5">
-        <Card title="Research operating point" description={featuredOperating.interpretation}>
-          {featuredOperating.threshold_feasible?
-            <div className="grid grid-cols-3 gap-3">
-              <MetricCard label="THRESHOLD" value={featuredOperating.selected_threshold===null?'—':featuredOperating.selected_threshold.toFixed(4)} detail={featuredOperating.threshold_source}/>
-              <MetricCard label="VALIDATION SENSITIVITY" value={metric(featuredOperating.validation_metrics?.sensitivity)} detail="Out-of-fold"/>
-              <MetricCard label="VALIDATION SPECIFICITY" value={metric(featuredOperating.validation_metrics?.specificity)} detail="Out-of-fold"/>
-            </div>
-            :<Notice tone="amber">{featuredOperating.infeasible_reason||'Target sensitivity is not achievable on the validation folds under the packaged model configuration.'}</Notice>}
-        </Card>
-        <Card title="Validation threshold trade-off" description={`Sensitivity and specificity across the locked research threshold for ${featuredModel?modelLabels[featuredModel.model_type]:'the featured model'}.`}>
-          <ThresholdTradeoffChart operatingPoint={featuredOperating}/>
-        </Card>
-      </div>}
-
-      <div className="mt-5">
-        <Card title="ROC comparison" description="Measured held-out ROC curves from the persisted benchmark artifacts.">
-          <RocChart models={models}/>
-        </Card>
-      </div>
-
-      {featuredModel&&<Card className="mt-5" title="Validation, holdout, and runtime" description="Detailed evidence for the featured model; values come directly from the verified package.">
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead><tr><th>Metric</th><th>CV mean</th><th>CV SD</th><th>Held-out test</th></tr></thead>
-            <tbody>
-              {(['accuracy','precision','recall','sensitivity','specificity','f1','roc_auc'] as const).map(name=>
-                <tr key={name}>
-                  <td>{name}</td>
-                  <td>{metric(validation[name]?.mean,name!=='roc_auc')}</td>
-                  <td>{metric(validation[name]?.std,name!=='roc_auc')}</td>
-                  <td>{metric(test?.[name],name!=='roc_auc')}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3 mt-4">
-          <MetricCard label="FINAL TRAINING" value={seconds(timing?.final_training_seconds)} detail="Persisted runtime"/>
-          <MetricCard label="CV TOTAL" value={seconds(timing?.cv_total_seconds)} detail="Persisted cross-validation runtime"/>
-          <MetricCard label="TEST INFERENCE" value={seconds(timing?.test_inference_seconds)} detail="Persisted held-out inference"/>
-        </div>
-      </Card>}
-
-      <Card className="mt-5" title="Benchmark conditions">
-        <JsonDisclosure label="Controlled comparison contract" value={data.evidence.benchmark.comparison_contract}/>
-        <JsonDisclosure label="Complete benchmark model evidence" value={data.evidence.benchmark.models}/>
-        <Notice tone="amber">The package records no quantum-advantage or real-hardware claim. All charts above are rendered from verified persisted evidence; no live comparison, training, or threshold search is executed.</Notice>
-      </Card>
-    </div>
+      <div className="mt-5"><ResearchResultsCenter experiment={{...data.experiment,summary:{...data.experiment.summary,sample_count:(data.evidence.benchmark.comparison_contract as Record<string,unknown>).evaluated_row_count}}} dataset={data.dataset} models={models} comparison={comparison} mode="verified"/></div>
+    </div>;
   }}</DemoBoundary>;
 }
 
