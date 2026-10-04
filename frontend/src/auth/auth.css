@@ -307,13 +307,26 @@
 @keyframes auth-logo-activate{from{opacity:0;transform:scale(0.7);filter:blur(12px)}to{opacity:1;transform:none;filter:none}}
 @keyframes auth-logo-sweep{to{transform:translateX(180%) skewX(-12deg)}}
 @keyframes auth-lockup-in{to{opacity:1;transform:none}}
-.workspace-reveal-shell{min-height:100dvh;opacity:0;filter:blur(5px);transform:scale(.995);animation:workspace-underlay-guest 1400ms cubic-bezier(0.22, 1, 0.36, 1) forwards}
-.workspace-reveal-shell.is-authenticated{animation-name:workspace-underlay-auth;animation-duration:2800ms}
-.workspace-reveal-shell.is-ready{opacity:1;filter:none;transform:none;animation:none}
-@keyframes workspace-underlay-guest{0%,60%{opacity:0;transform:scale(0.96);filter:blur(12px)}100%{opacity:1;filter:none;transform:none}}
-@keyframes workspace-underlay-auth{0%,75%{opacity:0;transform:scale(0.96);filter:blur(16px)}100%{opacity:1;filter:none;transform:none}}
-@keyframes auth-line-pass{from{transform:translateX(-120%)}to{transform:translateX(350%)}}
-
+.workspace-reveal-shell{
+  min-height:100dvh;
+  opacity:1;
+  filter:blur(1.6px);
+  transform:scale(1.006);
+  transform-origin:center top;
+  will-change:transform,filter;
+  transition:transform 520ms cubic-bezier(0.16,1,0.3,1),filter 520ms ease;
+}
+.workspace-reveal-shell.is-ready{
+  filter:none;
+  transform:none;
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace-reveal-shell{
+    filter:none;
+    transform:none;
+    transition:none;
+  }
+}
 @media(max-width:1080px){
   .auth-entry{grid-template-columns:minmax(0,1fr) minmax(360px,.74fr);gap:48px;padding-inline:38px}
   .auth-brand h1{font-size:clamp(2.8rem,5.4vw,4.6rem)}
