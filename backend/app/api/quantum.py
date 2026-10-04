@@ -4,7 +4,13 @@ from ..quantum.circuits import circuit_description
 from ..quantum.errors import QuantumProviderError
 from ..quantum.resource_advisor import advise_resources, resource_policy
 from ..quantum.service import service
+from ..quantum.visualization import visualization_service
 from ..utils.errors import AppError
+from ..quantum.schemas import (
+    QuantumVisualizationContract,
+    QuantumVisualizationPreviewRequest,
+    QuantumVisualizationSimulationRequest,
+)
 from .schemas import CircuitRequest, CircuitOut, ProviderPreflightRequest, ResourceAdvisorRequest
 
 router = APIRouter(prefix="/quantum", tags=["quantum simulation"])
@@ -69,6 +75,18 @@ def provider_preflight(request: ProviderPreflightRequest):
 @router.post("/circuit", response_model=CircuitOut)
 def preview_circuit(request: CircuitRequest):
     return circuit_description(request.quantum, request.model_type, request.seed)
+
+
+@router.post("/visualization/preview", response_model=QuantumVisualizationContract)
+def visualization_preview(request: QuantumVisualizationPreviewRequest):
+    contract, _artifacts = visualization_service.preview(request)
+    return contract
+
+
+@router.post("/visualization/simulate", response_model=QuantumVisualizationContract)
+def visualization_simulate(request: QuantumVisualizationSimulationRequest):
+    return visualization_service.simulate(request)
+
 
 @router.get("/resource-policy", response_model=dict)
 def resource_budget_policy():

@@ -146,10 +146,16 @@ class QiskitLocalProvider(QuantumProvider):
         try:
             if request.backend_id == "statevector":
                 from qiskit.quantum_info import Statevector
-                probabilities = Statevector.from_instruction(circuits[0]).probabilities_dict()
+                statevector = Statevector.from_instruction(circuits[0])
+                amplitudes = tuple(complex(value) for value in statevector.data)
+                width = int(circuits[0].num_qubits)
+                probabilities = {
+                    format(index, f"0{width}b"): float(abs(value) ** 2)
+                    for index, value in enumerate(amplitudes)
+                }
                 return ExecutionResult(
                     status=ExecutionStatus.COMPLETED, provider_id=self.provider_id, backend_id=request.backend_id,
-                    probabilities={str(key): float(value) for key, value in probabilities.items()}, shots=None,
+                    probabilities=probabilities, amplitudes=amplitudes, shots=None,
                     execution_time=time.perf_counter() - started,
                     metadata={"execution_mode": request.execution_mode, "seed_status": "UNSPECIFIED" if request.seed is None else "APPLIED"},
                 )
