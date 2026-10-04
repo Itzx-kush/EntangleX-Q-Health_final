@@ -324,8 +324,16 @@ def _resource_section(
         logical_qubits=circuit.qubits,
         circuit_depth=circuit.logical_depth,
         total_gates=circuit.total_gates,
-        parameterized_gates=sum(bool(gate.parameters) for gate in circuit.gate_sequence) if circuit.gate_sequence else None,
-        entangling_gates=sum(len(gate.qubits) > 1 for gate in circuit.gate_sequence) if circuit.gate_sequence else None,
+        parameterized_gates=(
+            sum(bool(gate.parameters) for gate in circuit.gate_sequence)
+            if circuit.gate_sequence and model_type != "hybrid_pennylane_torch"
+            else None
+        ),
+        entangling_gates=(
+            sum(len(gate.qubits) > 1 for gate in circuit.gate_sequence)
+            if circuit.gate_sequence and model_type != "hybrid_pennylane_torch"
+            else None
+        ),
         shots=quantum.shots if quantum and quantum.backend == "aer" else None,
         sample_count=request.sample_count,
         feature_dimension=circuit.qubits,

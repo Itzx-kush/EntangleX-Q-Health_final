@@ -49,6 +49,9 @@ def test_hybrid_preview_exposes_real_architecture_without_execution(client):
     assert data["state"]["status"] == "STRUCTURE_ONLY"
     assert data["bloch"]["status"] == "NOT_AVAILABLE"
     assert data["entanglement"]["status"] == "STRUCTURE_ONLY"
+    assert data["resources"]["parameterized_gates"] is None
+    assert data["resources"]["entangling_gates"] is None
+    assert data["resources"]["total_gates"] is None
     assert data["hybrid_architecture"]["output_path"] == [
         "PyTorch classical output head",
         "positive-class sigmoid probability",
