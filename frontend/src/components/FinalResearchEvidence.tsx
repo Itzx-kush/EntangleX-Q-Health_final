@@ -75,6 +75,7 @@ export function FinalResearchEvidence({detail,reportBusy,onReport,packagePanel}:
   const reportSections=[
     ['Experiment and dataset identity',Boolean(experiment.id&&experiment.dataset_id)],
     ['Model results and final finding',Boolean(criterion&&leader)],
+    ['Quantum computation evidence',familyCounts.Quantum+familyCounts.Hybrid>0],
     ['Evidence inventory and limitations',inventoryEntries.length>0],
     ['Traceability and lineage',Boolean(lineage.data)],
     ['Scientific audit',Boolean(audit.data)],

@@ -58,6 +58,7 @@ describe('Final Research Evidence',()=>{
     expect(await screen.findByText('INTEGRITY WARNING')).toBeInTheDocument();
     expect(screen.getAllByText('Not evaluated').length).toBeGreaterThan(0);
     expect(screen.getByText('Package controls')).toBeInTheDocument();
+    expect(screen.getByText('Quantum computation evidence')).toBeInTheDocument();
   });
 
   it('uses existing backend report actions for final downloads',async()=>{

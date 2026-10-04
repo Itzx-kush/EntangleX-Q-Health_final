@@ -176,6 +176,77 @@ def test_saved_report_integrity_failure_is_rejected(client, config, registered, 
     assert response.json()["error"]["code"] == "saved_report_integrity_failure"
 
 
+def test_saved_quantum_report_reopens_and_downloads_the_same_evidence(client, config, registered, saved_report_auth):
+    from app.database import session_scope
+    from app.storage.entities import ModelRecord, QuantumDiagnosticReport
+
+    experiment_id, model_id = create_completed_experiment(config, registered)
+    quantum_configuration = config.quantum.model_dump(mode="json")
+    circuit = {
+        "model_type": "qsvc",
+        "qubits": quantum_configuration["qubits"],
+        "logical_depth": 4,
+        "gate_counts": {"h": 4, "cx": 3},
+        "parameter_count": 0,
+        "text": "H q[0] -> CX q[0], q[1]",
+        "gates": [{"name": "h", "qubits": [0], "parameters": []}],
+        "limitation": "Feature-map structure only; no kernel matrix is computed here.",
+    }
+    with session_scope() as session:
+        model = session.get(ModelRecord, model_id)
+        model.model_type = "qsvc"
+        model.details = {
+            "quantum": {
+                "provider_id": "qiskit_local",
+                "framework": "Qiskit",
+                "backend": "statevector",
+                "execution_mode": "local_simulator",
+                "execution_kind": "local Qiskit simulation",
+                "real_hardware": False,
+                "feature_map": "ZZFeatureMap",
+                "configuration": quantum_configuration,
+                "circuit": circuit,
+            },
+            "configuration": config.model_dump(mode="json"),
+            "preprocessing": {"final_representation_dimension": quantum_configuration["qubits"]},
+            "limitations": ["Persisted quantum execution uses local simulation."],
+        }
+        session.add(QuantumDiagnosticReport(
+            experiment_id=experiment_id,
+            model_record_id=model_id,
+            model_type="qsvc",
+            status="completed",
+            model_configuration=quantum_configuration,
+            feature_encoding={"mapping_strategy": "ZZFeatureMap"},
+            circuit_structure={"depth": 4},
+            resource_profile={"qubits_configured": quantum_configuration["qubits"]},
+            optimizer_profile={"optimizer": "COBYLA"},
+            execution_profile={"execution_mode": "local_simulator"},
+            warnings=[],
+            limitations=["Persisted diagnostic record."],
+            configuration_fingerprint="b" * 64,
+            provenance={"experiment_id": experiment_id, "model_record_id": model_id},
+        ))
+
+    headers = {"Authorization": "Bearer token-a"}
+    saved = client.post(
+        "/api/me/research-reports",
+        json={"experiment_id": experiment_id},
+        headers=headers,
+    )
+    assert saved.status_code == 201, saved.text
+    saved_id = saved.json()["saved_report_id"]
+    reopened = client.get(f"/api/me/research-reports/{saved_id}", headers=headers)
+    assert reopened.status_code == 200
+    download = client.get(
+        f"/api/me/research-reports/{saved_id}/download",
+        headers=headers,
+    )
+    assert download.status_code == 200
+    assert download.content.startswith(b"%PDF-")
+    assert len(download.content) > 5000
+
+
 def test_supabase_jwt_verification_validates_signature_issuer_audience_and_expiry(monkeypatch):
     from cryptography.hazmat.primitives.asymmetric import rsa
     from app.saved_reports import auth

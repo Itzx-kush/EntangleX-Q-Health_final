@@ -126,6 +126,114 @@ def _metric_chart(models: list[dict], styles):
     return drawing
 
 
+def _quantum_evidence_story(evidence: dict, styles) -> list[Any]:
+    """Render only persisted quantum model/diagnostic values into the report."""
+    story: list[Any] = [_p("Quantum computation evidence", styles["Subsection"])]
+    models = evidence.get("models") or []
+    for model in models:
+        execution = model.get("execution") or {}
+        configuration = model.get("configuration") or {}
+        feature_encoding = model.get("feature_encoding") or {}
+        circuit = model.get("circuit") or {}
+        resources = model.get("resource_profile") or {}
+        diagnostic = model.get("diagnostics") or {}
+        dataset_hash = model.get("dataset_hash") or evidence.get("dataset_hash")
+        dataset_name = evidence.get("dataset_name")
+
+        story.append(_p(
+            f"{_model_name({'display_name': model.get('model_type')})} - model {model.get('model_id')}",
+            styles["BodySmall"],
+        ))
+        rows = [
+            ("Experiment ID", evidence.get("experiment_id")),
+            ("Dataset", dataset_name),
+            ("Dataset ID", model.get("dataset_id") or evidence.get("dataset_id")),
+            ("Dataset hash", dataset_hash),
+            ("Model record ID", model.get("model_id")),
+            ("Run ID", model.get("run_id")),
+            ("Quantum evidence status", model.get("evidence_status")),
+            ("Execution provider", execution.get("provider_id")),
+            ("Quantum framework", execution.get("framework")),
+            ("Backend", execution.get("backend")),
+            ("Execution mode", execution.get("execution_mode")),
+            ("Execution kind", execution.get("execution_kind")),
+            ("Hardware execution recorded", execution.get("real_hardware")),
+            ("Feature map / encoding", feature_encoding.get("method")),
+            ("Represented feature dimension", feature_encoding.get("represented_feature_dimension")),
+            ("PCA components", feature_encoding.get("pca_components")),
+            ("Angle scaling", feature_encoding.get("angle_scaling")),
+            ("Logical qubits", circuit.get("qubits")),
+            ("Circuit depth", circuit.get("logical_depth")),
+            ("Parameter count", circuit.get("parameter_count")),
+            ("Gate counts", circuit.get("gate_counts")),
+            ("Sample count", resources.get("sample_count")),
+            ("Configured shots", resources.get("configured_shots")),
+            ("Optimizer", configuration.get("optimizer")),
+            ("Configured maximum iterations", configuration.get("maxiter") or configuration.get("epochs")),
+        ]
+        rows = [(label, value) for label, value in rows if value is not None and value != "" and value != {}]
+        story.append(_kv(rows, styles))
+
+        gates = circuit.get("gates")
+        if isinstance(gates, list) and gates:
+            max_rows = 80
+            gate_rows = [["Order", "Gate", "Qubits", "Parameters"]]
+            for index, gate in enumerate(gates[:max_rows], start=1):
+                if not isinstance(gate, dict):
+                    continue
+                gate_rows.append([
+                    index,
+                    gate.get("name"),
+                    gate.get("qubits"),
+                    gate.get("parameters"),
+                ])
+            if len(gate_rows) > 1:
+                story += [_p("Persisted ordered circuit operations", styles["BodySmall"]),
+                          _table(gate_rows, styles, [18*mm, 42*mm, 45*mm, 65*mm])]
+            if len(gates) > max_rows:
+                story.append(_p(
+                    f"Showing the first {max_rows} of {len(gates)} persisted circuit operations.",
+                    styles["BodySmall"],
+                ))
+        if circuit.get("text"):
+            circuit_text = str(circuit["text"]).replace("→", "->").replace("←", "<-")
+            story += [_p("Persisted circuit description", styles["BodySmall"]),
+                      _p(circuit_text, styles["BodySmall"]), Spacer(1, 2 * mm)]
+        if circuit.get("limitation"):
+            story.append(_p(circuit["limitation"], styles["Note"]))
+
+        state = model.get("state_evidence") or {}
+        story.append(_kv([
+            ("State / measurement evidence status", state.get("status")),
+            ("State / measurement note", state.get("reason")),
+        ], styles))
+
+        if diagnostic:
+            diagnostic_rows = [
+                ("Diagnostic report ID", diagnostic.get("id")),
+                ("Diagnostic status", diagnostic.get("status")),
+                ("Diagnostic recorded", diagnostic.get("created_at")),
+                ("Configuration fingerprint", diagnostic.get("configuration_fingerprint")),
+                ("Persisted diagnostic resource profile", diagnostic.get("resource_profile")),
+                ("Diagnostic warnings", diagnostic.get("warnings")),
+                ("Diagnostic limitations", diagnostic.get("limitations")),
+            ]
+            diagnostic_rows = [(label, value) for label, value in diagnostic_rows if value is not None and value != "" and value != [] and value != {}]
+            story += [_p("Persisted quantum diagnostics", styles["BodySmall"]), _kv(diagnostic_rows, styles)]
+
+        limitations = model.get("limitations") or []
+        if limitations:
+            story.append(_p("Model limitations: " + "; ".join(str(value) for value in limitations), styles["Note"]))
+
+    if evidence.get("limitations"):
+        story.append(_p("; ".join(str(value) for value in evidence["limitations"]), styles["Note"]))
+    story.append(_p(
+        "This section summarizes persisted model and diagnostic records. It does not represent an unsaved preview, infer missing simulator state, claim hardware execution, or establish quantum advantage or clinical validity.",
+        styles["Note"],
+    ))
+    return story
+
+
 class _ReportDoc(BaseDocTemplate):
     def __init__(self, buffer: BytesIO, experiment_id: str, generated_at: str):
         super().__init__(buffer, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=17 * mm, bottomMargin=18 * mm, title="EntangleX Q-Health Research Experiment Report", author="EntangleX Q-Health")
@@ -263,6 +371,8 @@ def pdf_report(data: dict) -> bytes:
             q = _get(model, "details", "quantum", default={}) or {}
             quantum_rows.append([_model_name(model), q.get("framework"), q.get("execution_mode") or q.get("execution_kind"), q.get("backend"), q.get("qubits"), q.get("quantum_layers") or q.get("layers"), q.get("shots"), q.get("optimizer"), q.get("iterations") or q.get("maxiter"), _get(model, "metrics", "timing", "final_training_seconds")])
     story += [_p("13 — Quantum / hybrid execution", s["Section"]), _table(quantum_rows if len(quantum_rows)>1 else [["Quantum / hybrid execution evidence", "Not recorded"]], s), _p("Local simulation is distinct from real quantum hardware. No hardware performance or quantum advantage is inferred.", s["Note"])]
+    if isinstance(data.get("quantum_evidence"), dict) and data["quantum_evidence"].get("models"):
+        story += _quantum_evidence_story(data["quantum_evidence"], s)
 
     artifact = package.get("artifact") or {}
     story += [_p("14 — Provenance / traceability", s["Section"]), _kv([

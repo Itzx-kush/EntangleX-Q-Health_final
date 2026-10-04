@@ -132,4 +132,19 @@ describe('Quantum Lab visualization contract components',()=>{
   expect((await screen.findAllByText('Custom upload B')).length).toBeGreaterThan(1);
   expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(5);
  });
+ it('offers the existing experiment report for the selected persisted quantum model',async()=>{
+  localStorage.clear();vi.clearAllMocks();
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([{id:'model-1',experiment_id:'experiment-1',dataset_id:'dataset-1',model_type:'qsvc',status:'ready',details:{quantum:{}},metrics:{test:{},validation:{summary:{}},timing:{}}}] as never);
+  vi.mocked(qh.experiments).mockResolvedValue([{id:'experiment-1',dataset_id:'dataset-1',created_at:'2026-10-01T00:00:00Z',config:{quantum:{qubits:4,shots:1024},hybrid:{}}}] as never);
+  vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-1',name:'Cohort A'}] as never);
+  vi.mocked(qh.dataset).mockResolvedValue({id:'dataset-1',name:'Cohort A',provenance:{name:'Cohort A'}} as never);
+  vi.mocked(qh.quantum_diagnostics_by_run).mockResolvedValue(null as never);
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
+  const modelSelect=await screen.findByRole('combobox',{name:'Quantum persisted model'});
+  fireEvent.change(modelSelect,{target:{value:'model-1'}});
+  const reportLink=await screen.findByRole('link',{name:'Experiment report'});
+  expect(reportLink).toHaveAttribute('href','/experiments/experiment-1');
+ });
 });
