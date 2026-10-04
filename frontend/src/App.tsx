@@ -9,6 +9,7 @@ import {AiProvider} from './contexts/AiContext';
 import {AiPopup} from './components/AiPopup';
 import {qh} from './lib/api';
 import {useDraft} from './hooks/useDraft';
+import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
