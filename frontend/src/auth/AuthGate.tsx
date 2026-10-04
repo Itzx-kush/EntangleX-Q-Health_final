@@ -133,7 +133,10 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       <button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={14}/> Back to public experience</button>
       <div className="auth-brand-lockup">
         <img src="/entanglex-logo-dark.svg" alt="EntangleX"/>
-        <span>Q-HEALTH</span>
+        <ShinyText className="auth-product-label">Q-HEALTH</ShinyText>
+      </div>
+      <div className="auth-research-identity" aria-label="Research access environment">
+        <span>RESEARCH ACCESS</span><i aria-hidden="true"/><span>CONTROLLED ENTRY</span>
       </div>
       <p className="auth-eyebrow">Research access</p>
       <h1 id="auth-title"><SplitReveal text="Enter your research workspace."/></h1>
@@ -146,8 +149,14 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       <p className="auth-boundary"><ShieldCheck size={14}/> Research prototype · not for clinical diagnosis</p>
     </section>
 
-    <OuterSpotlight className="auth-panel-stage"><section className="auth-panel" data-motion-depth="front" aria-label="Choose how to continue">
-      <div className="auth-panel-index" aria-hidden="true"><span>ACCESS</span><strong>03</strong></div>
+    <OuterSpotlight className="auth-panel-stage"><BorderGlow className="auth-panel-border"><section className="auth-panel" data-motion-depth="front" aria-label="Choose how to continue">
+      <div className="auth-panel-index" aria-hidden="true"><span>ACCESS / RESEARCH GATE</span><strong>03</strong></div>
+      <div className="auth-research-rail" aria-label="Verified research access capabilities">
+        <span>RESEARCH MODE</span>
+        <span>CLASSICAL + QUANTUM</span>
+        <span>VERIFIED WORKFLOWS</span>
+        <span>GUEST ACCESS</span>
+      </div>
       <div className="auth-panel-heading">
         <span className="auth-step"><DecryptedText text="ENTANGLEX Q-HEALTH"/></span>
         <h2><SplitReveal text={preservingGuestWork?'Save this research to your workspace':'Enter your research workspace'}/></h2>
@@ -186,7 +195,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
       </div>}
 
       <p className="auth-footnote">Secure account access · guest exploration remains available</p>
-    </section></OuterSpotlight>
+    </section></BorderGlow></OuterSpotlight>
     {enteringGuest&&<AccessTransition guest/>}
   </main>;
 }
