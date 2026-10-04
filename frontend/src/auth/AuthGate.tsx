@@ -130,7 +130,7 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
     </div>
 
     <section className="auth-brand" data-motion-depth="back" aria-labelledby="auth-title">
-      <button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={14}/> Back to public experience</button>
+      <OuterMagnet className="auth-back-magnet"><button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={14}/> Back to public experience</button></OuterMagnet>
       <div className="auth-brand-lockup">
         <img src="/entanglex-logo-dark.svg" alt="EntangleX"/>
         <ShinyText className="auth-product-label">Q-HEALTH</ShinyText>
