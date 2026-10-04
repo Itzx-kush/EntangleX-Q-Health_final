@@ -485,3 +485,24 @@ export interface ScorecardComparison {
     delta: unknown;
   }>;
 }
+
+export interface SavedResearchReport {
+  saved_report_id:string;
+  title:string;
+  experiment_id:string;
+  experiment_name:string|null;
+  dataset_name:string|null;
+  report_version:string;
+  evidence_package_id:string|null;
+  evidence_package_fingerprint:string|null;
+  report_artifact_id:string|null;
+  report_fingerprint:string;
+  integrity_hash:string;
+  generated_at:string;
+  saved_at:string;
+  size_bytes:number;
+  content_type:'application/pdf';
+  status:'active'|'deleted';
+  primary_result:{model:string;metric:string;value:number}|null;
+  already_saved?:boolean;
+}

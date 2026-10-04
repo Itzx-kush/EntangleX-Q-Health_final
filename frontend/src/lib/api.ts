@@ -1,4 +1,4 @@
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -54,9 +54,10 @@ export function isApiError(error:unknown):error is ApiError{
   return error instanceof ApiError;
 }
 
-async function request(path:string,options:RequestInit={}){
+async function request(path:string,options:RequestInit={},authToken?:string){
   const headers=new Headers(options.headers);
-  if(token) headers.set('Authorization',`Bearer ${token}`);
+  const credential=authToken?.trim()||token;
+  if(credential) headers.set('Authorization',`Bearer ${credential}`);
   if(options.body && !(options.body instanceof FormData)) headers.set('Content-Type','application/json');
   let response:Response;
   try{
@@ -83,7 +84,11 @@ export const api={
   post:<T>(path:string,body?:unknown)=>request(path,{method:'POST',body:body===undefined?undefined:JSON.stringify(body)}).then(r=>r.json() as Promise<T>),
   upload:<T>(path:string,body:FormData)=>request(path,{method:'POST',body}).then(r=>r.json() as Promise<T>),
   remove:<T=void>(path:string)=>request(path,{method:'DELETE'}).then(async response=>response.status===204?undefined as T:await response.json() as T),
-  download:async(path:string,filename:string)=>{const blob=await request(path).then(r=>r.blob());const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),800);}
+  download:async(path:string,filename:string)=>{const blob=await request(path).then(r=>r.blob());const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),800);},
+  authGet:<T>(path:string,accessToken:string)=>request(path,{},accessToken).then(r=>r.json() as Promise<T>),
+  authPost:<T>(path:string,accessToken:string,body?:unknown)=>request(path,{method:'POST',body:body===undefined?undefined:JSON.stringify(body)},accessToken).then(r=>r.json() as Promise<T>),
+  authRemove:<T=void>(path:string,accessToken:string)=>request(path,{method:'DELETE'},accessToken).then(async response=>response.status===204?undefined as T:await response.json() as T),
+  authDownload:async(path:string,filename:string,accessToken:string)=>{const blob=await request(path,{},accessToken).then(r=>r.blob());const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),800);}
 };
 
 export const qh={
@@ -196,6 +201,11 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
     `/experiments/${id}/report?format=${format}`,
     `qhealth-${id}.${format}`
   ),
+  savedResearchReports:(accessToken:string,experimentId?:string)=>api.authGet<SavedResearchReport[]>(`/me/research-reports${experimentId?`?experiment_id=${encodeURIComponent(experimentId)}`:''}`,accessToken),
+  savedResearchReport:(id:string,accessToken:string)=>api.authGet<SavedResearchReport>(`/me/research-reports/${id}`,accessToken),
+  saveResearchReport:(experimentId:string,accessToken:string)=>api.authPost<SavedResearchReport>('/me/research-reports',accessToken,{experiment_id:experimentId}),
+  downloadSavedResearchReport:(id:string,experimentId:string,accessToken:string)=>api.authDownload(`/me/research-reports/${id}/download`,`qhealth-saved-report-${experimentId}.pdf`,accessToken),
+  deleteSavedResearchReport:(id:string,accessToken:string)=>api.authRemove<{saved_report_id:string;status:'deleted'}>(`/me/research-reports/${id}`,accessToken),
   subgroupPreflight:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupPreflightResponse>(`/experiments/${id}/subgroup-analysis/preflight`,body),
   createSubgroupAnalysis:(id:string,body:SubgroupAnalysisRequest)=>api.post<SubgroupStudy>(`/experiments/${id}/subgroup-analysis`,body),
   subgroupStudies:(id:string)=>api.get<SubgroupStudy[]>(`/experiments/${id}/subgroup-analysis`),

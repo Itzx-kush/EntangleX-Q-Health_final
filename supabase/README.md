@@ -8,6 +8,7 @@ Apply the migrations in filename order to the same Supabase project configured b
 
 1. `migrations/20261002170000_create_research_activity.sql`
 2. `migrations/20261002190000_allow_guest_session_activity.sql`
+3. `migrations/20261004133000_create_saved_research_reports.sql`
 
 The migration creates one deliberately small table:
 
@@ -40,3 +41,22 @@ Indexes support the actual query patterns:
 2. Keep only the public URL and anon/publishable key in the frontend environment.
 3. Never use a service-role key in the browser.
 4. Validate the policies with two real test users before production deployment.
+
+## Saved research reports
+
+Apply `migrations/20261004133000_create_saved_research_reports.sql` after the research-activity migrations. It creates:
+
+- `saved_research_reports`, a private user-owned metadata table with RLS;
+- a private `saved-research-reports` Storage bucket;
+- owner-scoped table and object policies based on `auth.uid()`;
+- an active-snapshot uniqueness rule to prevent duplicate saves.
+
+The backend cryptographically verifies the Supabase access token, derives the owner from its `sub` claim, and uses a backend-only service-role credential for the owner-filtered PostgREST and private Storage operations. The service-role credential is never returned to or exposed in the browser.
+
+Backend-only Render variables required for this feature:
+
+- `QHEALTH_SUPABASE_URL` — the same Supabase project URL used by the frontend;
+- `QHEALTH_SUPABASE_SERVICE_ROLE_KEY` — the project service-role key; configure it only on the backend and never in any `VITE_` variable;
+- `QHEALTH_SUPABASE_JWT_AUDIENCE` — optional, defaults to `authenticated`;
+
+The existing frontend variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) remain unchanged. Never configure a Supabase service-role key in the browser.
