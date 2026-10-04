@@ -74,3 +74,18 @@ export function RobustnessDeltaChart({records}:{records:RobustnessEvidence[]}){
  const rows=names.map(name=>({metric:name,...Object.fromEntries(measured.map(record=>[record.model_id,record.degradation_delta[name]]))}));
  return <div className="tremor-chart h-[300px]" role="img" aria-label="Observed degradation delta chart"><ResponsiveContainer width="100%" height="100%"><BarChart accessibilityLayer data={rows} margin={{top:12,right:14,left:0,bottom:20}}><CartesianGrid vertical={false} stroke="var(--tremor-grid)"/><XAxis dataKey="metric" tick={{fontSize:10,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false}/><YAxis tick={{fontSize:10,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false} tickFormatter={value=>Number(value).toFixed(2)}/><Tooltip cursor={{fill:'var(--tremor-hover)'}} content={<TremorChartTooltip valueFormatter={value=>value.toFixed(4)}/>}/><ReferenceLine y={0} stroke="var(--tremor-text)"/>{measured.map(record=><Bar key={record.model_id} dataKey={record.model_id} name={modelLabels[record.model_type]} fill={modelColors[record.model_type]||'var(--tremor-accent)'} radius={[4,4,0,0]}/>)}</BarChart></ResponsiveContainer><p className="mt-1 text-center text-[11px] muted">Observed change: perturbed − baseline</p></div>;
 }
+
+export type RuntimeKind = 'final_training_seconds'|'cv_total_seconds'|'test_inference_seconds'|'test_inference_seconds_per_sample';
+
+function modelFamily(kind:ModelRecord['model_type']){
+ if(kind==='hybrid_pennylane_torch')return 'Hybrid';
+ if(['vqc','qsvc','qnn'].includes(kind))return 'Quantum';
+ return 'Classical';
+}
+function analysisMetricLabel(name:MetricName){return name==='roc_auc'?'ROC-AUC':name.replaceAll('_',' ').toUpperCase()}
+
+export function ModelMetricBars({models,metricName}:{models:ModelRecord[];metricName:MetricName}){
+ const rows=models.map(model=>({name:modelLabels[model.model_type],kind:model.model_type,value:model.metrics.test?.[metricName]})).filter(row=>typeof row.value==='number'&&Number.isFinite(row.value)) as {name:string;kind:ModelRecord['model_type'];value:number}[];
+ if(!rows.length)return <div className="h-[300px] grid place-items-center text-sm muted">No persisted {analysisMetricLabel(metricName)} values are available for the selected model set.</div>;
+ return <div className="tremor-chart h-[310px]" role="img" aria-label={'Held-out '+analysisMetricLabel(metricName)+' by model'}><ResponsiveContainer width="100%" height="100%"><BarChart accessibilityLayer data={rows} margin={{top:14,right:12,left:0,bottom:48}}><CartesianGrid vertical={false} stroke="var(--tremor-grid)"/><XAxis dataKey="name" tick={{fontSize:10,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false} angle={-18} textAnchor="end" interval={0}/><YAxis domain={[0,1]} tick={{fontSize:10,fill:'var(--tremor-muted)'}} tickLine={false} axisLine={false} tickFormatter={value=>Number(value).toFixed(2)}/><Tooltip cursor={{fill:'var(--tremor-hover)'}} content={<TremorChartTooltip valueFormatter={value=>value.toFixed(3)}/>}/><Bar dataKey="value" name={analysisMetricLabel(metricName)} radius={[5,5,0,0]} maxBarSize={52}>{rows.map(row=><Cell key={row.name} fill={modelFamily(row.kind)==='Classical'?'var(--chart-blue)':modelFamily(row.kind)==='Quantum'?'var(--chart-purple)':'var(--chart-cyan)'}/>)}</Bar></BarChart></ResponsiveContainer></div>;
+}
