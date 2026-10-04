@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowRight,Atom,BarChart3,Brain,CheckCircle2,Play,RotateCcw,ShieldAlert,SlidersHorizontal} from 'lucide-react';
+import {ArrowRight,Play,ShieldAlert,SlidersHorizontal} from 'lucide-react';
 import {Button,Card,Badge,Input,Select} from '../components/ui';
 import {ErrorBanner,EmptyState,Loading,MetricCard,ModelSelect,Notice,PageHeader,StatusBadge,JsonDisclosure,metricNames} from '../components/Shared';
 import {InfluenceBars} from '../components/Charts';
@@ -10,7 +10,7 @@ import {qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId,isHybridModel,isQiskitQuantumModel,isQuantumFamilyModel} from '../utils/format';
 import type {EvidencePair,Experiment,Influence,Job,ModelKind,ModelRecord,PerturbationType,RobustnessEvidence} from '../types/qhealth';
-import {GlareHover,BorderGlow,Reveal,QuantumVisual,SpotlightPanel} from '../components/reactbits';
+import {GlareHover,BorderGlow} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,ProbabilityBand,StatusStrip,WorkbenchRail} from '../components/TremorWorkbench';
 import {VerifiedComparison,VerifiedExplainability,VerifiedPrediction,VerifiedRobustness,VerifiedTraining} from '../components/VerifiedDemoViews';
 import {ResearchResultsCenter} from '../components/ResearchResultsCenter';
@@ -18,18 +18,13 @@ import {ExplainabilityResearchLab} from '../components/ExplainabilityResearchLab
 import {ResearchPredictionLab,type CrossModelPrediction} from '../components/ResearchPredictionLab';
 import {RobustnessEvidenceLab} from '../components/RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
+import {QuantumCircuitExplorer,QuantumContextPanel,QuantumPipeline,QuantumResourcePanel,QuantumStatePanel} from '../components/quantum';
+import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest} from '../types/quantumVisualization';
+import type {Circuit} from '../types/qhealth';
 import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
 import {useResearchRecorder} from '../research/useResearchHistory';
 import {experimentActivity,explanationActivity,predictionActivity} from '../research/historyRecords';
 
-
-function CircuitViz({circuit}:{circuit:{qubits:number;gates:{name:string;qubits:number[];parameters:string[]}[]}}){
- const byQubit=Array.from({length:circuit.qubits},(_,qubit)=>({qubit,gates:circuit.gates.filter(g=>g.qubits.includes(qubit))}));
- return <div className="circuit-view" aria-label="Logical circuit visualization">
-  <div className="circuit-view-head"><span>Qubit</span><span>Measured gates returned by backend</span></div>
-  {byQubit.map(row=><div className="circuit-row" key={row.qubit}><strong>q[{row.qubit}]</strong><div className="circuit-wire">{row.gates.length?row.gates.map((gate,index)=><span className="circuit-gate" key={`${gate.name}-${index}`} title={gate.parameters.join(', ')}>{gate.name}{gate.parameters.length>0&&<small>{gate.parameters.join(', ')}</small>}</span>):<span className="circuit-idle">No gate on this wire</span>}</div></div>)}
- </div>;
-}
 
 function latestExperimentForDataset(experiments:Experiment[]|undefined,datasetId:string){
  return (experiments||[]).filter(experiment=>experiment.dataset_id===datasetId).sort((a,b)=>b.created_at.localeCompare(a.created_at))[0];
@@ -265,22 +260,110 @@ function LiveRobustness(){
 }
 
 export function Quantum(){
- const {draft,update,pipeline,quantum}=useDraft(); const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities}); const [kind,setKind]=useState<'vqc'|'qsvc'|'qnn'>('vqc');const [circuit,setCircuit]=useState<any>();const [modelId,setModelId]=useState('');const [mode,setMode]=useState<'explain'|'technical'>('explain');const models=useQuery({queryKey:['models'],queryFn:qh.models});const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});const selectedModel=models.data?.find(model=>model.id===modelId);const selectedExperiment=experiments.data?.find(item=>item.id===selectedModel?.experiment_id);const dataset=useQuery({queryKey:['dataset',selectedModel?.dataset_id],queryFn:()=>qh.dataset(selectedModel!.dataset_id),enabled:Boolean(selectedModel?.dataset_id),staleTime:300000});const diagnostics=useQuery({queryKey:['quantum-diagnostics',modelId],queryFn:()=>qh.quantum_diagnostics_by_run(modelId),enabled:Boolean(modelId),retry:false,staleTime:30000});const preview=useMutation({mutationFn:()=>qh.circuit({quantum:draft.quantum,model_type:kind,seed:draft.seed}),onSuccess:setCircuit});const fitted=useMutation({mutationFn:()=>qh.fittedCircuit(modelId),onSuccess:setCircuit});const advisor=useMutation({mutationFn:()=>qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:draft.dataset_id||null,experiment_id:null})});
- useEffect(()=>{setCircuit(undefined)},[modelId]);
- const advice=advisor.data;const history=advice?.historical_evidence;const applyRecommendation=()=>{const recommendation=advice?.recommendation.configuration;if(!recommendation)return;quantum(recommendation.quantum);pipeline({pca_components:recommendation.feature_dimension,angle_scaling:true});update({max_samples:recommendation.sample_count})};
- return <div><PageHeader eyebrow="04 / Quantum" title="Quantum Evidence Lab" description="Inspect persisted quantum and hybrid execution, resource, circuit, diagnostic, and runtime evidence without turning simulator measurements into hardware claims." actions={<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link>}/><StageNav current="/quantum"/><WorkbenchRail items={[{label:'Model family',value:kind.toUpperCase(),detail:'Qiskit quantum model',tone:'purple'},{label:'Runtime',value:cap.data?.available?'Available':'Unavailable',detail:cap.data?.execution||'Capability loading',tone:cap.data?.available?'green':'amber'},{label:'Logical qubits',value:circuit?.qubits??draft.quantum.qubits,detail:'Configured / returned width',tone:'blue'},{label:'Circuit evidence',value:circuit?'Measured':'Not generated',detail:circuit?`${circuit.logical_depth} depth · ${circuit.parameter_count} params`:'Backend representation required',tone:circuit?'green':'slate'}]}/><PipelineFlow items={[{label:'Capability',detail:'Backend dependency report',status:cap.data?.available?'complete':'blocked'},{label:'Configure',detail:`${kind.toUpperCase()} · ${draft.quantum.qubits} qubits`,status:'current'},{label:'Advise',detail:'Bounded resource policy',status:advice?'complete':'waiting'},{label:'Circuit',detail:'Logical representation',status:circuit?'complete':'waiting'},{label:'Execute',detail:'Simulator-backed training',status:modelId?'current':'waiting'}]}/><ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/><Reveal className="mb-5"><SpotlightPanel className="rb-quantum-stage p-4"><div className="flex flex-wrap items-center gap-5"><QuantumVisual/><div className="max-w-md"><div className="eyebrow">STRUCTURAL QUANTUM VIEW</div><h2 className="section-title mt-2">Logical circuits, measured honestly.</h2><p className="section-copy mt-2">The ambient visual communicates circuit structure only; every value below comes from the existing backend contract.</p></div></div></SpotlightPanel></Reveal><div className="mt-5 two-grid"><Card title="Quantum capability"><div className="grid gap-3"><div className="flex justify-between text-sm"><span className="muted">Dependencies</span><StatusBadge value={cap.data?.available?'ready':'unavailable'}/></div><p className="text-xs muted">{cap.data?.execution||'Loading quantum runtime capability…'}</p><label className="field"><span>Model</span><Select aria-label="Quantum advisor model" value={kind} onChange={e=>setKind(e.target.value as any)}><option value="vqc">VQC</option><option value="qsvc">QSVC</option><option value="qnn">QNN</option></Select></label><Button disabled={cap.data?.available===false||preview.isPending} onClick={()=>preview.mutate()}><Play size={14}/>{preview.isPending?'Generating…':'Generate circuit representation'}</Button></div></Card><Card title="Registered quantum model"><ModelSelect models={models.data||[]} value={modelId} onChange={setModelId} quantumOnly/><Button className="mt-3" disabled={!modelId||fitted.isPending} onClick={()=>fitted.mutate()} variant="outline">Retrieve fitted circuit</Button></Card></div>
- {modelId&&<div className="mt-5"><QuantumEvidenceLab mode="live" models={models.data||[]} experiment={selectedExperiment} dataset={dataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending}/></div>}
- <Card className="mt-5" title="Quantum Resource Advisor" description="Cheap deterministic planning against the bounded prototype resource policy. The advisor never starts training or silently edits the draft.">
-  <div className="grid gap-3 md:grid-cols-4"><MetricCard label="BACKEND" value={draft.quantum.backend} detail={draft.quantum.noise_probability?`Noise ${draft.quantum.noise_probability}`:'No configured noise'}/><MetricCard label="QUBITS / PCA" value={`${draft.quantum.qubits} / ${draft.pipeline.pca_components??'off'}`} detail="Logical width / feature dimension"/><MetricCard label="CIRCUIT REPS" value={`${draft.quantum.feature_map_reps} + ${draft.quantum.ansatz_reps}`} detail="Feature map + ansatz"/><MetricCard label="ITERATIONS / SHOTS" value={`${draft.quantum.maxiter} / ${draft.quantum.shots}`} detail={`${draft.quantum.optimizer} · ${draft.max_samples??160} samples`}/></div>
-  <Button className="mt-4" disabled={advisor.isPending} onClick={()=>advisor.mutate()}><SlidersHorizontal size={14}/>{advisor.isPending?'Analyzing configuration…':'Analyze resource profile'}</Button>
- </Card>
- {advice&&<div className="mt-5 space-y-5">
-  <Card title="Resource profile" description={advice.budget_policy.semantics}><div className="grid gap-3 md:grid-cols-3"><MetricCard label="CIRCUIT COMPLEXITY" value={advice.resource_profile.circuit_complexity.toUpperCase()} detail={`${advice.resource_profile.logical_qubits} qubits · ${advice.resource_profile.entanglement} entanglement`}/><MetricCard label="OPTIMIZATION" value={advice.resource_profile.optimization_workload.toUpperCase()} detail={`${advice.resource_profile.optimizer_iteration_budget} requested iterations`}/><MetricCard label="MEASUREMENT" value={advice.resource_profile.measurement_workload.replaceAll('_',' ').toUpperCase()} detail={advice.resource_profile.shots_per_circuit_evaluation===null?'Exact statevector; configured shots are unused':`${advice.resource_profile.shots_per_circuit_evaluation} shots`}/><MetricCard label="SAMPLE WORKLOAD" value={advice.resource_profile.sample_workload.toUpperCase()} detail={`${advice.resource_profile.sample_count} / ${advice.resource_profile.bounded_quantum_sample_cap} bounded samples`}/><MetricCard label="BUDGET STATUS" value={advice.budget_status.status.replaceAll('_',' ').toUpperCase()} detail={advice.budget_policy.version}/><MetricCard label="EXECUTION" value="SIMULATOR" detail={advice.resource_profile.execution_kind}/></div><Notice tone={advice.budget_status.status==='exceeds_budget'?'amber':'blue'}>{advice.budget_status.reasons.join(' ')}</Notice></Card>
-  <Card title="Configuration recommendation" description={advice.recommendation.rationale}>{advice.recommendation.available?<><div className="table-wrap"><table className="data-table"><thead><tr><th>Parameter</th><th>Requested</th><th>Recommended</th><th>Reason</th></tr></thead><tbody>{advice.recommendation.changes.map(change=><tr key={change.field}><td>{change.field}</td><td>{change.from}</td><td>{change.to}</td><td>{change.reason}</td></tr>)}</tbody></table></div><Button className="mt-4" onClick={applyRecommendation}>Apply recommended configuration</Button><p className="mt-2 text-xs muted">Explicit action only. Applying updates the existing draft, matching PCA to qubits; it does not start training.</p></>:<Notice tone="blue">Configuration is within the bounded prototype resource policy. No draft changes are recommended.</Notice>}</Card>
-  <Card title="Observed historical runs" description={history?.matching_policy}>{history&&history.matched_runs>0?<div className="grid gap-3 md:grid-cols-3"><MetricCard label="MATCHED RUNS" value={history.matched_runs} detail="Recorded completed models"/><MetricCard label="MEDIAN TRAINING" value={seconds(history.median_training_seconds)} detail="Observed, not estimated"/><MetricCard label="OBSERVED RANGE" value={`${seconds(history.min_training_seconds)} – ${seconds(history.max_training_seconds)}`} detail="Recorded final-fit timing"/></div>:<Notice>Insufficient historical evidence for a measured runtime comparison.</Notice>}<p className="mt-3 text-xs muted">Observed historical runtime is not a guaranteed runtime estimate for this request.</p></Card>
-  <Notice tone="amber">Hardware execution is not available in the current verified configuration. Logical resources and simulator workload do not predict real-QPU wall-clock performance.</Notice>
- </div>}
- {circuit?<Card className="mt-5" title={String(circuit.model_type).toUpperCase() + ' · ' + circuit.execution_kind} description={circuit.limitation}><div className="mode-tabs" role="tablist" aria-label="Quantum view mode"><button className={mode==='explain'?'is-active':''} onClick={()=>setMode('explain')} role="tab" aria-selected={mode==='explain'}>Explain mode</button><button className={mode==='technical'?'is-active':''} onClick={()=>setMode('technical')} role="tab" aria-selected={mode==='technical'}>Technical mode</button></div>{mode==='explain'?<div className="quantum-explain-grid mt-4">{['Classical features','Encoding / feature map','Parameterized ansatz','Measurement','Classical optimization'].map((step,index)=><div className="quantum-explain-step" key={step}><span>{String(index+1).padStart(2,'0')}</span><strong>{step}</strong><small>{index===0?'The configured input representation enters the circuit.':index===1?'Features are encoded into logical qubit rotations.':index===2?'Trainable circuit parameters are evaluated by the selected runtime.':index===3?'The backend measures the circuit output for the estimator.':'A classical optimizer updates parameters during training.'}</small></div>)}</div>:<div className="grid gap-3 md:grid-cols-3 mt-4"><MetricCard label="BACKEND" value={circuit.backend} detail="Reported execution target"/><MetricCard label="EXECUTION" value={circuit.execution_kind} detail="Reported mode"/><MetricCard label="GATE TYPES" value={Object.keys(circuit.gate_counts).length} detail="Returned gate categories"/></div>}<div className="grid grid-cols-3 gap-3 mt-5"><MetricCard label="QUBITS" value={circuit.qubits} detail="Logical width" icon={<Atom size={15}/>}/><MetricCard label="DEPTH" value={circuit.logical_depth} detail="Logical depth" icon={<BarChart3 size={15}/>}/><MetricCard label="PARAMETERS" value={circuit.parameter_count} detail="Trainable parameters" icon={<SlidersHorizontal size={15}/>}/></div><CircuitViz circuit={circuit}/><details className="mt-5 rounded-xl border p-4"><summary className="cursor-pointer text-xs font-semibold">Raw circuit text</summary><pre className="mono mt-3 max-h-[360px] overflow-auto whitespace-pre-wrap text-xs leading-relaxed">{circuit.text}</pre></details><JsonDisclosure label="Gate counts and limitations" value={{gate_counts:circuit.gate_counts,limitation:circuit.limitation}}/></Card>:<div className="mt-5"><EmptyState title="No circuit representation">Generate or retrieve a backend-described circuit.</EmptyState></div>}</div>
+ const {draft,update,pipeline,quantum}=useDraft();
+ const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities});
+ const [kind,setKind]=useState<'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch'>('vqc');
+ const [contract,setContract]=useState<QuantumVisualizationContract|null>(null);
+ const [circuit,setCircuit]=useState<Circuit>();
+ const [circuitSource,setCircuitSource]=useState<'preview'|'fitted'|null>(null);
+ const [modelId,setModelId]=useState('');
+ const [datasetId,setDatasetId]=useState(draft.dataset_id);
+ const models=useQuery({queryKey:['models'],queryFn:qh.models});
+ const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,staleTime:30000});
+ const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
+ const selectedModel=models.data?.find(model=>model.id===modelId);
+ const selectedExperiment=experiments.data?.find(item=>item.id===selectedModel?.experiment_id);
+ const evidenceDataset=useQuery({queryKey:['dataset',selectedModel?.dataset_id],queryFn:()=>qh.dataset(selectedModel!.dataset_id),enabled:Boolean(selectedModel?.dataset_id),staleTime:300000});
+ const selectedDatasetId=datasetId||selectedModel?.dataset_id||draft.dataset_id||'';
+ const dataset=useQuery({queryKey:['dataset',selectedDatasetId],queryFn:()=>qh.dataset(selectedDatasetId),enabled:Boolean(selectedDatasetId),staleTime:300000});
+ const diagnostics=useQuery({queryKey:['quantum-diagnostics',modelId],queryFn:()=>qh.quantum_diagnostics_by_run(modelId),enabled:Boolean(modelId),retry:false,staleTime:30000});
+ const preview=useMutation({
+  mutationFn:(request:QuantumVisualizationPreviewRequest)=>qh.quantumVisualizationPreview(request),
+  onMutate:()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},
+  onSuccess:(result)=>{setContract(result);setCircuit(undefined);setCircuitSource('preview')},
+ });
+ const fitted=useMutation({
+  mutationFn:()=>qh.fittedCircuit(modelId),
+  onMutate:()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},
+  onSuccess:(result)=>{setCircuit(result);setContract(null);setCircuitSource('fitted')},
+ });
+ const advisor=useMutation({mutationFn:()=>{if(kind==='hybrid_pennylane_torch')throw new Error('The resource advisor supports VQC, QSVC, and QNN only.');return qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null})}});
+ useEffect(()=>{setDatasetId(draft.dataset_id)},[draft.dataset_id]);
+ useEffect(()=>{advisor.reset()},[kind,draft.quantum,draft.pipeline.pca_components,draft.max_samples,draft.dataset_id,datasetId]);
+ useEffect(()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ const advice=advisor.data;
+ const history=advice?.historical_evidence;
+ const applyRecommendation=()=>{const recommendation=advice?.recommendation.configuration;if(!recommendation)return;quantum(recommendation.quantum);pipeline({pca_components:recommendation.feature_dimension,angle_scaling:true});update({max_samples:recommendation.sample_count})};
+ const requestPreview=()=>{
+  const context={dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null,seed:draft.seed,...(draft.max_samples?{sample_count:draft.max_samples}:{})};
+  if(kind==='hybrid_pennylane_torch')preview.mutate({...context,model_type:kind,hybrid:draft.hybrid});
+  else preview.mutate({...context,model_type:kind,quantum:draft.quantum});
+ };
+ return <div className="quantum-lab-page">
+  <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a><Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
+  <StageNav current="/quantum"/>
+  <WorkbenchRail items={[
+   {label:'Model family',value:kind.toUpperCase(),detail:'Backend visualization context',tone:'purple'},
+   {label:'Runtime',value:contract?.provider.availability||(kind==='hybrid_pennylane_torch'?'PennyLane path':cap.data?.available?'Available':'Unavailable'),detail:contract?.provider.display_name||(kind==='hybrid_pennylane_torch'?'Provider status loads with preview':cap.data?.execution||'Capability loading'),tone:contract?'green':cap.data?.available||kind==='hybrid_pennylane_torch'?'blue':'amber'},
+   {label:'Logical qubits',value:contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits),detail:'Backend-reported logical width',tone:'blue'},
+   {label:'Circuit structure',value:contract?.circuit.gate_sequence.length??circuit?.gates.length??'Not loaded',detail:contract?'Ordered backend operations':circuit?'Persisted fitted operations':'No circuit loaded',tone:contract||circuit?'green':'slate'},
+  ]}/>
+  <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/>
+
+  <QuantumContextPanel contract={contract} datasetName={dataset.data?.provenance.name} modelType={kind} capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution} circuitSource={circuitSource}/>
+  <QuantumPipeline contract={contract} hasPersistedEvidence={Boolean(selectedModel)} hasDatasetContext={Boolean(dataset.data?.id)} hasCircuitStructure={Boolean(circuit?.gates.length)}/>
+
+  <section className="ql-setup-grid" aria-label="Quantum Lab configuration">
+   <Card title="Quantum capability and preview" description="Generate a bounded structural contract from the current quantum configuration. Preview does not train, create jobs, or simulate a state.">
+    <div className="ql-form-grid">
+     <label className="field"><span>Quantum model</span><Select aria-label="Quantum advisor model" value={kind} onChange={event=>setKind(event.target.value as 'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch')}><option value="vqc">VQC · variational classifier</option><option value="qsvc">QSVC · feature-map kernel</option><option value="qnn">QNN · quantum neural network</option><option value="hybrid_pennylane_torch">PennyLane + PyTorch hybrid</option></Select></label>
+     <label className="field"><span>Dataset context</span><Select aria-label="Quantum dataset context" value={datasetId} onChange={event=>setDatasetId(event.target.value)}><option value="">No registered dataset context</option>{datasetId&&!((datasets.data||[]).some(item=>item.id===datasetId))&&<option value={datasetId}>Active draft dataset · {shortId(datasetId)}</option>}{(datasets.data||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
+    </div>
+    <div className="ql-persisted-model-row"><label className="field"><span>Persisted model for diagnostics / fitted circuit</span><Select aria-label="Quantum persisted model" value={modelId} onChange={event=>setModelId(event.target.value)}><option value="">No persisted model selected</option>{(models.data||[]).filter(model=>isQiskitQuantumModel(model.model_type)).map(model=><option key={model.id} value={model.id}>{modelLabels[model.model_type]} · {shortId(model.id)}</option>)}</Select></label></div>
+   <div className="ql-context-note"><span className="ql-eyebrow">CURRENT CONFIGURATION</span><p>{kind==='hybrid_pennylane_torch'?`${draft.hybrid.qubits} qubits · ${draft.hybrid.quantum_layers} PennyLane circuit layers · ${draft.hybrid.backend} local simulator`:`${draft.quantum.qubits} qubits · ${draft.quantum.feature_map_reps} feature-map repetitions · ${draft.quantum.ansatz_reps} ansatz repetitions · ${draft.quantum.backend} local simulator`}</p></div>
+    <div className="ql-action-row">
+     <Button disabled={(kind!=='hybrid_pennylane_torch'&&cap.data?.available===false)||preview.isPending} onClick={requestPreview}><Play size={14}/>{preview.isPending?'Building backend contract…':'Generate structural preview'}</Button>
+     {modelId&&<Button variant="outline" disabled={fitted.isPending} onClick={()=>fitted.mutate()}>{fitted.isPending?'Loading fitted circuit…':'Retrieve fitted circuit evidence'}</Button>}
+    </div>
+    {circuitSource==='fitted'&&<Notice tone="blue">Fitted circuit structure is persisted model evidence. State, probability, phase, and Bloch output are not included unless the backend explicitly supplies them.</Notice>}
+   </Card>
+   <Card title="Quantum execution boundary" description="Provider and backend claims follow the backend contract; no hardware execution is available in this path.">
+    <div className="ql-runtime-summary"><span><small>Provider</small><strong>{contract?.provider.display_name||'Qiskit local'}</strong></span><span><small>Backend</small><strong>{contract?.provider.backend_id||draft.quantum.backend}</strong></span><span><small>Execution mode</small><strong>{contract?.provider.execution_mode||cap.data?.execution||'Local simulator'}</strong></span><span><small>Hardware availability</small><strong>{contract?.provider.hardware_available?'Reported available':'Not available in this execution path'}</strong></span></div>
+    <p className="ql-boundary-note">Circuit preview describes structure only. No simulator state, measurement, or quantum advantage is inferred from gate connectivity.</p>
+   </Card>
+  </section>
+
+  <section className="ql-main-grid" aria-label="Quantum visualization panels">
+   <div className="ql-main-primary">
+    <Card title="Circuit explorer" description={contract?.circuit.limitation||circuit?.limitation||'Backend-ordered gates are interactive. Structural playback highlights operations only; it does not evolve or invent a quantum state.'}>
+     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer circuit={contract?.circuit||circuit!} sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}/>:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
+    </Card>
+    <QuantumStatePanel contract={contract} unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulation was run. Generate a preview for structure, or use an explicitly supported backend simulation with a valid encoded representation.'}/>
+   </div>
+   <div className="ql-main-secondary">
+    <QuantumResourcePanel contract={contract}/>
+    {contract&&<Card title="Contract and limitations" description={`Version ${contract.schema_version} · fingerprint ${contract.request_fingerprint}`}>
+     <div className="ql-contract-meta"><span><small>Model semantics</small><strong>{contract.circuit.output_semantics||contract.circuit.measurement_path||'Not reported'}</strong></span><span><small>Gate operations</small><strong>{contract.circuit.total_gates??contract.circuit.gate_sequence.length}</strong></span><span><small>Execution kind</small><strong>{contract.circuit.execution_kind}</strong></span></div>
+     <ul className="ql-limitation-list">{contract.limitations.map((limitation,index)=><li key={`${index}-${limitation}`}>{limitation}</li>)}</ul>
+    </Card>}
+   </div>
+  </section>
+
+  <Card title="Quantum Resource Advisor" description="Existing deterministic, bounded backend resource advice. Recommendations are applied only after an explicit action; the advisor never starts training.">
+   <div className="grid gap-3 md:grid-cols-4"><MetricCard label="BACKEND" value={draft.quantum.backend} detail={draft.quantum.noise_probability?`Noise ${draft.quantum.noise_probability}`:'No configured noise'}/><MetricCard label="QUBITS / PCA" value={`${draft.quantum.qubits} / ${draft.pipeline.pca_components??'off'}`} detail="Logical width / configured feature dimension"/><MetricCard label="CIRCUIT REPS" value={`${draft.quantum.feature_map_reps} + ${draft.quantum.ansatz_reps}`} detail="Feature map + ansatz"/><MetricCard label="ITERATIONS / SHOTS" value={`${draft.quantum.maxiter} / ${draft.quantum.shots}`} detail={`${draft.quantum.optimizer} · ${draft.max_samples??160} samples`}/></div>
+   <Button className="mt-4" disabled={advisor.isPending||kind==='hybrid_pennylane_torch'} onClick={()=>advisor.mutate()}><SlidersHorizontal size={14}/>{kind==='hybrid_pennylane_torch'?'Advisor supports VQC, QSVC, and QNN':advisor.isPending?'Analyzing configuration…':'Analyze resource profile'}</Button>
+  </Card>
+  {advice&&<div className="mt-5 space-y-5">
+   <Card title="Resource profile" description={advice.budget_policy.semantics}><div className="grid gap-3 md:grid-cols-3"><MetricCard label="CIRCUIT COMPLEXITY" value={advice.resource_profile.circuit_complexity.toUpperCase()} detail={`${advice.resource_profile.logical_qubits} qubits · ${advice.resource_profile.entanglement} entanglement`}/><MetricCard label="OPTIMIZATION" value={advice.resource_profile.optimization_workload.toUpperCase()} detail={`${advice.resource_profile.optimizer_iteration_budget} requested iterations`}/><MetricCard label="MEASUREMENT" value={advice.resource_profile.measurement_workload.replaceAll('_',' ').toUpperCase()} detail={advice.resource_profile.shots_per_circuit_evaluation===null?'Exact statevector; configured shots are unused':`${advice.resource_profile.shots_per_circuit_evaluation} shots`}/><MetricCard label="SAMPLE WORKLOAD" value={advice.resource_profile.sample_workload.toUpperCase()} detail={`${advice.resource_profile.sample_count} / ${advice.resource_profile.bounded_quantum_sample_cap} bounded samples`}/><MetricCard label="BUDGET STATUS" value={advice.budget_status.status.replaceAll('_',' ').toUpperCase()} detail={advice.budget_policy.version}/><MetricCard label="EXECUTION" value="SIMULATOR" detail={advice.resource_profile.execution_kind}/></div><Notice tone={advice.budget_status.status==='exceeds_budget'?'amber':'blue'}>{advice.budget_status.reasons.join(' ')}</Notice></Card>
+   <Card title="Configuration recommendation" description={advice.recommendation.rationale}>{advice.recommendation.available?<><div className="table-wrap"><table className="data-table"><thead><tr><th>Parameter</th><th>Requested</th><th>Recommended</th><th>Reason</th></tr></thead><tbody>{advice.recommendation.changes.map(change=><tr key={change.field}><td>{change.field}</td><td>{change.from}</td><td>{change.to}</td><td>{change.reason}</td></tr>)}</tbody></table></div><Button className="mt-4" onClick={applyRecommendation}>Apply recommended configuration</Button><p className="mt-2 text-xs muted">Explicit action only. Applying updates the existing draft and never starts training.</p></>:<Notice tone="blue">Configuration is within the bounded prototype resource policy. No draft changes are recommended.</Notice>}</Card>
+   <Card title="Observed historical runs" description={history?.matching_policy}>{history&&history.matched_runs>0?<div className="grid gap-3 md:grid-cols-3"><MetricCard label="MATCHED RUNS" value={history.matched_runs} detail="Recorded completed models"/><MetricCard label="MEDIAN TRAINING" value={seconds(history.median_training_seconds)} detail="Observed, not estimated"/><MetricCard label="OBSERVED RANGE" value={`${seconds(history.min_training_seconds)} – ${seconds(history.max_training_seconds)}`} detail="Recorded final-fit timing"/></div>:<Notice>Insufficient historical evidence for a measured runtime comparison.</Notice>}<p className="mt-3 text-xs muted">Observed historical runtime is not a guaranteed runtime estimate for this request.</p></Card>
+   <Notice tone="amber">Hardware execution is not available in the current verified configuration. Logical resources and simulator workload do not predict real-QPU performance.</Notice>
+  </div>}
+
+  <div id="quantum-evidence" className="ql-evidence-anchor">
+   {modelId?<QuantumEvidenceLab mode="live" models={models.data||[]} experiment={selectedExperiment} dataset={evidenceDataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending}/>:<Card title="Persisted model evidence" description="Select a registered quantum model above to inspect its diagnostics and persisted model evidence."><p className="ql-evidence-prompt">Model evidence remains separate from structural previews and is never created by this visualization flow.</p></Card>}
+  </div>
+ </div>;
 }
 
 export function Explainability(){
