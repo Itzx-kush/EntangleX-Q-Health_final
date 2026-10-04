@@ -35,6 +35,15 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
+    # A persistent disk keeps the runtime SQLite registry, uploaded datasets and
+    # generated model/experiment artifacts across restarts and redeploys.
+    # Persistent disks require a paid instance type and pin the service to a
+    # single instance (no zero-downtime deploys). Size can grow but never shrink.
+    plan: starter
+    disk:
+      name: qhealth-runtime
+      mountPath: /runtime
+      sizeGB: 1
     envVars:
       - key: QHEALTH_DEPLOYMENT_MODE
         value: production
