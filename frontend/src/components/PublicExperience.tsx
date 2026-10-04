@@ -100,20 +100,8 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       <OuterAurora/>
       <span className="public-glow public-glow-a" data-motion-depth="back"/>
       <span className="public-glow public-glow-b" data-motion-depth="back"/>
-      <span className="public-background-node node-a" data-motion-depth="mid"/>
-      <span className="public-background-node node-b" data-motion-depth="back"/>
-      <span className="public-background-node node-c" data-motion-depth="mid"/>
-      <div className="public-background-network" aria-hidden="true">
-        <span className="network-node network-node-a"/>
-        <span className="network-node network-node-b"/>
-        <span className="network-node network-node-c"/>
-        <span className="network-node network-node-d"/>
-        <span className="network-node network-node-e"/>
-        <i className="network-link link-a"/>
-        <i className="network-link link-b"/>
-        <i className="network-link link-c"/>
-        <i className="network-link link-d"/>
-      </div>
+      <span className="public-background-vignette"/>
+      <InteractiveQuantumField/>
     </div>
 
     <header className="public-header">
@@ -151,7 +139,6 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
 
     <main id="top">
       <section className="public-hero public-shell" aria-labelledby="public-hero-title">
-        <InteractiveQuantumField/>
         <PixelTrail/>
         <div className="public-hero-copy" data-public-reveal="hero" data-motion-depth="front">
           <p className="public-eyebrow"><span><DecryptedText text="ENTANGLEX"/></span> Biomedical research platform</p>
