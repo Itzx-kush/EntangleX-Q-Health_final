@@ -10,6 +10,10 @@ async def authorize(request: Request) -> None:
     if origin is not None and origin not in cors_origins and "*" not in cors_origins:
         # CORS alone does not prevent simple cross-origin write requests.
         raise AppError("origin_not_allowed", "This request origin is not allowed.", 403)
+    # Saved-report routes verify Supabase JWTs independently. Existing routes
+    # retain the local bearer-token contract unchanged.
+    if request.url.path.startswith("/api/me/research-reports"):
+        return
     if settings.api_token:
         supplied = request.headers.get("authorization", "")
         expected = f"Bearer {settings.api_token}"

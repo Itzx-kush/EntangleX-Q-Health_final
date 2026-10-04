@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     job_max_resume_attempts: int = Field(default=5, ge=1, le=50)
     log_level: str = "INFO"
 
+    # Backend-only Supabase bridge for authenticated saved research reports.
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_jwt_audience: str = "authenticated"
+
     groq_api_key: str = ""
     groq_model: str = "qwen/qwen3.8-27b"
 

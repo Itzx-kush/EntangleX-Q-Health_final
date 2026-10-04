@@ -28,6 +28,8 @@ const DemoCenter=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({defaul
 const SettingsPage=lazy(()=>import('./pages/ResearchPagesSystem').then(m=>({default:m.SettingsPage})));
 const AccountPage=lazy(()=>import('./pages/AccountPage').then(m=>({default:m.AccountPage})));
 const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then(m=>({default:m.ResearchHistoryPage})));
+const ResearchReportsPage=lazy(()=>import('./research/ResearchReportsPage').then(m=>({default:m.ResearchReportsPage})));
+const ResearchReportDetailPage=lazy(()=>import('./research/ResearchReportsPage').then(m=>({default:m.ResearchReportDetailPage})));
 const AiAssistantPage=lazy(()=>import('./pages/AiAssistantPage').then(m=>({default:m.AiAssistantPage})));
 
 export default function App(){
@@ -62,6 +64,8 @@ function WorkspaceRoutes(){
       <Route path="/demo" element={<DemoCenter/>}/>
       <Route path="/account" element={<AccountPage/>}/>
       <Route path="/my-research" element={<ResearchHistoryPage/>}/>
+      <Route path="/my-research/reports" element={<ResearchReportsPage/>}/>
+      <Route path="/my-research/reports/:savedReportId" element={<ResearchReportDetailPage/>}/>
       <Route path="/ai" element={<AiAssistantPage/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>

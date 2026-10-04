@@ -1,7 +1,7 @@
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft,Copy,Download,ExternalLink,GitBranch,History,RotateCcw,Trash2} from 'lucide-react';
+import {ArrowLeft,BookmarkPlus,Copy,Download,ExternalLink,GitBranch,History,LogIn,RotateCcw,Trash2} from 'lucide-react';
 import {Button,Card,Select,Badge} from '../components/ui';
 import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHeader,StatusBadge} from '../components/Shared';
 import {StageNav} from './ResearchPagesCore';
@@ -21,6 +21,7 @@ import {DatasetQualityPanel} from './DatasetQualityScorecard';
 import {FinalResearchEvidence} from '../components/FinalResearchEvidence';
 import {useResearchRecorder} from '../research/useResearchHistory';
 import {experimentActivity} from '../research/historyRecords';
+import {useAuth} from '../auth/AuthProvider';
 
 export function Experiments(){
   const list=useQuery({queryKey:['experiments'],queryFn:qh.experiments,refetchInterval:5000});
@@ -469,9 +470,15 @@ export function ScientificAuditTimelinePanel({experimentId}:{experimentId:string
 
 export function ExperimentDetail(){
   const {id=''}=useParams();
+  const {session,isAuthenticated,leaveGuestMode}=useAuth();
+  const queryClient=useQueryClient();
+  const accessToken=session?.access_token||'';
   const result=useQuery({queryKey:['experiment',id],queryFn:()=>qh.experiment(id),enabled:Boolean(id),refetchInterval:query=>['queued','running','cancel_requested'].includes(query.state.data?.experiment.status||'')?5000:false});
   const action=useMutation({mutationFn:(format:'html'|'json')=>qh.report(id,format)});
   const pdfAction=useMutation({mutationFn:()=>qh.report(id,'pdf')});
+  const savedState=useQuery({queryKey:['saved-research-report-state',id],queryFn:()=>qh.savedResearchReports(accessToken,id),enabled:Boolean(isAuthenticated&&accessToken&&id),retry:false});
+  const savedReport=savedState.data?.[0];
+  const saveReport=useMutation({mutationFn:()=>qh.saveResearchReport(id,accessToken),onSuccess:async()=>{await Promise.all([queryClient.invalidateQueries({queryKey:['saved-research-report-state',id]}),queryClient.invalidateQueries({queryKey:['saved-research-reports']})])}});
   const [expanded,setExpanded]=useState<string|null>(null);
   const detail=result.data;
   if(result.isLoading)return <div><PageHeader eyebrow="Research Studio · Evidence" title="Experiment detail" description="Loading the selected research record."/><Loading/></div>;
@@ -515,9 +522,12 @@ export function ExperimentDetail(){
           <MetricCard label="EXPERIMENT ID" value={shortId(id)} detail="Included in every page footer"/>
           <MetricCard label="REPORT SCOPE" value="Persisted evidence" detail="No training or scientific recomputation"/>
         </div>
-        <ErrorBanner error={(pdfAction.error as Error)?.message}/>
+        <ErrorBanner error={(pdfAction.error as Error)?.message||(savedState.error as Error)?.message||(saveReport.error as Error)?.message}/>
         {pdfAction.isSuccess&&<Notice tone="blue">PDF downloaded successfully.</Notice>}
-        <div className="mt-4"><Button disabled={pdfAction.isPending} onClick={()=>pdfAction.mutate()}><Download size={14}/>{pdfAction.isPending?'Generating report…':'Download PDF Report'}</Button></div>
+        {saveReport.isSuccess&&<Notice tone="blue">Research report saved to My Research.</Notice>}
+        <div className="mt-4 flex flex-wrap gap-2"><Button disabled={pdfAction.isPending} onClick={()=>pdfAction.mutate()}><Download size={14}/>{pdfAction.isPending?'Generating report…':'Download PDF Report'}</Button>{isAuthenticated?<Button variant="outline" disabled={Boolean(savedReport)||savedState.isLoading||saveReport.isPending} onClick={()=>saveReport.mutate()}><BookmarkPlus size={14}/>{saveReport.isPending?'Saving…':savedReport?'Saved to My Research':'Save to My Research'}</Button>:<Button variant="outline" onClick={leaveGuestMode}><LogIn size={14}/>Sign in to save</Button>}</div>
+        {savedReport&&<p className="mt-3 text-xs muted">Saved to My Research {dateTime(savedReport.saved_at)} · <Link className="text-primary hover:underline" to={`/my-research/reports/${savedReport.saved_report_id}`}>View saved report</Link></p>}
+        {!isAuthenticated&&<p className="mt-3 text-xs muted">Sign in with Google or GitHub to save this report to My Research. Guest PDF download remains available.</p>}
         <p className="mt-3 text-xs muted">Research use only. The report does not establish diagnosis, clinical validation, causality, statistical significance, or quantum advantage.</p>
       </Card>
     </section>
