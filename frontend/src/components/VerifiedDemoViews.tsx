@@ -10,6 +10,7 @@ import {StageNav} from '../pages/ResearchPagesCore';
 import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
 import {ResearchResultsCenter} from './ResearchResultsCenter';
+import {ExplainabilityResearchLab} from './ExplainabilityResearchLab';
 import type {MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
@@ -153,11 +154,16 @@ export function VerifiedRobustness(){
 }
 
 export function VerifiedExplainability(){
-  return <DemoBoundary>{data=>{const x=data.evidence.explainability;const local=x.local;const positive=local.contributions.filter(c=>(c.contribution??0)>0);const negative=local.contributions.filter(c=>(c.contribution??0)<0);return <div><PageHeader eyebrow="PennyLane + PyTorch Hybrid · packaged SHAP" title="Why was this case flagged?" description="Local and global SHAP evidence for the genuine hybrid probability path; no explanation is computed in the browser or at request time."/><EvidenceStrip source="Packaged hybrid SHAP record" scope={local.case_id} limitation="Research explanation · not diagnosis"/><StageNav current="/explainability"/><div className="grid gap-5 lg:grid-cols-[.9fr_1.1fr] mt-5"><Card title={`Explained case · ${local.case_id}`} description={local.model_display_name}><ProbabilityBand probability={local.prediction_context.probability_positive} threshold={local.prediction_context.operating_threshold}/><div className="grid grid-cols-2 gap-3 mt-4"><MetricCard label="PREDICTED CLASS" value={local.prediction_context.predicted_class}/><MetricCard label="METHOD" value={x.method}/></div><Notice tone="amber">{local.limitations[0]}</Notice></Card><Card title="Top local contributions" description="Signed contribution to final positive-class probability."><InfluenceBars items={local.contributions}/></Card></div><div className="two-grid mt-5"><ContributionList title="Toward positive" items={positive}/><ContributionList title="Toward negative" items={negative}/></div><Card className="mt-5" title="Global SHAP summary" description="Mean absolute contribution across the packaged representative cases."><InfluenceBars items={x.global_summary.map(v=>({feature:v.feature,magnitude:v.mean_absolute_shap}))}/></Card><JsonDisclosure label="Complete verified SHAP evidence" value={x}/></div>}}</DemoBoundary>;
-}
-
-function ContributionList({title,items}:{title:string;items:{feature:string;contribution?:number;original_value?:unknown}[]}){
-  return <Card title={title}>{items.length?<div>{items.map(item=><div className="tremor-list-row" key={item.feature}><div><strong className="text-xs">{item.feature}</strong><p className="text-[10px] muted">Value: {String(item.original_value??'—')}</p></div><strong className="mono ml-auto text-xs">{Number(item.contribution??0).toFixed(4)}</strong></div>)}</div>:<p className="text-xs muted">No contribution in this direction.</p>}</Card>;
+  return <DemoBoundary>{data=>{
+    const evidence=data.evidence.explainability;
+    const model=data.models.find(item=>item.id===evidence.model_id)||data.models.find(item=>item.model_type==='hybrid_pennylane_torch');
+    return <div>
+      <PageHeader eyebrow="Verified explainability · packaged evidence" title="Explainability Research Lab" description="Global and representative local SHAP evidence for the frozen hybrid output; no explanation is computed in the browser or at request time."/>
+      <EvidenceStrip source="Packaged hybrid SHAP record" scope={evidence.local.case_id} limitation="Post-hoc research explanation · not diagnosis"/>
+      <StageNav current="/explainability"/>
+      <div className="mt-5"><ExplainabilityResearchLab model={model} models={model?[model]:[]} experiment={data.experiment} dataset={data.dataset} verified={evidence} mode="verified"/></div>
+    </div>;
+  }}</DemoBoundary>;
 }
 
 export function VerifiedPrediction(){
