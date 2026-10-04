@@ -23,6 +23,32 @@ export type QuantumVisualizationSimulationRequest=QuantumVisualizationPreviewReq
   ansatz_parameters?:number[];
 };
 
+export interface QuantumVisualizationEvidenceRequest {
+  model_record_id:string;
+  simulation:QuantumVisualizationSimulationRequest;
+}
+
+export interface QuantumVisualizationEvidenceResponse {
+  artifact_id:string;
+  experiment_id:string;
+  model_record_id:string;
+  run_id:string|null;
+  request_fingerprint:string;
+  contract:QuantumVisualizationContract;
+}
+
+export interface QuantumVisualizationArtifact {
+  id:string;
+  experiment_id:string;
+  run_id:string|null;
+  model_id:string|null;
+  artifact_type:string;
+  name:string;
+  description:string;
+  details:Record<string,unknown>;
+  created_at:string;
+}
+
 export interface QuantumVisualizationFeatureMapping {
   feature_index:number;
   feature_name:string|null;

@@ -24,6 +24,7 @@ def _quantum_report_evidence(
     dataset: dict,
     models: list[dict],
     diagnostics: list[QuantumDiagnosticReport],
+    quantum_artifacts: list[Artifact] | None = None,
 ) -> dict | None:
     """Project persisted model/diagnostic records into the report's optional quantum section.
 
@@ -132,7 +133,25 @@ def _quantum_report_evidence(
                 ),
             }
 
-        records.append({
+        visualization_simulations = []
+        for artifact in quantum_artifacts or []:
+            if artifact.model_id != model.get("id"):
+                continue
+            details_payload = artifact.details if isinstance(artifact.details, dict) else {}
+            saved_contract = details_payload.get("contract")
+            if details_payload.get("evidence_status") != "AVAILABLE" or not isinstance(saved_contract, dict):
+                continue
+            visualization_simulations.append({
+                "artifact_id": artifact.id,
+                "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
+                "run_id": artifact.run_id,
+                "request_fingerprint": details_payload.get("request_fingerprint"),
+                "source": details_payload.get("source"),
+                "interpretation": details_payload.get("interpretation"),
+                "contract": saved_contract,
+            })
+
+        record = {
             "model_id": model.get("id"),
             "model_type": model_type,
             "model_status": model.get("status"),
@@ -150,7 +169,10 @@ def _quantum_report_evidence(
             "state_evidence": state_evidence,
             "diagnostics": diagnostic_payload,
             "limitations": list(dict.fromkeys(str(value) for value in limitations if value)),
-        })
+        }
+        if visualization_simulations:
+            record["visualization_simulations"] = visualization_simulations[-5:]
+        records.append(record)
 
     if not records:
         return None
@@ -164,8 +186,8 @@ def _quantum_report_evidence(
         "models": records,
         "limitations": [
             "This section reports persisted configuration and execution evidence only.",
-            "Transient visualization previews and unsaved simulator responses are not included.",
-            "Simulation is not real quantum hardware execution and does not establish quantum advantage.",
+            "Transient previews and unsaved simulator responses are not included; explicitly saved backend-generated visualization simulations are listed per model.",
+            "The latest five explicitly saved visualization simulations per model are included; these snapshots are not fitted-model predictions or real quantum hardware execution and do not establish quantum advantage.",
         ],
     }
 
@@ -182,6 +204,14 @@ def report_data(identity: str) -> dict:
             select(QuantumDiagnosticReport)
             .where(QuantumDiagnosticReport.experiment_id == identity)
             .order_by(QuantumDiagnosticReport.created_at, QuantumDiagnosticReport.id)
+        )) if has_quantum_models else []
+        quantum_artifacts = list(session.scalars(
+            select(Artifact)
+            .where(
+                Artifact.experiment_id == identity,
+                Artifact.artifact_type == "quantum_visualization_evidence",
+            )
+            .order_by(Artifact.created_at, Artifact.id)
         )) if has_quantum_models else []
         pipeline = session.get(PipelineVersion, experiment.pipeline_version_id) if experiment.pipeline_version_id else None
         pipeline_data = pipeline_payload(session, pipeline) if pipeline else {
@@ -234,6 +264,7 @@ def report_data(identity: str) -> dict:
         report["dataset"] if isinstance(report["dataset"], dict) else {},
         report["models"],
         quantum_diagnostics,
+        quantum_artifacts,
     )
     # Keep the historical report payload unchanged for experiments without
     # persisted quantum model records.

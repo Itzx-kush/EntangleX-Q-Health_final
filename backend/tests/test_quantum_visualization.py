@@ -321,3 +321,117 @@ def test_aer_shot_limit_is_enforced_before_simulation():
     with pytest.raises(AppError) as caught:
         visualization_service.simulate(request)
     assert caught.value.code == "quantum_resource_limit"
+
+def test_save_simulation_evidence_is_backend_generated_and_reportable(client, registered, monkeypatch):
+    pytest.importorskip("qiskit_machine_learning")
+    from uuid import uuid4
+    from app.experiments.reports import _quantum_report_evidence
+    from app.quantum.schemas import QuantumVisualizationContract
+    from app.storage.entities import Artifact
+
+    experiment_id = str(uuid4())
+    model_id = str(uuid4())
+    with session_scope() as session:
+        experiment = Experiment(
+            id=experiment_id, dataset_id=registered.id, name="Visualization evidence test",
+            status="completed", config={"pipeline": {}}, summary={},
+        )
+        model = ModelRecord(
+            id=model_id, experiment_id=experiment_id, dataset_id=registered.id,
+            model_type="vqc", status="ready", details={}, metrics={},
+        )
+        session.add_all([experiment, model])
+
+    preview = visualization_service.preview(QuantumVisualizationPreviewRequest(
+        model_type="vqc", quantum={"qubits": 2, "maxiter": 5}, dataset_id=registered.id,
+    ))[0]
+    simulated = preview.model_copy(update={
+        "status": "SIMULATION_AVAILABLE",
+        "state": preview.state.model_copy(update={
+            "status": "AVAILABLE", "execution_source": "local_simulator",
+            "simulator": "qiskit_local", "backend_id": "statevector",
+            "basis_states": ["00", "01", "10", "11"],
+            "probability": [1.0, 0.0, 0.0, 0.0],
+            "normalized_probability": [1.0, 0.0, 0.0, 0.0],
+            "limitations": ["Actual local simulator output in this API test."],
+        }),
+    })
+    called = []
+    def fake_simulate(request):
+        called.append(request)
+        return simulated
+    monkeypatch.setattr("app.api.quantum.visualization_service.simulate", fake_simulate)
+
+    before = {}
+    with session_scope() as session:
+        before["experiments"] = session.scalar(select(func.count()).select_from(Experiment))
+        before["models"] = session.scalar(select(func.count()).select_from(ModelRecord))
+        before["jobs"] = session.scalar(select(func.count()).select_from(Job))
+    response = client.post("/api/quantum/visualization/evidence", json={
+        "model_record_id": model_id,
+        "simulation": {
+            "model_type": "vqc", "quantum": {"qubits": 2, "maxiter": 5},
+            "encoded_vector": [0.15, -0.25], "seed": 7,
+        },
+    })
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["contract"]["state"]["execution_source"] == "local_simulator"
+    assert body["experiment_id"] == experiment_id
+    assert body["model_record_id"] == model_id
+    assert len(called) == 1
+    assert called[0].dataset_id == registered.id
+    assert called[0].experiment_id == experiment_id
+
+    with session_scope() as session:
+        artifact = session.get(Artifact, body["artifact_id"])
+        assert artifact is not None
+        assert artifact.artifact_type == "quantum_visualization_evidence"
+        assert artifact.model_id == model_id
+        assert artifact.run_id is None
+        assert artifact.details["interpretation"].startswith("Explicit visualization simulation only")
+        after = {
+            "experiments": session.scalar(select(func.count()).select_from(Experiment)),
+            "models": session.scalar(select(func.count()).select_from(ModelRecord)),
+            "jobs": session.scalar(select(func.count()).select_from(Job)),
+        }
+        persisted_experiment = session.get(Experiment, experiment_id)
+        persisted_model = session.get(ModelRecord, model_id)
+        report = _quantum_report_evidence(
+            persisted_experiment,
+            {"name": registered.name, "dataset_hash": registered.sha256},
+            [{"id": model_id, "model_type": "vqc", "status": "ready", "details": persisted_model.details, "metrics": {}}],
+            [],
+            [artifact],
+        )
+    assert before == after
+    snapshot = report["models"][0]["visualization_simulations"][0]
+    assert snapshot["artifact_id"] == body["artifact_id"]
+    assert snapshot["contract"]["state"]["normalized_probability"] == [1.0, 0.0, 0.0, 0.0]
+
+
+def test_save_simulation_evidence_rejects_model_mismatch_before_execution(client, registered, monkeypatch):
+    from uuid import uuid4
+    experiment_id = str(uuid4())
+    model_id = str(uuid4())
+    with session_scope() as session:
+        session.add(Experiment(
+            id=experiment_id, dataset_id=registered.id, name="Mismatch test",
+            status="completed", config={"pipeline": {}}, summary={},
+        ))
+        session.add(ModelRecord(
+            id=model_id, experiment_id=experiment_id, dataset_id=registered.id,
+            model_type="qsvc", status="ready", details={}, metrics={},
+        ))
+    called = []
+    monkeypatch.setattr("app.api.quantum.visualization_service.simulate", lambda request: called.append(request))
+    response = client.post("/api/quantum/visualization/evidence", json={
+        "model_record_id": model_id,
+        "simulation": {
+            "model_type": "vqc", "quantum": {"qubits": 2, "maxiter": 5},
+            "encoded_vector": [0.15, -0.25],
+        },
+    })
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "quantum_visualization_invalid_context"
+    assert called == []

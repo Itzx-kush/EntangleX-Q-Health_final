@@ -203,10 +203,72 @@ def _quantum_evidence_story(evidence: dict, styles) -> list[Any]:
             story.append(_p(circuit["limitation"], styles["Note"]))
 
         state = model.get("state_evidence") or {}
+        if model.get("visualization_simulations") and state.get("status") == "NOT_RECORDED":
+            state = {
+                **state,
+                "reason": "No fitted-model state output is persisted on the model record. Explicit saved visualization simulations are reported separately below.",
+            }
         story.append(_kv([
             ("State / measurement evidence status", state.get("status")),
             ("State / measurement note", state.get("reason")),
         ], styles))
+
+        for snapshot in model.get("visualization_simulations") or []:
+            contract = snapshot.get("contract") if isinstance(snapshot, dict) else None
+            if not isinstance(contract, dict):
+                continue
+            state = contract.get("state") if isinstance(contract.get("state"), dict) else {}
+            provider = contract.get("provider") if isinstance(contract.get("provider"), dict) else {}
+            circuit_data = contract.get("circuit") if isinstance(contract.get("circuit"), dict) else {}
+            bloch = contract.get("bloch") if isinstance(contract.get("bloch"), dict) else {}
+            entanglement = contract.get("entanglement") if isinstance(contract.get("entanglement"), dict) else {}
+            story.append(_p("Saved backend simulation evidence", styles["BodySmall"]))
+            simulation_rows = [
+                ("Evidence artifact ID", snapshot.get("artifact_id")),
+                ("Run ID", snapshot.get("run_id")),
+                ("Request fingerprint", snapshot.get("request_fingerprint")),
+                ("Execution source", state.get("execution_source")),
+                ("Simulator / backend", f"{state.get('simulator') or 'Not reported'} / {state.get('backend_id') or provider.get('backend_id') or 'Not reported'}"),
+                ("Simulation scope", state.get("circuit_scope")),
+                ("State status", state.get("status")),
+                ("Logical qubits", circuit_data.get("qubits")),
+                ("Circuit depth", circuit_data.get("logical_depth")),
+                ("Gate count", circuit_data.get("total_gates")),
+                ("Bloch state status", bloch.get("status")),
+                ("Entanglement status", entanglement.get("status")),
+                ("Interpretation", snapshot.get("interpretation")),
+            ]
+            story.append(_kv([(label, value) for label, value in simulation_rows if value is not None and value != ""], styles))
+
+            basis = state.get("basis_states")
+            probabilities = state.get("normalized_probability")
+            real_parts = state.get("amplitude_real")
+            imaginary_parts = state.get("amplitude_imaginary")
+            phases = state.get("phase")
+            if isinstance(basis, list) and isinstance(probabilities, list) and len(basis) == len(probabilities):
+                indices = sorted(range(len(probabilities)), key=lambda index: probabilities[index], reverse=True)[:16]
+                probability_rows = [["Basis state", "Probability", "Amplitude (real + imag)", "Phase (rad)"]]
+                for index in indices:
+                    amplitude = "Not returned"
+                    if isinstance(real_parts, list) and isinstance(imaginary_parts, list) and index < len(real_parts) and index < len(imaginary_parts):
+                        amplitude = f"{real_parts[index]:.6f} + {imaginary_parts[index]:.6f}i"
+                    phase = phases[index] if isinstance(phases, list) and index < len(phases) else None
+                    probability_rows.append([
+                        basis[index],
+                        f"{probabilities[index]:.6f}",
+                        amplitude,
+                        f"{phase:.6f}" if isinstance(phase, (int, float)) else "Not defined / not returned",
+                    ])
+                story += [_p(f"Highest-probability basis states ({len(indices)} of {len(basis)} returned states)", styles["BodySmall"]),
+                          _table(probability_rows, styles, [24 * mm, 29 * mm, 72 * mm, 45 * mm])]
+            counts = state.get("measurement_counts")
+            if isinstance(counts, dict) and counts:
+                count_rows = [["Basis state", "Local simulator counts"]]
+                count_rows.extend([[basis_state, count] for basis_state, count in sorted(counts.items(), key=lambda item: item[1], reverse=True)[:16]])
+                story += [_p("Returned finite-shot measurement counts", styles["BodySmall"]), _table(count_rows, styles, [70 * mm, 50 * mm])]
+            snapshot_limits = state.get("limitations") or []
+            if snapshot_limits:
+                story.append(_p("Simulation limitations: " + "; ".join(str(value) for value in snapshot_limits), styles["Note"]))
 
         if diagnostic:
             diagnostic_rows = [
@@ -228,7 +290,7 @@ def _quantum_evidence_story(evidence: dict, styles) -> list[Any]:
     if evidence.get("limitations"):
         story.append(_p("; ".join(str(value) for value in evidence["limitations"]), styles["Note"]))
     story.append(_p(
-        "This section summarizes persisted model and diagnostic records. It does not represent an unsaved preview, infer missing simulator state, claim hardware execution, or establish quantum advantage or clinical validity.",
+        "This section summarizes persisted model, diagnostic, and explicitly saved backend simulator records. Visualization simulations are not fitted-model predictions. No hardware execution, quantum advantage, or clinical validity is claimed.",
         styles["Note"],
     ))
     return story

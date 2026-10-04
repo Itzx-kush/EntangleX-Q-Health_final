@@ -8,6 +8,7 @@ import {qh} from '../lib/api';
 import {QuantumCircuitExplorer} from '../components/quantum/QuantumCircuitExplorer';
 import {QuantumContextPanel} from '../components/quantum/QuantumContextPanel';
 import {QuantumStatePanel} from '../components/quantum/QuantumStatePanel';
+import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
 import type {Circuit} from '../types/qhealth';
 import type {QuantumVisualizationContract,QuantumVisualizationGate} from '../types/quantumVisualization';
 
@@ -15,7 +16,8 @@ type ContractOverrides=Omit<Partial<QuantumVisualizationContract>,'dataset_conte
 
 vi.mock('../lib/api',()=>({qh:{
  capabilities:vi.fn(),models:vi.fn(),experiments:vi.fn(),datasets:vi.fn(),dataset:vi.fn(),quantum_diagnostics_by_run:vi.fn(),
- quantumVisualizationPreview:vi.fn(),fittedCircuit:vi.fn(),resourceAdvisor:vi.fn(),
+ quantumVisualizationPreview:vi.fn(),quantumVisualizationSimulate:vi.fn(),saveQuantumVisualizationEvidence:vi.fn(),fittedCircuit:vi.fn(),resourceAdvisor:vi.fn(),
+ experimentArtifacts:vi.fn().mockResolvedValue([]),
 }}));
 
 const gate=(gate_index:number,name:string,qubits:number[],parameters:string[]=[]):QuantumVisualizationGate=>({gate_index,name,gate_type:name==='CX'?'controlled':'rotation',qubits,parameters,control_qubits:name==='CX'?[0]:[],target_qubits:name==='CX'?[1]:[]});
@@ -37,6 +39,13 @@ function makeContract(overrides:ContractOverrides={}):QuantumVisualizationContra
 }
 
 describe('Quantum Lab visualization contract components',()=>{
+ it('shows saved backend visualization artifacts in the existing Quantum Evidence Lab',()=>{
+  render(<MemoryRouter><QuantumEvidenceLab mode="live" models={[{id:'model-qsvc',experiment_id:'experiment-qsvc',dataset_id:'dataset-qsvc',model_type:'qsvc',status:'ready',details:{quantum:{}},metrics:{}} as never]} visualizationArtifacts={[{id:'artifact-1',experiment_id:'experiment-qsvc',model_id:'model-qsvc',run_id:'run-1',artifact_type:'quantum_visualization_evidence',name:'Quantum Lab simulation',description:'Backend-generated simulation evidence',details:{request_fingerprint:'fingerprint-1',contract:{status:'SIMULATION_AVAILABLE',state:{status:'AVAILABLE',execution_source:'local_simulator',simulator:'qiskit_local'},provider:{backend_id:'statevector'}}},created_at:'2026-10-04T12:00:00Z'} as never]}/></MemoryRouter>);
+  expect(screen.getByText('Saved Quantum Lab simulation evidence')).toBeInTheDocument();
+  expect(screen.getByText('artifact-1')).toBeInTheDocument();
+  expect(screen.getByText('fingerprint-1')).toBeInTheDocument();
+  expect(screen.getByRole('link',{name:/Open linked experiment report/})).toHaveAttribute('href','/experiments/experiment-qsvc');
+ });
  it('renders backend gate order and keyboard-driven structural playback',()=>{
   const contract=makeContract();
   render(<QuantumCircuitExplorer circuit={contract.circuit} sourceLabel="Preview"/>);
@@ -130,11 +139,56 @@ describe('Quantum Lab visualization contract components',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Generate structural preview'}));
   await waitFor(()=>expect(qh.quantumVisualizationPreview).toHaveBeenLastCalledWith(expect.objectContaining({model_type:'vqc',dataset_id:'dataset-2'})));
   expect((await screen.findAllByText('Custom upload B')).length).toBeGreaterThan(1);
-  expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(5);
+  expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(6); // one automatic entry preview plus five explicit previews
+ });
+ it('loads backend circuit visuals on entry and simulates only an explicitly entered vector',async()=>{
+  localStorage.clear();vi.clearAllMocks();
+  const previewContract=makeContract();
+  const simulatedContract=makeContract({status:'SIMULATION_AVAILABLE',state:{status:'AVAILABLE',execution_source:'local_simulator',simulator:'qiskit_local',backend_id:'statevector',circuit_scope:'feature_map',input_sample_count:1,basis_states:['00','01'],amplitude_real:[1,0],amplitude_imaginary:[0,0],amplitude_magnitude:[1,0],phase:[0,null],probability:[1,0],normalized_probability:[1,0],measurement_counts:null,shots:null,limitations:['Actual simulator response.']}});
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([]);vi.mocked(qh.experiments).mockResolvedValue([]);vi.mocked(qh.datasets).mockResolvedValue([]);
+  vi.mocked(qh.quantumVisualizationPreview).mockResolvedValue(previewContract);
+  vi.mocked(qh.quantumVisualizationSimulate).mockResolvedValue(simulatedContract);
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
+  expect(await screen.findByRole('button',{name:/Operation 1: H/})).toBeInTheDocument();
+  expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(1);
+  const fields=Array.from({length:4},(_,index)=>screen.getByRole('spinbutton',{name:`Encoded value for qubit ${index}`}));
+  expect(screen.getByRole('button',{name:'Simulate entered vector'})).toBeDisabled();
+  fields.forEach((field,index)=>fireEvent.change(field,{target:{value:String(index/10)}}));
+  fireEvent.click(screen.getByRole('button',{name:'Simulate entered vector'}));
+  await waitFor(()=>expect(qh.quantumVisualizationSimulate).toHaveBeenCalledWith(expect.objectContaining({model_type:'vqc',simulation_stage:'encoding',encoded_vector:[0,.1,.2,.3],dataset_id:null})));
+  expect(await screen.findByText('100.00%')).toBeInTheDocument();
+  expect(screen.getByRole('tab',{name:'Probability'})).toBeInTheDocument();
+ });
+ it('saves a simulator snapshot only to the matching persisted model report',async()=>{
+  localStorage.clear();vi.clearAllMocks();
+  const qsvcSimulation=makeContract({model_type:'qsvc',status:'SIMULATION_AVAILABLE',circuit:{model_type:'qsvc'},state:{status:'AVAILABLE',execution_source:'local_simulator',simulator:'qiskit_local',backend_id:'statevector',circuit_scope:'feature_map',input_sample_count:1,basis_states:['00','01'],amplitude_real:[1,0],amplitude_imaginary:[0,0],amplitude_magnitude:[1,0],phase:[0,null],probability:[1,0],normalized_probability:[1,0],measurement_counts:null,shots:null,limitations:[]}});
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([{id:'model-qsvc',experiment_id:'experiment-qsvc',dataset_id:'dataset-qsvc',model_type:'qsvc',status:'ready',details:{quantum:{}},metrics:{}}] as never);
+  vi.mocked(qh.experiments).mockResolvedValue([{id:'experiment-qsvc',dataset_id:'dataset-qsvc',created_at:'2026-10-01T00:00:00Z',config:{quantum:{qubits:4},hybrid:{}}}] as never);
+  vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-qsvc',name:'Registered cohort'}] as never);
+  vi.mocked(qh.dataset).mockResolvedValue({id:'dataset-qsvc',name:'Registered cohort',provenance:{name:'Registered cohort'}} as never);
+  vi.mocked(qh.quantum_diagnostics_by_run).mockResolvedValue(null as never);
+  vi.mocked(qh.quantumVisualizationPreview).mockResolvedValue(makeContract());
+  vi.mocked(qh.quantumVisualizationSimulate).mockResolvedValue(qsvcSimulation);
+  vi.mocked(qh.saveQuantumVisualizationEvidence).mockResolvedValue({artifact_id:'artifact-1',experiment_id:'experiment-qsvc',model_record_id:'model-qsvc',run_id:null,request_fingerprint:'saved-fingerprint',contract:qsvcSimulation});
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
+  const modelSelect=await screen.findByRole('combobox',{name:'Quantum persisted model'});
+  await screen.findByRole('option',{name:/qsvc/i});
+  fireEvent.change(modelSelect,{target:{value:'model-qsvc'}});
+  fireEvent.change(screen.getByRole('combobox',{name:'Quantum advisor model'}),{target:{value:'qsvc'}});
+  for(let index=0;index<4;index++)fireEvent.change(screen.getByRole('spinbutton',{name:`Encoded value for qubit ${index}`}),{target:{value:String(index/10)}});
+  fireEvent.click(screen.getByRole('button',{name:'Simulate entered vector'}));
+  const saveButton=await screen.findByRole('button',{name:'Save simulator evidence to model report'});
+  fireEvent.click(saveButton);
+  await waitFor(()=>expect(qh.saveQuantumVisualizationEvidence).toHaveBeenCalledWith(expect.objectContaining({model_record_id:'model-qsvc',simulation:expect.objectContaining({model_type:'qsvc',experiment_id:'experiment-qsvc',dataset_id:'dataset-qsvc'})})));
+  expect(await screen.findByText(/artifact artifact-1/)).toBeInTheDocument();
  });
  it('offers the existing experiment report for the selected persisted quantum model',async()=>{
   localStorage.clear();vi.clearAllMocks();
-  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.capabilities).mockResolvedValue({available:false,runtime_verified:false,execution:'Unavailable'});
   vi.mocked(qh.models).mockResolvedValue([{id:'model-1',experiment_id:'experiment-1',dataset_id:'dataset-1',model_type:'qsvc',status:'ready',details:{quantum:{}},metrics:{test:{},validation:{summary:{}},timing:{}}}] as never);
   vi.mocked(qh.experiments).mockResolvedValue([{id:'experiment-1',dataset_id:'dataset-1',created_at:'2026-10-01T00:00:00Z',config:{quantum:{qubits:4,shots:1024},hybrid:{}}}] as never);
   vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-1',name:'Cohort A'}] as never);
@@ -143,6 +197,7 @@ describe('Quantum Lab visualization contract components',()=>{
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
   const modelSelect=await screen.findByRole('combobox',{name:'Quantum persisted model'});
+  await screen.findByRole('option',{name:/qsvc/i});
   fireEvent.change(modelSelect,{target:{value:'model-1'}});
   const reportLink=await screen.findByRole('link',{name:'Experiment report'});
   expect(reportLink).toHaveAttribute('href','/experiments/experiment-1');

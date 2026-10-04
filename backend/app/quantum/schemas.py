@@ -299,3 +299,19 @@ class QuantumVisualizationContract(Schema):
     resources: VisualizationResource
     hybrid_architecture: HybridArchitecture | None = None
     limitations: list[str] = Field(default_factory=list)
+
+
+class QuantumVisualizationEvidenceRequest(Schema):
+    """Explicitly rerun and persist a bounded visualization simulation for a model."""
+
+    model_record_id: UUID
+    simulation: QuantumVisualizationSimulationRequest
+
+
+class QuantumVisualizationEvidenceOut(Schema):
+    artifact_id: str
+    experiment_id: str
+    model_record_id: str
+    run_id: str | None = None
+    request_fingerprint: str
+    contract: QuantumVisualizationContract

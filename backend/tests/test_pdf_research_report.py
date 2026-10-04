@@ -163,3 +163,91 @@ def test_quantum_pdf_report_uses_persisted_quantum_and_diagnostic_evidence(
     assert evidence_model["state_evidence"]["status"] == "NOT_RECORDED"
     assert "amplitudes" not in evidence_model["state_evidence"]
     assert evidence_model["limitations"]
+
+
+def test_pdf_quantum_simulation_evidence_uses_persisted_backend_values(
+    client, config, registered, monkeypatch, tmp_path
+):
+    import subprocess
+    import pytest
+    pytest.importorskip("qiskit_machine_learning")
+    from app.artifacts.service import register_metadata
+    from app.database import session_scope
+    from app.experiments import reports
+    from app.quantum.schemas import QuantumVisualizationSimulationRequest
+    from app.quantum.visualization import visualization_service
+    from app.storage.entities import Experiment, ModelRecord
+
+    with session_scope() as session:
+        experiment = Experiment(
+            name="Persisted quantum simulation report", dataset_id=registered.id,
+            status="completed", config=config.model_dump(mode="json"),
+            summary={"experiment_kind": "live_experiment", "dataset_provenance": registered.provenance},
+        )
+        session.add(experiment)
+        session.flush()
+        model = ModelRecord(
+            experiment_id=experiment.id, dataset_id=registered.id, model_type="qsvc",
+            status="ready", details={
+                "quantum": {
+                    "provider_id": "qiskit_local", "framework": "Qiskit",
+                    "backend": "statevector", "execution_mode": "local_simulator",
+                    "execution_kind": "local Qiskit simulation", "real_hardware": False,
+                    "feature_map": "ZZFeatureMap", "configuration": config.quantum.model_dump(mode="json"),
+                    "circuit": {"qubits": config.quantum.qubits, "logical_depth": 2,
+                                "parameter_count": 0, "gate_counts": {"h": 4, "cx": 3},
+                                "gates": [{"name": "h", "qubits": [0], "parameters": []}],
+                                "text": "H q[0]", "limitation": "Structure-only fitted model record."},
+                },
+                "configuration": config.model_dump(mode="json"),
+                "preprocessing": {"final_representation_dimension": config.quantum.qubits},
+                "limitations": ["Persisted model evidence is not a clinical result."],
+            },
+            metrics={"test": {"accuracy": 0.5}},
+        )
+        session.add(model)
+        session.flush()
+        experiment_id, model_id = experiment.id, model.id
+
+    simulation = visualization_service.simulate(QuantumVisualizationSimulationRequest(
+        model_type="qsvc", quantum=config.quantum,
+        encoded_vector=[0.1 * (index + 1) for index in range(config.quantum.qubits)],
+        dataset_id=registered.id, experiment_id=experiment_id, seed=13,
+    ))
+    with session_scope() as session:
+        register_metadata(
+            session,
+            experiment_id=experiment_id,
+            model_id=model_id,
+            artifact_type="quantum_visualization_evidence",
+            name="Quantum visualization simulation",
+            description="Backend-generated bounded local-simulator evidence.",
+            payload={
+                "schema_version": "quantum_visualization_evidence_v1",
+                "evidence_status": "AVAILABLE",
+                "source": "backend_bounded_local_simulator",
+                "experiment_id": experiment_id,
+                "model_record_id": model_id,
+                "run_id": None,
+                "dataset_id": registered.id,
+                "request_fingerprint": simulation.request_fingerprint,
+                "interpretation": "Explicit visualization simulation only; not a fitted-model prediction.",
+                "contract": simulation.model_dump(mode="json"),
+            },
+            operation_key=f"pdf-test-quantum:{model_id}:{simulation.request_fingerprint}",
+        )
+    monkeypatch.setattr(reports, "verify_installed_model", lambda _model: None)
+    pdf_response = client.get(f"/api/experiments/{experiment_id}/report?format=pdf")
+    assert pdf_response.status_code == 200, pdf_response.text
+    pdf_path = tmp_path / "quantum-simulation-report.pdf"
+    text_path = tmp_path / "quantum-simulation-report.txt"
+    pdf_path.write_bytes(pdf_response.content)
+    extracted = subprocess.run(["pdftotext", "-layout", str(pdf_path), str(text_path)], check=True, capture_output=True)
+    assert extracted.returncode == 0
+    text = text_path.read_text()
+    assert "Saved backend simulation evidence" in text
+    assert "Highest-probability basis states" in text
+    assert "Amplitude (real + imag)" in text
+    assert "local_simulator" in text
+    assert "not a fitted-model prediction" in text.lower()
+    assert "normalized_probability" not in text

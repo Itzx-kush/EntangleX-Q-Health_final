@@ -1,5 +1,5 @@
 import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
-import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
+import type {QuantumVisualizationArtifact,QuantumVisualizationContract,QuantumVisualizationEvidenceRequest,QuantumVisualizationEvidenceResponse,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
   const value=(configured||'/api').trim()||'/api';
@@ -199,6 +199,8 @@ sample:string;source:string}>(`/models/${id}/demo-sample`),
   circuit:(body:unknown)=>api.post<Circuit>('/quantum/circuit',body),
   quantumVisualizationPreview:(body:QuantumVisualizationPreviewRequest)=>api.post<QuantumVisualizationContract>('/quantum/visualization/preview',body),
   quantumVisualizationSimulate:(body:QuantumVisualizationSimulationRequest)=>api.post<QuantumVisualizationContract>('/quantum/visualization/simulate',body),
+  saveQuantumVisualizationEvidence:(body:QuantumVisualizationEvidenceRequest)=>api.post<QuantumVisualizationEvidenceResponse>('/quantum/visualization/evidence',body),
+  experimentArtifacts:(id:string)=>api.get<QuantumVisualizationArtifact[]>(`/experiments/${id}/artifacts`),
   fittedCircuit:(id:string)=>api.get<Circuit>(`/models/${id}/circuit`),
   report:(id:string,format:'html'|'json'|'pdf')=>api.download(
     `/experiments/${id}/report?format=${format}`,
