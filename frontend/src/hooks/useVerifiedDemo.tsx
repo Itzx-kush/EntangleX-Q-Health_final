@@ -58,6 +58,6 @@ export function useFlagshipData(requireActive=false){
     dataset:payload?.dataset as Dataset|undefined,
     models:(payload?.models||[]) as ModelRecord[],
     evidence:payload?.evidence as VerifiedEvidencePackage['evidence']|undefined,
-    available:item?.demo_readiness.status==='ready'&&item.demo_readiness.instant_demo_available,
+    available:item?.demo_readiness.status==='ready'&&(item.demo_readiness.instant_demo_available!==false),
   };
 }
