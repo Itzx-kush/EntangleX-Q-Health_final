@@ -39,7 +39,9 @@ services:
     # generated model/experiment artifacts across restarts and redeploys.
     # Persistent disks require a paid instance type and pin the service to a
     # single instance (no zero-downtime deploys). Size can grow but never shrink.
-    plan: starter
+    # 1 CPU / 2 GB RAM: the backend imports Qiskit, SciPy, scikit-learn,
+    # SHAP and the packaged PennyLane/PyTorch hybrid runtime.
+    plan: 1c-2g
     disk:
       name: qhealth-runtime
       mountPath: /runtime
