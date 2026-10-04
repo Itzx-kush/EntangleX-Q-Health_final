@@ -133,6 +133,68 @@ describe('Quantum Lab visualization contract components',()=>{
   expect((await screen.findAllByText('Custom upload B')).length).toBeGreaterThan(1);
   expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(5);
  });
+ it('clears persisted model evidence when dataset or model family changes',async()=>{
+  localStorage.clear();vi.clearAllMocks();
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([
+   {id:'model-1',experiment_id:'experiment-1',dataset_id:'dataset-1',model_type:'vqc',status:'ready',details:{quantum:{}},metrics:{test:{},validation:{summary:{}},timing:{}}},
+   {id:'model-2',experiment_id:'experiment-2',dataset_id:'dataset-2',model_type:'vqc',status:'ready',details:{quantum:{}},metrics:{test:{},validation:{summary:{}},timing:{}}},
+  ] as never);
+  vi.mocked(qh.experiments).mockResolvedValue([]);
+  vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-1',name:'Cohort A'},{id:'dataset-2',name:'Cohort B'}] as never);
+  vi.mocked(qh.dataset).mockImplementation(async id=>({id,name:id==='dataset-2'?'Cohort B':'Cohort A',provenance:{name:id==='dataset-2'?'Cohort B':'Cohort A'}} as never));
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
+  const datasetSelect=await screen.findByRole('combobox',{name:'Quantum dataset context'});
+  fireEvent.change(datasetSelect,{target:{value:'dataset-1'}});
+  const modelSelect=await screen.findByRole('combobox',{name:'Quantum persisted model'});
+  expect(within(modelSelect).getByRole('option',{name:/VQC · model-1/})).toBeInTheDocument();
+  fireEvent.change(modelSelect,{target:{value:'model-1'}});
+  expect(modelSelect).toHaveValue('model-1');
+
+  fireEvent.change(datasetSelect,{target:{value:'dataset-2'}});
+  await waitFor(()=>expect(modelSelect).toHaveValue(''));
+  expect(within(modelSelect).queryByRole('option',{name:/VQC · model-1/})).not.toBeInTheDocument();
+  expect(within(modelSelect).getByRole('option',{name:/VQC · model-2/})).toBeInTheDocument();
+
+  const modelFamily=screen.getByRole('combobox',{name:'Quantum advisor model'});
+  fireEvent.change(modelFamily,{target:{value:'qsvc'}});
+  await waitFor(()=>expect(modelSelect).toHaveValue(''));
+ });
+ it('ignores a late visualization response after the Quantum Lab context changes',async()=>{
+  localStorage.clear();vi.clearAllMocks();
+  vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
+  vi.mocked(qh.models).mockResolvedValue([]);
+  vi.mocked(qh.experiments).mockResolvedValue([]);
+  vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-1',name:'Cohort A'},{id:'dataset-2',name:'Cohort B'}] as never);
+  vi.mocked(qh.dataset).mockImplementation(async id=>({id,name:id==='dataset-2'?'Cohort B':'Cohort A',provenance:{name:id==='dataset-2'?'Cohort B':'Cohort A'}} as never));
+  const first:{resolve:(value:QuantumVisualizationContract)=>void;promise:Promise<QuantumVisualizationContract>}={resolve:()=>undefined,promise:Promise.resolve(makeContract())};
+  first.promise=new Promise(resolve=>{first.resolve=resolve});
+  const second:{resolve:(value:QuantumVisualizationContract)=>void;promise:Promise<QuantumVisualizationContract>}={resolve:()=>undefined,promise:Promise.resolve(makeContract())};
+  second.promise=new Promise(resolve=>{second.resolve=resolve});
+  vi.mocked(qh.quantumVisualizationPreview)
+    .mockImplementationOnce(()=>first.promise)
+    .mockImplementationOnce(()=>second.promise);
+
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
+  const datasetSelect=await screen.findByRole('combobox',{name:'Quantum dataset context'});
+  fireEvent.change(datasetSelect,{target:{value:'dataset-1'}});
+  const generate=screen.getByRole('button',{name:'Generate structural preview'});
+  fireEvent.click(generate);
+  await waitFor(()=>expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(datasetSelect,{target:{value:'dataset-2'}});
+  fireEvent.click(generate);
+  await waitFor(()=>expect(qh.quantumVisualizationPreview).toHaveBeenCalledTimes(2));
+
+  second.resolve(makeContract({dataset_context:{status:'AVAILABLE',dataset_id:'dataset-2',dataset_name:'Cohort B',limitations:[]},circuit:{limitation:'DATASET_B_CONTRACT'}}));
+  await waitFor(()=>expect(screen.getByText('DATASET_B_CONTRACT')).toBeInTheDocument());
+
+  first.resolve(makeContract({dataset_context:{status:'AVAILABLE',dataset_id:'dataset-1',dataset_name:'Cohort A',limitations:[]},circuit:{limitation:'DATASET_A_CONTRACT'}}));
+  await waitFor(()=>expect(screen.getByText('DATASET_B_CONTRACT')).toBeInTheDocument());
+  expect(screen.queryByText('DATASET_A_CONTRACT')).not.toBeInTheDocument();
+ });
  it('offers the existing experiment report for the selected persisted quantum model',async()=>{
   localStorage.clear();vi.clearAllMocks();
   vi.mocked(qh.capabilities).mockResolvedValue({available:true,runtime_verified:true,execution:'Local simulator'});
