@@ -78,7 +78,7 @@ export function DiagnosticEvidence({experiment,models,mode,limitations=[]}:{expe
  if(!operating?.curve?.length)gaps.push('Threshold trade-off coordinates are unavailable.');
  if(calibrationEvidenceState==='NOT AVAILABLE'||calibrationEvidenceState==='NOT YET EVALUATED')gaps.push('Calibration evidence was not evaluated or not persisted.');
 
- return <section className="space-y-5" aria-label="Diagnostic and statistical research evidence">
+ return <section id="diagnostics" className="space-y-5 scroll-mt-24" aria-label="Diagnostic and statistical research evidence">
   <Card title="Diagnostic Evidence" description={`${mode==='verified'?'Verified precomputed':'Live persisted'} evidence availability for the selected model. Viewing or switching models does not execute scientific computation.`}>
    <div className="mb-4 grid gap-3 md:grid-cols-[minmax(240px,.8fr)_minmax(0,2fr)]"><label className="field"><span>Model diagnostic selector</span><Select aria-label="Model diagnostic selector" value={model.id} onChange={event=>setModelId(event.target.value)}>{models.map(item=><option key={item.id} value={item.id}>{modelLabels[item.model_type]} · {item.status}</option>)}</Select></label><div className="rounded-lg border p-3"><div className="flex flex-wrap items-center gap-2"><strong>{modelLabels[model.model_type]}</strong><StatusBadge value={model.status}/><Badge tone={mode==='verified'?'purple':'blue'}>{mode==='verified'?'PRECOMPUTED / VERIFIED':'PERSISTED LIVE RESULT'}</Badge></div><p className="mt-2 text-xs muted">Selected model evidence updates locally from the already loaded model records.</p></div></div>
    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

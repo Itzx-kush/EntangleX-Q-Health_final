@@ -160,8 +160,23 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
     <Card title="Investigate deeper evidence" description="Start with this result, then continue into the existing evidence workbenches.">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ['/comparison','Diagnostics / comparison',BarChart3],['/explainability','Explainability',Brain],['/prediction','Prediction',LineChart],['/robustness','Robustness',ShieldCheck],['/quantum','Quantum evidence',Atom],['/experiments/'+experiment.id,'Experiment lineage',GitBranch],['/experiments/'+experiment.id,'Evidence package',Microscope],['/experiments/'+experiment.id,'Research report',FileText]
-        ].map(([path,label,Icon])=><Link className="group flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-primary/5" to={String(path)} key={String(label)}><Icon size={17} className="text-primary"/><span className="flex-1 text-sm font-semibold">{String(label)}</span><ArrowRight size={14} className="muted group-hover:text-primary"/></Link>)}
+          {path:'#diagnostics',label:'Diagnostics / comparison',Icon:BarChart3,anchor:true},
+          {path:'/explainability',label:'Explainability',Icon:Brain},
+          {path:'/prediction',label:'Prediction',Icon:LineChart},
+          {path:'/robustness',label:'Robustness',Icon:ShieldCheck},
+          {path:'/quantum',label:'Quantum evidence',Icon:Atom},
+          {path:'/experiments/'+experiment.id,label:'Experiment lineage',Icon:GitBranch},
+          {path:'/experiments/'+experiment.id,label:'Evidence package',Icon:Microscope},
+          {path:'/experiments/'+experiment.id,label:'Research report',Icon:FileText},
+        ].map(({path,label,Icon,anchor})=>anchor?(
+          <a href={path} className="group flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-primary/5" key={label}>
+            <Icon size={17} className="text-primary"/><span className="flex-1 text-sm font-semibold">{label}</span><ArrowRight size={14} className="muted group-hover:text-primary"/>
+          </a>
+        ):(
+          <Link className="group flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-primary/5" to={path} key={label}>
+            <Icon size={17} className="text-primary"/><span className="flex-1 text-sm font-semibold">{label}</span><ArrowRight size={14} className="muted group-hover:text-primary"/>
+          </Link>
+        ))}
       </div>
     </Card>
 
