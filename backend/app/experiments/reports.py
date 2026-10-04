@@ -8,18 +8,181 @@ from ..api.schemas import ExperimentOut, ModelOut, ExplanationOut
 from ..config import DISCLAIMER
 from ..database import session_scope
 from ..demo_readiness import verify_installed_model
-from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion
+from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRecord, PipelineVersion, Run, ExperimentProtocolVersion, QuantumDiagnosticReport
 from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
 from ..utils.serialization import utcnow
 from .comparison import comparison
 
+
+QUANTUM_MODEL_TYPES = {"vqc", "qsvc", "qnn", "hybrid_pennylane_torch"}
+
+
+def _quantum_report_evidence(
+    experiment: Experiment,
+    dataset: dict,
+    models: list[dict],
+    diagnostics: list[QuantumDiagnosticReport],
+) -> dict | None:
+    """Project persisted model/diagnostic records into the report's optional quantum section.
+
+    This is deliberately read-only: it does not run a preview, simulator, resource
+    advisor, or training workflow while producing a report.
+    """
+    latest_diagnostic: dict[str, QuantumDiagnosticReport] = {}
+    for diagnostic in sorted(
+        diagnostics,
+        key=lambda item: (item.created_at or utcnow(), item.id),
+    ):
+        if diagnostic.status == "completed":
+            latest_diagnostic[diagnostic.model_record_id] = diagnostic
+
+    records = []
+    for model in models:
+        model_type = model.get("model_type")
+        if model_type not in QUANTUM_MODEL_TYPES:
+            continue
+
+        details = model.get("details") if isinstance(model.get("details"), dict) else {}
+        metadata = details.get("quantum") if isinstance(details.get("quantum"), dict) else {}
+        configuration = details.get("configuration") if isinstance(details.get("configuration"), dict) else {}
+        config_key = "hybrid" if model_type == "hybrid_pennylane_torch" else "quantum"
+        model_config = metadata.get("configuration")
+        if not isinstance(model_config, dict):
+            model_config = configuration.get(config_key)
+        if not isinstance(model_config, dict):
+            model_config = {}
+
+        circuit = metadata.get("circuit")
+        if not isinstance(circuit, dict):
+            circuit = {}
+        pipeline = configuration.get("pipeline") if isinstance(configuration.get("pipeline"), dict) else {}
+        preprocessing = details.get("preprocessing") if isinstance(details.get("preprocessing"), dict) else {}
+        feature_dimension = preprocessing.get("final_representation_dimension")
+        comparison_conditions = details.get("comparison_conditions")
+        if not isinstance(comparison_conditions, dict):
+            comparison_conditions = {}
+
+        feature_encoding = {
+            key: value
+            for key, value in {
+                "method": metadata.get("feature_map") or model_config.get("feature_map"),
+                "represented_feature_dimension": feature_dimension,
+                "pca_components": pipeline.get("pca_components"),
+                "angle_scaling": pipeline.get("angle_scaling"),
+            }.items()
+            if value is not None
+        }
+        execution = {}
+        for key in (
+            "provider_id", "framework", "classical_framework", "backend",
+            "execution_mode", "execution_kind", "real_hardware",
+        ):
+            value = metadata.get(key)
+            if value is None and key in {"provider_id", "backend", "execution_mode"}:
+                value = model_config.get(key)
+            if value is not None:
+                execution[key] = value
+        resources = {
+            key: circuit[key]
+            for key in ("qubits", "logical_depth", "gate_counts", "parameter_count")
+            if key in circuit and circuit[key] is not None
+        }
+        if metadata.get("sample_count") is not None:
+            resources["sample_count"] = metadata["sample_count"]
+        if model_config.get("shots") is not None:
+            resources["configured_shots"] = model_config["shots"]
+
+        diagnostic = latest_diagnostic.get(model.get("id"))
+        diagnostic_payload = None
+        if diagnostic is not None:
+            diagnostic_payload = {
+                "id": diagnostic.id,
+                "status": diagnostic.status,
+                "created_at": diagnostic.created_at.isoformat() if diagnostic.created_at else None,
+                "configuration_fingerprint": diagnostic.configuration_fingerprint,
+                "feature_encoding": diagnostic.feature_encoding,
+                "circuit_structure": diagnostic.circuit_structure,
+                "resource_profile": diagnostic.resource_profile,
+                "optimizer_profile": diagnostic.optimizer_profile,
+                "execution_profile": diagnostic.execution_profile,
+                "warnings": diagnostic.warnings,
+                "limitations": diagnostic.limitations,
+                "provenance": diagnostic.provenance,
+            }
+
+        stored_limitations = details.get("limitations")
+        limitations = (
+            list(stored_limitations)
+            if isinstance(stored_limitations, list)
+            else [stored_limitations] if isinstance(stored_limitations, str) else []
+        )
+        if circuit.get("limitation"):
+            limitations.append(circuit["limitation"])
+        if diagnostic_payload:
+            limitations.extend(diagnostic_payload.get("limitations") or [])
+        state_evidence = metadata.get("state_evidence")
+        if not isinstance(state_evidence, dict):
+            state_evidence = {
+                "status": "NOT_RECORDED",
+                "reason": (
+                    "No statevector, state probabilities, phase, Bloch state, or shot-count "
+                    "result is persisted with this model record."
+                ),
+            }
+
+        records.append({
+            "model_id": model.get("id"),
+            "model_type": model_type,
+            "model_status": model.get("status"),
+            "evidence_status": "AVAILABLE" if metadata else "NOT_AVAILABLE",
+            "run_id": model.get("run_id"),
+            "dataset_id": model.get("dataset_id") or experiment.dataset_id,
+            "dataset_version_id": details.get("dataset_version_id")
+            or comparison_conditions.get("dataset_version_id"),
+            "dataset_hash": dataset.get("dataset_hash") or dataset.get("sha256"),
+            "execution": execution,
+            "configuration": model_config,
+            "feature_encoding": feature_encoding,
+            "circuit": circuit or None,
+            "resource_profile": resources,
+            "state_evidence": state_evidence,
+            "diagnostics": diagnostic_payload,
+            "limitations": list(dict.fromkeys(str(value) for value in limitations if value)),
+        })
+
+    if not records:
+        return None
+    return {
+        "schema_version": "quantum_report_evidence_v1",
+        "source": "persisted model records and linked quantum diagnostics",
+        "experiment_id": experiment.id,
+        "dataset_id": experiment.dataset_id,
+        "dataset_name": dataset.get("name") or dataset.get("dataset_name"),
+        "dataset_hash": dataset.get("dataset_hash") or dataset.get("sha256"),
+        "models": records,
+        "limitations": [
+            "This section reports persisted configuration and execution evidence only.",
+            "Transient visualization previews and unsaved simulator responses are not included.",
+            "Simulation is not real quantum hardware execution and does not establish quantum advantage.",
+        ],
+    }
+
+
 def report_data(identity: str) -> dict:
     with session_scope() as session:
         experiment = require(session, Experiment, identity)
         models = list(session.scalars(select(ModelRecord).where(ModelRecord.experiment_id == identity)))
         explanations = list(session.scalars(select(ExplanationRecord).where(ExplanationRecord.model_id.in_([m.id for m in models])))) if models else []
+        has_quantum_models = any(
+            model.model_type in QUANTUM_MODEL_TYPES for model in models
+        )
+        quantum_diagnostics = list(session.scalars(
+            select(QuantumDiagnosticReport)
+            .where(QuantumDiagnosticReport.experiment_id == identity)
+            .order_by(QuantumDiagnosticReport.created_at, QuantumDiagnosticReport.id)
+        )) if has_quantum_models else []
         pipeline = session.get(PipelineVersion, experiment.pipeline_version_id) if experiment.pipeline_version_id else None
         pipeline_data = pipeline_payload(session, pipeline) if pipeline else {
             "status": "LEGACY_UNRESOLVED",
@@ -55,7 +218,7 @@ def report_data(identity: str) -> dict:
     experiment_kind = experiment.summary.get("experiment_kind", "live_experiment")
     for model in models:
         verify_installed_model(model)
-    return {"title": "EntangleX Q-Health Research Experiment Report", "generated_at": utcnow().isoformat(),
+    report = {"title": "EntangleX Q-Health Research Experiment Report", "generated_at": utcnow().isoformat(),
         "experiment_kind": experiment_kind, "experiment_label": "PRECOMPUTED VERIFIED DEMO EXPERIMENT" if experiment_kind == "precomputed_verified_demo" else "LIVE RESEARCH EXPERIMENT",
         "disclaimer": DISCLAIMER, "experiment": ExperimentOut.model_validate(experiment).model_dump(mode="json"),
         "dataset": experiment.summary.get("dataset_provenance", {}), "preprocessing": experiment.config["pipeline"],
@@ -66,6 +229,17 @@ def report_data(identity: str) -> dict:
         "interpretation": [ExplanationOut.model_validate(e).model_dump(mode="json") for e in explanations],
         "comparison": comparison(identity),
         "scientific_boundary": "Model probabilities, test metrics, and simulation results do not establish diagnosis, clinical validity, regulatory approval, or quantum advantage. Uncomputed measurements remain absent, not zero."}
+    quantum_evidence = _quantum_report_evidence(
+        experiment,
+        report["dataset"] if isinstance(report["dataset"], dict) else {},
+        report["models"],
+        quantum_diagnostics,
+    )
+    # Keep the historical report payload unchanged for experiments without
+    # persisted quantum model records.
+    if quantum_evidence is not None:
+        report["quantum_evidence"] = quantum_evidence
+    return report
 
 def html_report(identity: str) -> str:
     data = report_data(identity)
@@ -81,6 +255,8 @@ def html_report(identity: str) -> str:
         "<h2>Audit timeline</h2>" + pre(data["audit_summary"]),
         "<h2>Shared split and reproducibility</h2>" + pre(data["experiment"]["summary"]),
         "<h2>Model configuration</h2>" + pre(data["experiment"]["config"])]
+    if data.get("quantum_evidence"):
+        sections.append("<h2>Quantum computation evidence</h2>" + pre(data["quantum_evidence"]))
     for model in data["models"]:
         sections.append("<h2>Model: " + escaped(model.get("display_name", model["model_type"])) + "</h2><p>Model ID: " + escaped(model["id"]) + "; status: " + escaped(model["status"]) + "</p>")
         metrics = model["metrics"]
