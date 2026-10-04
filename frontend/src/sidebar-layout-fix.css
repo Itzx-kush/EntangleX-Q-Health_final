@@ -38,3 +38,59 @@ body,
 #root .research-shell .research-sidebar::after {
   border-radius: 0 !important;
 }
+
+
+/*
+ * Layer 3 independent-scroll correction.
+ *
+ * Desktop/tablet: the research shell owns the viewport and the workspace
+ * becomes the primary vertical scroll container. The sidebar remains fixed
+ * to the viewport and only its navigation list may scroll internally.
+ *
+ * Mobile deliberately restores the existing document/drawer scroll model.
+ */
+#root .research-shell {
+  height: 100dvh;
+  min-height: 100dvh !important;
+  overflow: hidden;
+}
+
+#root .research-shell .research-workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+#root .research-shell .research-sidebar {
+  overflow: hidden !important;
+}
+
+#root .research-shell .research-sidebar .sidebar-nav {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+#root .research-shell .research-sidebar .sidebar-bottom {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767px) {
+  #root .research-shell {
+    height: auto;
+    min-height: 100dvh !important;
+    overflow: visible;
+  }
+
+  #root .research-shell .research-workspace {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    overscroll-behavior-y: auto;
+    scrollbar-gutter: auto;
+  }
+}
