@@ -226,28 +226,50 @@ def test_uploaded_dataset_is_excluded_at_registered_readiness_boundary(client, r
     assert preview.status_code == 200
 
 
-def test_installer_validates_all_registry_conflicts_before_any_file_write(client, monkeypatch):
-    checked = validate_packaged_dataset("early-stage-diabetes")
-    dataset_path = safe_path("data/datasets", checked["dataset"]["id"], ".csv")
+def test_installer_reconciles_stale_persistent_verified_demo_state():
+    checked = validate_packaged_dataset("early-stage-diabetes", refresh=True)
     model_data = checked["models"][0]
     model_path = safe_path("models", model_data["id"], ".dill")
-    original_dataset_bytes, original_model_bytes = dataset_path.read_bytes(), model_path.read_bytes()
-    original_artifact_sha = model_data["artifact_sha256"]
-    sentinel_dataset, sentinel_model = b"dataset-sentinel-before-conflict", b"model-sentinel-before-conflict"
+    original_model_bytes = model_path.read_bytes()
+    try:
+        with session_scope() as session:
+            model = session.get(ModelRecord, model_data["id"])
+            model.artifact_sha256 = "0" * 64
+            model.metrics = {}
+        model_path.write_bytes(b"stale-demo-artifact")
+
+        install_verified_demo_artifacts()
+
+        with session_scope() as session:
+            repaired = session.get(ModelRecord, model_data["id"])
+            assert repaired.artifact_sha256 == model_data["artifact_sha256"]
+            assert repaired.details.get("experiment_kind") == "precomputed_verified_demo"
+            assert repaired.metrics == model_data["metrics"]
+        assert model_path.read_bytes() == original_model_bytes
+    finally:
+        model_path.write_bytes(original_model_bytes)
+        with session_scope() as session:
+            model = session.get(ModelRecord, model_data["id"])
+            model.artifact_sha256 = model_data["artifact_sha256"]
+            model.details = model_data["details"]
+            model.metrics = model_data["metrics"]
+        clear_verified_readiness_cache(clear_manifest=True)
+
+
+def test_installer_still_rejects_unrelated_persistent_registry_conflicts(monkeypatch):
+    checked = validate_packaged_dataset("early-stage-diabetes", refresh=True)
+    model_data = checked["models"][0]
+    model_path = safe_path("models", model_data["id"], ".dill")
+    original_model_bytes = model_path.read_bytes()
     calls = []
+
     with session_scope() as session:
         model = session.get(ModelRecord, model_data["id"])
-        model.artifact_sha256 = "0" * 64
-        counts_before = tuple(
-            len(list(session.query(entity)))
-            for entity in (Dataset, Experiment, Job, ModelRecord)
-        )
-    dataset_path.write_bytes(sentinel_dataset)
-    model_path.write_bytes(sentinel_model)
+        model.details = {**model.details, "experiment_kind": "live_training"}
 
     def forbidden_write(*args, **kwargs):
         calls.append((args, kwargs))
-        raise AssertionError("filesystem hydration started before registry validation completed")
+        raise AssertionError("filesystem hydration must not start for an unrelated registry conflict")
 
     monkeypatch.setattr(demo_readiness, "atomic_bytes", forbidden_write)
     try:
@@ -255,21 +277,13 @@ def test_installer_validates_all_registry_conflicts_before_any_file_write(client
             install_verified_demo_artifacts()
         assert error.value.code == "demo_model_mismatch"
         assert calls == []
-        assert dataset_path.read_bytes() == sentinel_dataset
-        assert model_path.read_bytes() == sentinel_model
-        with session_scope() as session:
-            counts_after = tuple(
-                len(list(session.query(entity)))
-                for entity in (Dataset, Experiment, Job, ModelRecord)
-            )
-            assert session.get(ModelRecord, model_data["id"]).artifact_sha256 == "0" * 64
-        assert counts_after == counts_before
+        assert model_path.read_bytes() == original_model_bytes
     finally:
-        dataset_path.write_bytes(original_dataset_bytes)
-        model_path.write_bytes(original_model_bytes)
         with session_scope() as session:
-            session.get(ModelRecord, model_data["id"]).artifact_sha256 = original_artifact_sha
+            model = session.get(ModelRecord, model_data["id"])
+            model.details = {**model.details, "experiment_kind": "precomputed_verified_demo"}
         clear_verified_readiness_cache(clear_manifest=True)
+
 
 
 def _load_generator_module():
