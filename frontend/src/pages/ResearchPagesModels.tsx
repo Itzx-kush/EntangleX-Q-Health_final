@@ -261,13 +261,15 @@ function LiveRobustness(){
 
 export function Quantum(){
  const {draft,update,pipeline,quantum}=useDraft();
+ const demo=useVerifiedDemo();
+ const [demoHydrated,setDemoHydrated]=useState(false);
  const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities});
  const [kind,setKind]=useState<'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch'>('vqc');
  const [contract,setContract]=useState<QuantumVisualizationContract|null>(null);
  const [circuit,setCircuit]=useState<Circuit>();
  const [circuitSource,setCircuitSource]=useState<'preview'|'fitted'|null>(null);
  const [modelId,setModelId]=useState('');
- const [datasetId,setDatasetId]=useState(draft.dataset_id);
+ const [datasetId,setDatasetId]=useState(demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id);
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,staleTime:30000});
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
@@ -288,9 +290,32 @@ export function Quantum(){
   onSuccess:(result)=>{setCircuit(result);setContract(null);setCircuitSource('fitted')},
  });
  const advisor=useMutation({mutationFn:()=>{if(kind==='hybrid_pennylane_torch')throw new Error('The resource advisor supports VQC, QSVC, and QNN only.');return qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null})}});
- useEffect(()=>{setDatasetId(draft.dataset_id)},[draft.dataset_id]);
+ useEffect(()=>{
+  const nextDatasetId=demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id;
+  if(datasetId!==nextDatasetId)setDatasetId(nextDatasetId||'');
+  if(!demo.active&&demoHydrated)setDemoHydrated(false);
+ },[demo.active,demo.datasetId,draft.dataset_id,datasetId,demoHydrated]);
+ useEffect(()=>{
+  if(!demo.active||demoHydrated||!demo.datasetId||!demo.experimentId||!models.data)return;
+  const candidates=models.data.filter(model=>model.dataset_id===demo.datasetId&&model.experiment_id===demo.experimentId&&isQiskitQuantumModel(model.model_type));
+  const preferred=candidates.find(model=>model.model_type==='vqc')||candidates.find(model=>model.model_type==='qnn')||candidates[0];
+  if(!preferred)return;
+  setDatasetId(demo.datasetId);
+  setModelId(preferred.id);
+  setKind(preferred.model_type as 'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch');
+  setDemoHydrated(true);
+ },[demo.active,demo.datasetId,demo.experimentId,demoHydrated,models.data]);
  useEffect(()=>{advisor.reset()},[kind,draft.quantum,draft.pipeline.pca_components,draft.max_samples,draft.dataset_id,datasetId]);
  useEffect(()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ useEffect(()=>{
+  if(!demo.active||!demoHydrated||!selectedModel)return;
+  const quantumDetails=(selectedModel.details?.quantum||{}) as Record<string,unknown>;
+  const persistedCircuit=quantumDetails.circuit as Circuit|undefined;
+  if(!persistedCircuit||!Array.isArray(persistedCircuit.gates)||persistedCircuit.gates.length===0)return;
+  setContract(null);
+  setCircuit(persistedCircuit);
+  setCircuitSource('fitted');
+ },[demo.active,demoHydrated,selectedModel?.id]);
  const advice=advisor.data;
  const history=advice?.historical_evidence;
  const applyRecommendation=()=>{const recommendation=advice?.recommendation.configuration;if(!recommendation)return;quantum(recommendation.quantum);pipeline({pca_components:recommendation.feature_dimension,angle_scaling:true});update({max_samples:recommendation.sample_count})};
@@ -301,6 +326,7 @@ export function Quantum(){
  };
  return <div className="quantum-lab-page">
   <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
+  {demo.active&&<div className="ql-verified-banner" role="status" aria-label="Verified quantum demo status"><Badge tone="green">VERIFIED DEMO</Badge><Badge tone="blue">PRECOMPUTED / REPRODUCIBLE</Badge><span>Read-only packaged quantum evidence is surfaced through the same Quantum Lab workspace.</span></div>}
   <StageNav current="/quantum"/>
   <WorkbenchRail items={[
    {label:'Model family',value:kind.toUpperCase(),detail:'Backend visualization context',tone:'purple'},
