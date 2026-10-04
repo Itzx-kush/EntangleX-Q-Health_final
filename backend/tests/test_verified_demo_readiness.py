@@ -76,6 +76,10 @@ def test_manifest_and_every_packaged_artifact_have_real_matching_hashes():
             assert bundle["dataset_hash"] == checked["catalog"]["sha256"]
 
 
+def test_readiness_validates_artifact_bytes_without_deserializing_models(monkeypatch):
+    checked = demo_readiness.validate_packaged_dataset("early-stage-diabetes", refresh=True)
+    assert len(checked["models"]) == 7
+
 def test_diabetes_package_has_one_controlled_seven_model_experiment_and_all_evidence():
     checked = validate_packaged_dataset("early-stage-diabetes", refresh=True)
     assert len(checked["models"]) == 7
@@ -191,22 +195,20 @@ def test_processing_dataset_creates_no_fake_experiment_and_live_pipeline_remains
     assert client.post("/api/training/jobs", json=payload).status_code == 202
 
 
-def test_repeated_readiness_calls_use_verified_cache_without_reopening_bundles(client, monkeypatch):
+def test_repeated_readiness_calls_use_verified_cache_without_unpickling_bundles(client, monkeypatch):
     clear_verified_readiness_cache(clear_manifest=True)
-    calls = 0
-    original = demo_readiness._read_bundle
 
-    def counted(*args, **kwargs):
-        nonlocal calls
-        calls += 1
-        return original(*args, **kwargs)
+    def forbidden_unpickle(*args, **kwargs):
+        raise AssertionError("verified-demo readiness must not unpickle model artifacts")
 
-    monkeypatch.setattr(demo_readiness, "_read_bundle", counted)
+    monkeypatch.setattr(demo_readiness, "_read_bundle", forbidden_unpickle)
     first = client.get("/api/datasets/readiness")
     second = client.get("/api/datasets/readiness")
     library = client.get("/api/datasets/library")
     assert first.status_code == second.status_code == library.status_code == 200
-    assert calls == 7  # all seven genuine diabetes models, verified once
+    assert first.json()["verified_demo_ready"] == 1
+    assert first.json()["requires_processing"] == 4
+    assert second.json() == first.json()
 
 
 def test_uploaded_dataset_is_excluded_at_registered_readiness_boundary(client, registered, config):

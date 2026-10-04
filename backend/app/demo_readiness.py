@@ -132,6 +132,7 @@ def packaged_artifact_sha256(payload: bytes) -> str:
 
 
 def _read_bundle(path: Path, expected_sha256: str) -> dict:
+    """Load a packaged model only when a caller actually needs the model object."""
     payload = _artifact_payload(path)
     if packaged_artifact_sha256(payload) != expected_sha256:
         raise AppError("demo_artifact_integrity", "A verified demo model artifact failed its SHA-256 integrity check.", 409)
@@ -139,6 +140,17 @@ def _read_bundle(path: Path, expected_sha256: str) -> dict:
         return RestrictedUnpickler(io.BytesIO(payload)).load()
     except Exception as exc:
         raise AppError("demo_artifact_invalid", "A verified demo model artifact could not be loaded safely.", 409) from exc
+
+def _validate_packaged_artifact(path: Path, expected_sha256: str) -> None:
+    """Validate encoded bytes and the published hash without importing/unpickling the model.
+
+    Verified-demo readiness is an integrity/readiness check for a precomputed evidence
+    package. Model objects are loaded only on demand, so startup must not require every
+    optional ML/quantum runtime dependency to deserialize all seven packaged models.
+    """
+    payload = _artifact_payload(path)
+    if packaged_artifact_sha256(payload) != expected_sha256:
+        raise AppError("demo_artifact_integrity", "A verified demo model artifact failed its SHA-256 integrity check.", 409)
 
 
 def _validate_timestamp(value: object, field: str) -> None:
@@ -189,10 +201,9 @@ def _validate_entry(slug: str, entry: dict, manifest: dict, artifact_root=None) 
                 or artifact.get("hash_scope") != PACKAGED_ARTIFACT_HASH_SCOPE
                 or model.get("artifact_sha256") != artifact.get("sha256")):
             raise AppError("demo_model_mismatch", "A verified demo model SHA-256 contract is inconsistent.", 409)
-        bundle = _read_bundle(_artifact_path(artifact.get("filename", ""), artifact_root), artifact.get("sha256", ""))
+        _validate_packaged_artifact(_artifact_path(artifact.get("filename", ""), artifact_root), artifact.get("sha256", ""))
         model_provenance = model.get("details", {}).get("dataset_provenance", {})
-        if (bundle.get("dataset_id") != dataset_id or bundle.get("dataset_hash") != catalog["sha256"]
-                or bundle.get("config") != experiment.get("config") or model_provenance.get("library_slug") != slug
+        if (model_provenance.get("library_slug") != slug
                 or model_provenance.get("dataset_hash") != catalog["sha256"]
                 or model.get("details", {}).get("configuration") != experiment.get("config")):
             raise AppError("demo_model_mismatch", "A verified demo model is incompatible with its dataset or experiment.", 409)
