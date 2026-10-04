@@ -297,56 +297,127 @@ def _datetime(value: str) -> datetime:
 
 
 def _validate_runtime_registry(session, slug: str, checked: dict) -> None:
-    """Phase A: validate every existing registry identity without mutating files or rows."""
+    """Validate persisted rows and permit safe reconciliation of the immutable demo package.
+
+    Render uses a persistent runtime disk. A previously deployed copy of the immutable
+    verified demo can therefore survive a redeploy even when its packaged records have
+    evolved. Those stale demo rows must not brick application startup. Only rows that
+    are
+    explicitly marked as the packaged verified demo may be reconciled; unrelated user
+    or live-experiment rows remain fail-closed.
+    """
     dataset_data, experiment_data, job_data, models_data = (
         checked["dataset"], checked["experiment"], checked["job"], checked["models"]
     )
+
     dataset = session.get(Dataset, dataset_data["id"])
-    if dataset is not None and (
-        dataset.id != dataset_data["id"]
-        or dataset.sha256 != checked["catalog"]["sha256"]
-        or dataset.provenance.get("library_slug") != slug
-    ):
-        raise AppError("demo_dataset_mismatch", "A runtime dataset conflicts with the verified demo identity.", 409)
+    if dataset is not None:
+        provenance = dataset.provenance or {}
+        if provenance.get("origin") != "built_in" or provenance.get("library_slug") != slug:
+            raise AppError("demo_dataset_mismatch", "A runtime dataset conflicts with the verified demo identity.", 409)
 
     experiment = session.get(Experiment, experiment_data["id"])
-    if experiment is not None and (
-        experiment.id != experiment_data["id"]
-        or experiment.dataset_id != dataset_data["id"]
-        or experiment.config != experiment_data["config"]
-    ):
-        raise AppError("demo_experiment_mismatch", "A runtime experiment conflicts with the verified demo identity.", 409)
+    if experiment is not None:
+        if (
+            experiment.dataset_id != dataset_data["id"]
+            or experiment.summary.get("experiment_kind") != "precomputed_verified_demo"
+        ):
+            raise AppError("demo_experiment_mismatch", "A runtime experiment conflicts with the verified demo identity.", 409)
 
     jobs = list(session.scalars(select(Job).where(Job.experiment_id == experiment_data["id"])))
-    if any(job.id != job_data["id"] for job in jobs):
-        raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
-    job = session.get(Job, job_data["id"])
-    if job is not None and (
-        job.id != job_data["id"]
-        or job.experiment_id != experiment_data["id"]
-        or job.status != job_data["status"]
-        or job.progress != job_data["progress"]
-        or job.state != job_data["state"]
-        or job.errors != job_data["errors"]
-    ):
-        raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
+    expected_job_id = job_data["id"]
+    for job in jobs:
+        if job.id != expected_job_id:
+            raise AppError("demo_job_mismatch", "A runtime job conflicts with the verified demo experiment.", 409)
 
     expected_model_ids = {model["id"] for model in models_data}
     experiment_models = list(session.scalars(
         select(ModelRecord).where(ModelRecord.experiment_id == experiment_data["id"])
     ))
-    if any(model.id not in expected_model_ids for model in experiment_models):
-        raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+    for model in experiment_models:
+        if model.id not in expected_model_ids:
+            raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+
     for model_data in models_data:
         model = session.get(ModelRecord, model_data["id"])
-        if model is not None and (
-            model.id != model_data["id"]
-            or model.dataset_id != dataset_data["id"]
-            or model.experiment_id != experiment_data["id"]
-            or model.status != model_data["status"]
-            or model.artifact_sha256 != model_data["artifact_sha256"]
-        ):
-            raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+        if model is not None:
+            details = model.details or {}
+            if (
+                model.dataset_id != dataset_data["id"]
+                or model.experiment_id != experiment_data["id"]
+                or details.get("experiment_kind") != "precomputed_verified_demo"
+            ):
+                raise AppError("demo_model_mismatch", "A runtime model conflicts with the verified demo identity.", 409)
+
+
+def _reconcile_verified_demo_registry(session, checked: dict) -> None:
+    """Reconcile stale rows for the immutable verified demo without touching live research data."""
+    dataset_data, experiment_data, job_data, models_data = (
+        checked["dataset"], checked["experiment"], checked["job"], checked["models"]
+    )
+
+    dataset = session.get(Dataset, dataset_data["id"])
+    if dataset is not None:
+        dataset.name = dataset_data["name"]
+        dataset.filename = dataset_data["filename"]
+        dataset.sha256 = dataset_data["sha256"]
+        dataset.provenance = dataset_data["provenance"]
+        dataset.quality = dataset_data["quality"]
+        dataset.created_at = _datetime(dataset_data["created_at"])
+        # Force versioned backfill against the newly hydrated immutable CSV.
+        dataset.current_version_id = None
+    else:
+        session.add(Dataset(**{**dataset_data, "created_at": _datetime(dataset_data["created_at"])}))
+
+    experiment = session.get(Experiment, experiment_data["id"])
+    if experiment is not None:
+        experiment.name = experiment_data.get("name")
+        experiment.dataset_id = experiment_data["dataset_id"]
+        experiment.parent_id = experiment_data.get("parent_id")
+        experiment.pipeline_version_id = None
+        experiment.protocol_version_id = None
+        experiment.protocol_fingerprint = None
+        experiment.status = experiment_data["status"]
+        experiment.config = experiment_data["config"]
+        experiment.summary = experiment_data["summary"]
+        experiment.created_at = _datetime(experiment_data["created_at"])
+        experiment.deleted_at = None
+    else:
+        session.add(Experiment(**{**experiment_data, "created_at": _datetime(experiment_data["created_at"])}))
+
+    job = session.get(Job, job_data["id"])
+    if job is not None:
+        for key, value in job_data.items():
+            if key in {"created_at", "updated_at"}:
+                continue
+            if hasattr(job, key):
+                setattr(job, key, value)
+        job.created_at = _datetime(job_data["created_at"])
+        job.updated_at = _datetime(job_data["updated_at"])
+        job.run_id = None
+        job.worker_id = None
+        job.lease_id = None
+        job.leased_at = None
+        job.lease_expires_at = None
+    else:
+        session.add(Job(**{**job_data, "created_at": _datetime(job_data["created_at"]), "updated_at": _datetime(job_data["updated_at"])}))
+
+    for model_data in models_data:
+        stored = {key: value for key, value in model_data.items() if key != "artifact"}
+        model = session.get(ModelRecord, stored["id"])
+        if model is None:
+            session.add(ModelRecord(**{**stored, "created_at": _datetime(stored["created_at"])}))
+            continue
+        model.experiment_id = stored["experiment_id"]
+        model.dataset_id = stored["dataset_id"]
+        model.run_id = None
+        model.model_type = stored["model_type"]
+        model.status = stored["status"]
+        model.progress = stored["progress"]
+        model.artifact_sha256 = stored["artifact_sha256"]
+        model.details = stored["details"]
+        model.metrics = stored["metrics"]
+        model.created_at = _datetime(stored["created_at"])
 
 
 def install_verified_demo_artifacts() -> None:
@@ -360,11 +431,11 @@ def install_verified_demo_artifacts() -> None:
             checked = state["checked"]
             dataset_data, experiment_data, job_data, models_data = checked["dataset"], checked["experiment"], checked["job"], checked["models"]
             try:
-                # Phase A: every possible registry conflict is checked before the first file write.
+                # Phase A: inspect the persistent registry before any file write.
                 with session_scope() as session:
                     _validate_runtime_registry(session, slug, checked)
 
-                # Phase B: only a conflict-free slug may hydrate runtime files.
+                # Phase B: hydrate the immutable packaged files.
                 dataset_path = safe_path("data/datasets", dataset_data["id"], ".csv")
                 if not dataset_path.is_file() or hashlib.sha256(dataset_path.read_bytes()).hexdigest() != checked["catalog"]["sha256"]:
                     atomic_bytes(dataset_path, checked["dataset_bytes"])
@@ -374,20 +445,7 @@ def install_verified_demo_artifacts() -> None:
                     if not target.is_file() or packaged_artifact_sha256(target.read_bytes()) != model["artifact_sha256"]:
                         atomic_bytes(target, _artifact_payload(source))
                 with session_scope() as session:
-                    existing_dataset = session.get(Dataset, dataset_data["id"])
-                    if existing_dataset is None:
-                        session.add(Dataset(**{**dataset_data, "created_at": _datetime(dataset_data["created_at"])}))
-                    existing_experiment = session.get(Experiment, experiment_data["id"])
-                    if existing_experiment is None:
-                        session.add(Experiment(**{**experiment_data, "created_at": _datetime(experiment_data["created_at"])}))
-                    existing_job = session.get(Job, job_data["id"])
-                    if existing_job is None:
-                        session.add(Job(**{**job_data, "created_at": _datetime(job_data["created_at"]), "updated_at": _datetime(job_data["updated_at"])}))
-                    for model_data in models_data:
-                        stored = {key: value for key, value in model_data.items() if key != "artifact"}
-                        existing_model = session.get(ModelRecord, stored["id"])
-                        if existing_model is None:
-                            session.add(ModelRecord(**{**stored, "created_at": _datetime(stored["created_at"])}))
+                    _reconcile_verified_demo_registry(session, checked)
             except AppError as exc:
                 state.clear()
                 state.update({"available": False, "code": exc.code})

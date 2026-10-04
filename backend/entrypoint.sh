@@ -18,8 +18,20 @@ APP_USER="qhealth"
 
 if [ "$(id -u)" = "0" ]; then
   mkdir -p "$RUNTIME/data/datasets" "$RUNTIME/models" "$RUNTIME/experiments"
-  # The disk mount is root-owned; hand the runtime tree to the app user.
-  chown -R "$APP_USER:$APP_USER" "$RUNTIME" 2>/dev/null || true
+  # Render mounts persistent disks at runtime. Avoid recursively chowning the
+  # entire disk on every restart; large experiment/model stores can otherwise
+  # delay the HTTP health check and make the service flap.
+  MARKER="$RUNTIME/.qhealth_permissions_initialized"
+  if [ ! -f "$MARKER" ]; then
+    if chown -R "$APP_USER:$APP_USER" "$RUNTIME"; then
+      : > "$MARKER"
+      chown "$APP_USER:$APP_USER" "$MARKER" 2>/dev/null || true
+    else
+      echo "[entrypoint] unable to prepare persistent runtime ownership" >&2
+    fi
+  else
+    chown "$APP_USER:$APP_USER" "$RUNTIME" "$RUNTIME/data" "$RUNTIME/models" "$RUNTIME/experiments" 2>/dev/null || true
+  fi
   if command -v setpriv >/dev/null 2>&1; then
     exec setpriv --reuid="$APP_USER" --regid="$APP_USER" --init-groups "$@"
   fi

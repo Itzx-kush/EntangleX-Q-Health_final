@@ -1,5 +1,6 @@
 import json
 import logging
+from threading import Thread
 from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import APIRouter, Depends, FastAPI, Request
@@ -38,13 +39,26 @@ logger.handlers = [handler]
 logger.setLevel(settings.log_level.upper())
 logger.propagate = False
 
+def _background_runtime_bootstrap():
+    try:
+        install_verified_demo_artifacts()
+    except AppError as exc:
+        # Request-time recovery remains available for the immutable packaged demo.
+        logger.warning("verified_demo_startup_recovery_required code=%s", exc.code)
+    except OSError as exc:
+        logger.warning("verified_demo_startup_filesystem_unavailable exception_type=%s", type(exc).__name__)
+    try:
+        ensure_legacy_versions()
+    except Exception as exc:
+        logger.warning("legacy_version_backfill_deferred exception_type=%s", type(exc).__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_readiness_configuration()
     init_db()
-    install_verified_demo_artifacts()
-    ensure_legacy_versions()
     manager.start()
+    Thread(target=_background_runtime_bootstrap, name="qhealth-runtime-bootstrap", daemon=True).start()
     logger.info("application_started mode=single_workstation_research")
     try:
         yield
@@ -124,16 +138,28 @@ def summary():
 @api.get("/system/status", tags=["dashboard"])
 def system_status():
     """Expose safe, read-only runtime facts for the research workspace shell."""
-    with session_scope() as session:
-        jobs = list(session.scalars(select(Job)))
-        database_available = True
+    jobs = []
+    database_available = True
+    database_error = None
+    try:
+        with session_scope() as session:
+            jobs = list(session.scalars(select(Job)))
+    except Exception as exc:
+        database_available = False
+        database_error = type(exc).__name__
+        logger.warning("system_status_database_unavailable exception_type=%s", type(exc).__name__)
     root = settings.root
-    storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
+    try:
+        storage_available = all((root / name).is_dir() for name in ["data", "models", "experiments"])
+    except OSError:
+        storage_available = False
+    status = "ok" if database_available and storage_available else "degraded"
     return {
-        "status": "ok",
+        "status": status,
         "version": "0.1.0",
         "mode": "single-workstation research prototype",
         "database_available": database_available,
+        "database_error": database_error,
         "storage_available": storage_available,
         "quantum": availability(),
         "model_capabilities": alignment_contract()["models"],

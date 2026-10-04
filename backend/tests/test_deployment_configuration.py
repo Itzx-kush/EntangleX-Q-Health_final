@@ -26,6 +26,7 @@ def test_render_blueprint_has_backend_static_frontend_and_spa_fallback():
     assert "healthCheckPath: /api/health" in rendered
     assert "VITE_API_BASE\n        value: https://entanglex-q-health-api.onrender.com/api" in rendered
     assert "QHEALTH_CORS_ORIGINS\n        value: https://entanglex-q-health.onrender.com" in rendered
+    assert "plan: 1c-2g" in rendered
 
 
 def test_browser_router_and_every_supported_direct_route_remain_declared():
@@ -98,3 +99,6 @@ def test_render_blueprint_declares_persistent_runtime_disk():
     assert entrypoint.is_file()
     script = entrypoint.read_text(encoding="utf-8")
     assert "setpriv" in script and "setuid" in script
+    assert ".qhealth_permissions_initialized" in script
+    assert "chown -R" in script
+    assert 'chown "$APP_USER:$APP_USER" "$RUNTIME" "$RUNTIME/data"' in script
