@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom';
 import {ArrowRight,Atom,BarChart3,Brain,FileText,GitBranch,LineChart,Microscope,ShieldCheck} from 'lucide-react';
 import {Badge,Card} from './ui';
 import {JsonDisclosure,MetricCard,Notice,StatusBadge} from './Shared';
-import {RocChart} from './Charts';
+import {DiagnosticEvidence} from './DiagnosticEvidence';
 import {metric,modelLabels,seconds,shortId} from '../utils/format';
 import type {Comparison,Dataset,Experiment,MetricName,ModelRecord} from '../types/qhealth';
 
@@ -133,12 +133,14 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
       <Card title="Research findings" description="Deterministic statements derived only from the evidence visible on this page."><ul className="space-y-3">{findings.map((finding,index)=><li className="flex gap-3 text-sm" key={index}><ShieldCheck className="mt-0.5 shrink-0 text-emerald-600" size={16}/><span>{finding}</span></li>)}</ul></Card>
     </div>
 
+    <DiagnosticEvidence experiment={experiment} models={models} mode={mode} limitations={comparison?.limitations||[]}/>
+
     <Card title="Classical vs quantum vs hybrid" description={criterion?`Best observed held-out ${metricLabel(criterion)} within each model family.`:'Family counts are available; a common result metric is not.'}>
       <div className="grid gap-3 md:grid-cols-3">{families.map(value=>{const best=bestForFamily(ranked,value);return <div className="rounded-xl border p-4" key={value}><div className="flex items-center justify-between"><Badge tone={tone(value)}>{value.toUpperCase()}</Badge><span className="text-xs muted">{familyCounts[value]} model{familyCounts[value]===1?'':'s'}</span></div><h3 className="mt-3 font-semibold">{best?modelLabels[best.model.model_type]:'No comparable result'}</h3><div className="mt-1 text-xl font-semibold">{best?metric(best.value):'Not available'}</div><div className="mt-1 text-[10px] muted">{criterion?`Held-out ${metricLabel(criterion)}`:'Primary metric unavailable'}</div></div>})}</div>
       {criterion&&observedDifference!==null&&quantumComparator&&bestClassical&&<div className="mt-4"><Notice tone="blue"><strong>Observed {metricLabel(criterion)} difference:</strong> {modelLabels[quantumComparator.model.model_type]} vs best classical = {observedDifference>=0?'+':''}{observedDifference.toFixed(3)}. This is a descriptive result under this experiment, not an advantage claim.</Notice></div>}
     </Card>
 
-    {leader&&criterion&&<div className="tremor-grid-main"><Card title="Variability / stability summary" description="Persisted cross-validation evidence for the leading held-out result."><div className="grid gap-3 sm:grid-cols-3"><MetricCard label="CV MEAN" value={metric(leaderSummary?.mean)} detail={metricLabel(criterion)}/><MetricCard label="CV SD" value={metric(leaderSummary?.std)} detail="Persisted fold variability"/><MetricCard label="VALID FOLDS" value={leaderSummary?.valid_folds??'Not recorded'} detail={config.cv_folds?`${config.cv_folds}-fold configured`:`Fold count not recorded`}/></div>{leader.model.metrics.validation?.folds?.length?<JsonDisclosure label="Inspect persisted fold-level values" value={leader.model.metrics.validation.folds.map((fold,index)=>({fold:index+1,[criterion]:fold[criterion]}))}/>:<p className="mt-3 text-xs muted">Fold-level values were not recorded in this result.</p>}</Card><Card title="Held-out ROC evidence" description="Persisted test curves; no curve is reconstructed."><RocChart models={models}/></Card></div>}
+    {leader&&criterion&&<Card title="Variability / stability summary" description="Persisted cross-validation evidence for the leading held-out result."><div className="grid gap-3 sm:grid-cols-3"><MetricCard label="CV MEAN" value={metric(leaderSummary?.mean)} detail={metricLabel(criterion)}/><MetricCard label="CV SD" value={metric(leaderSummary?.std)} detail="Persisted fold variability"/><MetricCard label="VALID FOLDS" value={leaderSummary?.valid_folds??'Not recorded'} detail={config.cv_folds?`${config.cv_folds}-fold configured`:`Fold count not recorded`}/></div>{leader.model.metrics.validation?.folds?.length?<JsonDisclosure label="Inspect persisted fold-level values" value={leader.model.metrics.validation.folds.map((fold,index)=>({fold:index+1,[criterion]:fold[criterion]}))}/>:<p className="mt-3 text-xs muted">Fold-level values were not recorded in this result.</p>}</Card>}
 
     <Card title="Experiment conditions" description="A readable snapshot of persisted configuration; no condition is described as matched unless the backend records it.">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
