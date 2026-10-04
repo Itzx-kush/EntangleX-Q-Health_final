@@ -53,7 +53,7 @@ export function Experiments(){
     const hay=((e.name||'')+' '+e.id+' '+e.status+' '+e.dataset_id+' '+(e.config.models||[]).join(' ')).toLowerCase();
     return hay.includes(query.toLowerCase())&&(status==='all'||e.status===status);
   });
-  return <div>
+  return <div className="layer3-final-workspace layer3-experiments-workspace">
     <PageHeader eyebrow="Research Studio · Registry" title="Experiments" description="Preserve every research decision: dataset reference, model set, seeds, execution state, measured output and limitations." actions={<Link className="btn btn-outline" to="/training">Start in Model Lab <RotateCcw size={13}/></Link>}/>
     <StageNav current="/experiments"/>
     <ErrorBanner error={(list.error as Error)?.message||(rerun.error as Error)?.message||(remove.error as Error)?.message}/>
@@ -516,9 +516,9 @@ export function ExperimentDetail(){
   const saveReport=useMutation({mutationFn:()=>qh.saveResearchReport(id,accessToken),onSuccess:async()=>{await Promise.all([queryClient.invalidateQueries({queryKey:['saved-research-report-state',id]}),queryClient.invalidateQueries({queryKey:['saved-research-reports']})])}});
   const [expanded,setExpanded]=useState<string|null>(null);
   const detail=result.data;
-  if(result.isLoading)return <div><PageHeader eyebrow="Research Studio · Evidence" title="Experiment detail" description="Loading the selected research record."/><Loading/></div>;
-  if(result.error||!detail)return <div><PageHeader eyebrow="Research Studio · Evidence" title="Experiment not found" description="The selected research record could not be loaded."/><ErrorBanner error={(result.error as Error)?.message}/><Link className="btn btn-outline mt-4" to="/experiments"><ArrowLeft size={13}/>Back to registry</Link></div>;
-  return <div>
+  if(result.isLoading)return <div className="layer3-final-workspace layer3-experiment-detail-workspace"><PageHeader eyebrow="Research Studio · Evidence" title="Experiment detail" description="Loading the selected research record."/><Loading/></div>;
+  if(result.error||!detail)return <div className="layer3-final-workspace layer3-experiment-detail-workspace"><PageHeader eyebrow="Research Studio · Evidence" title="Experiment not found" description="The selected research record could not be loaded."/><ErrorBanner error={(result.error as Error)?.message}/><Link className="btn btn-outline mt-4" to="/experiments"><ArrowLeft size={13}/>Back to registry</Link></div>;
+  return <div className="layer3-final-workspace layer3-experiment-detail-workspace">
     <PageHeader eyebrow="Research Studio · Evidence" title={detail.experiment.name||`Experiment ${shortId(id)}`} description="Inspect provenance, job state, measured model records and the exact configuration behind one Q‑Health research experiment." actions={<Link className="btn btn-outline" to="/experiments"><ArrowLeft size={13}/>All experiments</Link>}/>
     <StageNav current="/experiments"/>
     <WorkbenchRail items={[{label:'Status',value:detail.experiment.status.replaceAll('_',' '),detail:'Backend experiment state',tone:detail.experiment.status==='completed'?'green':'amber'},{label:'Models',value:detail.models.length,detail:'Persisted model records',tone:'purple'},{label:'Ready models',value:detail.models.filter(model=>model.status==='ready').length,detail:'Measured evidence available',tone:'green'},{label:'Jobs',value:detail.jobs.length,detail:'Execution records',tone:'blue'}]}/>
