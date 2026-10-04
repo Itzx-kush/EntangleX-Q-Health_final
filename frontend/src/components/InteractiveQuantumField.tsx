@@ -177,7 +177,7 @@ export function InteractiveQuantumField(){
       context.fillStyle=broad;
       context.fillRect(0,0,width,height);
 
-      const lower=context.createRadialGradient(width*(.18+accessState*.6),height*(.7-.13*evidenceState),0,width*.35,height*.65);
+      const lower=context.createRadialGradient(width*(.18+accessState*.6),height*(.7-.13*evidenceState),0,width*.35,height*.65,Math.max(width,height)*.65);
       lower.addColorStop(0,rgba(CYAN,.025+evidenceState*.04));
       lower.addColorStop(.72,'rgba(7,7,10,0)');
       context.fillStyle=lower;
