@@ -20,6 +20,11 @@ vi.mock('../lib/api',()=>({qh:{
 }}));
 
 const gate=(gate_index:number,name:string,qubits:number[],parameters:string[]=[]):QuantumVisualizationGate=>({gate_index,name,gate_type:name==='CX'?'controlled':'rotation',qubits,parameters,control_qubits:name==='CX'?[0]:[],target_qubits:name==='CX'?[1]:[]});
+function deferred<T>(){
+ let resolve!:(value:T)=>void;
+ const promise=new Promise<T>(value=>{resolve=value});
+ return {promise,resolve};
+}
 function makeContract(overrides:ContractOverrides={}):QuantumVisualizationContract{
  const base:QuantumVisualizationContract={
   schema_version:'quantum-visualization-v1',request_fingerprint:'test-fingerprint',status:'STRUCTURE_ONLY',model_type:'vqc',
@@ -168,10 +173,8 @@ describe('Quantum Lab visualization contract components',()=>{
   vi.mocked(qh.experiments).mockResolvedValue([]);
   vi.mocked(qh.datasets).mockResolvedValue([{id:'dataset-1',name:'Cohort A'},{id:'dataset-2',name:'Cohort B'}] as never);
   vi.mocked(qh.dataset).mockImplementation(async id=>({id,name:id==='dataset-2'?'Cohort B':'Cohort A',provenance:{name:id==='dataset-2'?'Cohort B':'Cohort A'}} as never));
-  const first:{resolve:(value:QuantumVisualizationContract)=>void;promise:Promise<QuantumVisualizationContract>}={resolve:()=>undefined,promise:Promise.resolve(makeContract())};
-  first.promise=new Promise(resolve=>{first.resolve=resolve});
-  const second:{resolve:(value:QuantumVisualizationContract)=>void;promise:Promise<QuantumVisualizationContract>}={resolve:()=>undefined,promise:Promise.resolve(makeContract())};
-  second.promise=new Promise(resolve=>{second.resolve=resolve});
+  const first=deferred<QuantumVisualizationContract>();
+  const second=deferred<QuantumVisualizationContract>();
   vi.mocked(qh.quantumVisualizationPreview)
     .mockImplementationOnce(()=>first.promise)
     .mockImplementationOnce(()=>second.promise);
