@@ -3,7 +3,7 @@ import {ArrowDown,ArrowRight,ArrowUpRight,Atom,BrainCircuit,Database,Menu,Shield
 import {InteractiveQuantumField} from './InteractiveQuantumField';
 import {ParticleText} from './ParticleText';
 import {usePointerMotion} from './motion/usePointerMotion';
-import {DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,PixelTrail,SplitReveal} from './reactbits';
+import {BorderGlow,DecryptedText,GlareHover,OuterAurora,OuterMagnet,OuterSpotlight,PixelTrail,ShinyText,SplitReveal} from './reactbits';
 
 type PublicExperienceProps={
   onRequestAccess:(destination?:string)=>void;
@@ -61,6 +61,27 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
   },[]);
 
   useEffect(()=>{
+    const root=sceneRef.current;
+    if(!root)return;
+    let frame=0;
+    const updateProgress=()=>{
+      const documentHeight=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+      const progress=Math.max(0,Math.min(1,window.scrollY/documentHeight));
+      root.style.setProperty('--public-scroll-progress',progress.toFixed(4));
+      frame=0;
+    };
+    const onScroll=()=>{if(!frame)frame=requestAnimationFrame(updateProgress)};
+    updateProgress();
+    window.addEventListener('scroll',onScroll,{passive:true});
+    window.addEventListener('resize',onScroll,{passive:true});
+    return()=>{
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll',onScroll);
+      window.removeEventListener('resize',onScroll);
+    };
+  },[]);
+
+  useEffect(()=>{
     if(!menuOpen)return;
     const close=(event:KeyboardEvent)=>{if(event.key==='Escape')setMenuOpen(false)};
     window.addEventListener('keydown',close);
@@ -73,6 +94,7 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
   };
 
   return <div ref={sceneRef} className={'public-experience '+(exiting?'is-exiting':'')}>
+    <div className="public-scroll-progress" aria-hidden="true"><i/></div>
     <div className="public-access-portal" aria-hidden="true"><i/><i/><i/></div>
     <div className="public-background" aria-hidden="true">
       <OuterAurora/>
@@ -81,6 +103,17 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       <span className="public-background-node node-a" data-motion-depth="mid"/>
       <span className="public-background-node node-b" data-motion-depth="back"/>
       <span className="public-background-node node-c" data-motion-depth="mid"/>
+      <div className="public-background-network" aria-hidden="true">
+        <span className="network-node network-node-a"/>
+        <span className="network-node network-node-b"/>
+        <span className="network-node network-node-c"/>
+        <span className="network-node network-node-d"/>
+        <span className="network-node network-node-e"/>
+        <i className="network-link link-a"/>
+        <i className="network-link link-b"/>
+        <i className="network-link link-c"/>
+        <i className="network-link link-d"/>
+      </div>
     </div>
 
     <header className="public-header">
@@ -143,8 +176,10 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
           <div className="public-system-node system-node-b" aria-hidden="true"/>
           <div className="public-system-core">
             <img src="/entanglex-mark.svg" alt="" aria-hidden="true"/>
-            <span>HYBRID CORE</span>
+            <ShinyText>HYBRID CORE</ShinyText>
           </div>
+          <div className="public-system-signal signal-classical" aria-hidden="true"><i/><i/><i/></div>
+          <div className="public-system-signal signal-quantum" aria-hidden="true"><i/><i/><i/></div>
           <div className="public-system-label label-classical"><span>CLASSICAL</span><strong>Measured baselines</strong></div>
           <div className="public-system-label label-quantum"><span>QUANTUM</span><strong>Simulator research</strong></div>
           <div className="public-system-caption"><span>Data</span><ArrowRight size={12}/><span>Evidence</span><ArrowRight size={12}/><span>Interpretation</span></div>
@@ -168,6 +203,7 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
         <SectionHeading number="02" label="Data" title="A traceable path from data to evaluation." copy="The public story mirrors the existing research workflow without reproducing any processing or calculation in the browser."/>
         <div className="public-pipeline" data-public-reveal>
           {pipelineSteps.map((step,index)=><div className="public-pipeline-step" key={step}>
+            <i className="public-pipeline-pulse" aria-hidden="true"/>
             <span>{String(index+1).padStart(2,'0')}</span>
             <strong>{step}</strong>
             {index<pipelineSteps.length-1&&<ArrowRight aria-hidden="true"/>}
@@ -179,21 +215,21 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
       <section className="public-section public-shell">
         <SectionHeading number="03" label="Hybrid intelligence" title="Two model families. One controlled research workflow." copy="Classical and quantum approaches are evaluated as research methods under shared evidence boundaries—not as unsupported claims of advantage."/>
         <div className="public-hybrid-grid" data-public-reveal>
-          <OuterSpotlight className="public-model-spotlight"><article className="public-model-panel">
+          <OuterSpotlight className="public-model-spotlight"><GlareHover><article className="public-model-panel">
             <div className="public-model-panel-head"><Database size={18}/><span>CLASSICAL ML</span></div>
             <h3>Established research baselines</h3>
             <div className="public-model-list"><span>Logistic Regression</span><span>SVM</span><span>Random Forest</span></div>
-          </article></OuterSpotlight>
+          </article></GlareHover></OuterSpotlight>
           <div className="public-hybrid-bridge" aria-hidden="true">
             <span/>
             <strong>+</strong>
             <span/>
           </div>
-          <OuterSpotlight className="public-model-spotlight"><article className="public-model-panel is-quantum">
+          <OuterSpotlight className="public-model-spotlight"><GlareHover><article className="public-model-panel is-quantum">
             <div className="public-model-panel-head"><Atom size={18}/><span>QUANTUM ML</span></div>
             <h3>Simulator-based quantum research</h3>
             <div className="public-model-list"><span>VQC</span><span>QSVC</span><span>QNN</span><span>PennyLane + PyTorch Hybrid</span></div>
-          </article></OuterSpotlight>
+          </article></GlareHover></OuterSpotlight>
         </div>
       </section>
 
@@ -201,6 +237,8 @@ export function PublicExperience({onRequestAccess,exiting=false}:PublicExperienc
         <SectionHeading number="04" label="Explainability" title="Prediction research connected to interpretable evidence." copy="EntangleX presents model influence with its method, scope and limitations so that interpretation remains bounded and scientifically responsible."/>
         <div className="public-explain-grid" data-public-reveal>
           <div className="public-evidence-map" aria-hidden="true">
+            <span className="public-evidence-scan"/>
+            <span className="public-evidence-orbit orbit-a"/><span className="public-evidence-orbit orbit-b"/>
             <span className="evidence-axis"/>
             <i style={{'--signal':'72%'} as CSSProperties}/><i style={{'--signal':'46%'} as CSSProperties}/><i style={{'--signal':'61%'} as CSSProperties}/><i style={{'--signal':'34%'} as CSSProperties}/><i style={{'--signal':'55%'} as CSSProperties}/>
           </div>
