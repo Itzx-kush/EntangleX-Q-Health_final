@@ -383,6 +383,29 @@ def install_verified_demo_artifacts() -> None:
                 raise
 
 
+def ensure_verified_demo_installed(identity: str) -> bool:
+    """Ensure a packaged verified-demo experiment exists in the runtime registry.
+
+    This recovery path is only active for the immutable packaged verified demo.
+    It is idempotent and never trains, recomputes, or mutates scientific evidence.
+    """
+    requested = str(identity)
+    state = verify_packaged_readiness().get(next(iter(READY_DEMO_DATASETS)), {})
+    checked = state.get("checked") or {}
+    experiment = checked.get("experiment") or {}
+    if not state.get("available") or experiment.get("id") != requested:
+        return False
+
+    with session_scope() as session:
+        if session.get(Experiment, requested) is not None:
+            return True
+
+    install_verified_demo_artifacts()
+
+    with session_scope() as session:
+        return session.get(Experiment, requested) is not None
+
+
 def _processing_readiness(*, unavailable_reason: str | None = None) -> dict:
     value = {"status": "requires_processing", "instant_demo_available": False, "artifact_version": None,
              "experiment_id": None, "model_ids": [], "verified_dataset_hash": None,
