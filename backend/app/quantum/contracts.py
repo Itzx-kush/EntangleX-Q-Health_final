@@ -114,6 +114,7 @@ class ExecutionResult:
     job_id: str | None = None
     counts: Mapping[str, int] | None = None
     probabilities: Mapping[str, float] | None = None
+    amplitudes: Sequence[complex] | None = None
     observables: Sequence[float] | None = None
     shots: int | None = None
     execution_time: float | None = None
@@ -127,6 +128,10 @@ class ExecutionResult:
             "status": self.status.value,
             "counts": dict(self.counts) if self.counts is not None else None,
             "probabilities": dict(self.probabilities) if self.probabilities is not None else None,
+            "amplitudes": (
+                [{"real": float(value.real), "imaginary": float(value.imag)} for value in self.amplitudes]
+                if self.amplitudes is not None else None
+            ),
             "observables": list(self.observables) if self.observables is not None else None,
             "metadata": dict(self.metadata),
             "error": dict(self.error) if self.error is not None else None,
