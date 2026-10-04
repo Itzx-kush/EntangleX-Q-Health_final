@@ -4,7 +4,6 @@ import {useQuery} from '@tanstack/react-query';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
-import {QuantumWorkbench} from './components/QuantumWorkbench';
 import {VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 import {AiProvider} from './contexts/AiContext';
@@ -96,5 +95,5 @@ function FeaturesRoute(){ const demo=useVerifiedDemo(); return demo.active?<Veri
 function PcaRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="pca"/>:<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary."/>; }
 function QuantumRoute(){
   const demo=useVerifiedDemo();
-  return demo.active?<VerifiedQuantum/>:<QuantumWorkbench/>;
+  return demo.active?<VerifiedQuantum/>:<Quantum/>;
 }
