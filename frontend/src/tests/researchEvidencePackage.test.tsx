@@ -6,6 +6,7 @@ import {qh} from '../lib/api';
 
 vi.mock('../lib/api',()=>({qh:{
   evidencePackage:vi.fn(),
+  evidencePackagePreflight:vi.fn(),
   createEvidencePackage:vi.fn(),
   downloadEvidencePackage:vi.fn(),
 }}));
@@ -32,13 +33,27 @@ const packageValue={
   evidence_gaps:[{category:'calibration',status:'not_available',reason:'missing'}],
   artifact:{id:'artifact',artifact_type:'research_evidence_package',content_type:'application/json',integrity_hash:'e'.repeat(64),hash_algorithm:'sha256',immutable:true},
 } as any;
+const preflightValue={
+  feasible:true,
+  package_status:'PARTIAL',
+  package_fingerprint_candidate:'f'.repeat(64),
+  evidence_inventory:packageValue.evidence_inventory,
+  blockers:[],
+  warnings:[],
+  missing_evidence:packageValue.evidence_gaps,
+  core_missing_evidence:[],
+  manifest:packageValue,
+} as any;
 
 function renderPanel(){
   return render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}})}><ResearchEvidencePackagePanel experimentId={experimentId}/></QueryClientProvider>);
 }
 
 describe('Research Evidence Package panel',()=>{
-  beforeEach(()=>vi.clearAllMocks());
+  beforeEach(()=>{
+    vi.clearAllMocks();
+    vi.mocked(qh.evidencePackagePreflight).mockResolvedValue(preflightValue);
+  });
 
   it('shows partial availability, fingerprint, provenance, and immutable artifact state',async()=>{
     vi.mocked(qh.evidencePackage).mockResolvedValue(packageValue);

@@ -18,6 +18,7 @@ import {GlareHover} from '../components/reactbits';
 import {DistributionStrip,PipelineFlow,WorkbenchRail} from '../components/TremorWorkbench';
 import {ModelCardPanel} from '../components/ModelCardPanel';
 import {DatasetQualityPanel} from './DatasetQualityScorecard';
+import {FinalResearchEvidence} from '../components/FinalResearchEvidence';
 import {useResearchRecorder} from '../research/useResearchHistory';
 import {experimentActivity} from '../research/historyRecords';
 
@@ -318,6 +319,11 @@ export function ExperimentLineagePanel({experimentId}:{experimentId:string}){
 
 export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string}){
   const qc=useQueryClient();
+  const preflight=useQuery({
+    queryKey:['evidence-package-preflight',experimentId],
+    queryFn:()=>qh.evidencePackagePreflight(experimentId),
+    retry:false,
+  });
   const packageQuery=useQuery({
     queryKey:['evidence-package',experimentId],
     queryFn:()=>qh.evidencePackage(experimentId),
@@ -330,11 +336,19 @@ export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string
   const [inspect,setInspect]=useState(false);
   const value=packageQuery.data;
   const categories=value?Object.entries(value.evidence_inventory):[];
+  const readiness=preflight.data;
   return <Card className="mt-5" title="Research Evidence Package" description="Immutable, machine-readable manifest of the persisted evidence associated with this experiment.">
-    <ErrorBanner error={(generate.error as Error)?.message}/>
+    <ErrorBanner error={(preflight.error as Error)?.message||(generate.error as Error)?.message}/>
     {!value?<div>
       <p className="text-sm muted">{packageQuery.isLoading?'Checking for an existing package…':'No package has been generated for the current evidence state.'}</p>
-      <Button className="mt-3" disabled={packageQuery.isLoading||generate.isPending} onClick={()=>generate.mutate()}>{generate.isPending?'Running preflight…':'Generate package'}</Button>
+      {readiness&&<div className="mt-3 rounded-xl border p-4">
+        <div className="flex flex-wrap items-center gap-2"><span className="metric-label">PACKAGE PREFLIGHT</span><StatusBadge value={readiness.package_status}/><Badge tone={readiness.feasible?'green':'amber'}>{readiness.feasible?'CREATION READY':'CREATION BLOCKED'}</Badge></div>
+        <p className="mt-2 text-xs muted">{Object.values(readiness.evidence_inventory).filter(item=>item.status==='available').length} evidence categories available · {readiness.missing_evidence.length} recorded gaps.</p>
+        {readiness.blockers.length>0&&<Notice tone="amber">{readiness.blockers.map(item=>item.message||item.code).join('; ')}</Notice>}
+        {readiness.warnings.length>0&&<JsonDisclosure label="Inspect preflight warnings" value={readiness.warnings}/>}
+      </div>}
+      <Button className="mt-3" disabled={packageQuery.isLoading||preflight.isLoading||!readiness?.feasible||generate.isPending} onClick={()=>generate.mutate()}>{generate.isPending?'Generating package…':'Generate package'}</Button>
+      <p className="mt-2 text-[11px] muted">Package creation is a deliberate archival action. It does not train models or recompute scientific evidence.</p>
     </div>:<>
       <div className="flex flex-wrap items-center gap-2"><StatusBadge value={value.package_status}/><Badge tone={value.artifact.immutable?'green':'amber'}>{value.artifact.immutable?'IMMUTABLE ARTIFACT':'INTEGRITY UNAVAILABLE'}</Badge><span className="text-xs muted">{dateTime(value.created_at)}</span></div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -343,7 +357,7 @@ export function ResearchEvidencePackagePanel({experimentId}:{experimentId:string
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{categories.map(([name,entry])=><div className="rounded-xl border p-3" key={name}><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{name.replaceAll('_',' ')}</span><StatusBadge value={entry.status}/></div><small className="muted">{entry.record_count} persisted record{entry.record_count===1?'':'s'}</small></div>)}</div>
       {value.evidence_gaps.length>0&&<Notice tone="amber">{value.evidence_gaps.length} evidence categor{value.evidence_gaps.length===1?'y is':'ies are'} unavailable, incomplete, or limited. This is an evidence state, not a quality score.</Notice>}
-      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={generate.isPending} onClick={()=>generate.mutate()}><RotateCcw size={13}/>{generate.isPending?'Refreshing…':'Refresh package'}</Button><Button variant="outline" onClick={()=>setInspect(current=>!current)}>{inspect?'Close package':'Inspect package'}</Button><Button variant="outline" onClick={()=>qh.downloadEvidencePackage(experimentId,value.package_id)}><Download size={13}/>Download JSON</Button></div>
+      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={generate.isPending||preflight.isLoading||!readiness?.feasible} onClick={()=>generate.mutate()}><RotateCcw size={13}/>{generate.isPending?'Refreshing…':'Refresh package'}</Button><Button variant="outline" onClick={()=>setInspect(current=>!current)}>{inspect?'Close package':'Inspect package'}</Button><Button variant="outline" onClick={()=>qh.downloadEvidencePackage(experimentId,value.package_id)}><Download size={13}/>Download JSON</Button></div>
       {inspect&&<div className="mt-4"><div className="two-grid"><div className="rounded-xl border p-4"><div className="metric-label">PROVENANCE</div><p className="mt-2 text-xs">Runs: {value.provenance.run_ids.length} · Referenced artifacts: {value.provenance.artifact_ids.length}</p><p className="mt-1 mono text-[10px] break-all">Artifact {value.integrity.artifact_id}</p></div><div className="rounded-xl border p-4"><div className="metric-label">LIMITATIONS</div><ul className="mt-2 list-disc pl-4 text-xs">{value.limitations.map(item=><li key={item}>{item}</li>)}</ul></div></div><JsonDisclosure label="Open full machine-readable package" value={value}/></div>}
     </>}
   </Card>
@@ -476,12 +490,12 @@ export function ExperimentDetail(){
     <Card className="mt-5" title="Experiment context" description="A drill-down evidence surface modeled on TICTAC-style research detail views.">
       <div className="flex flex-wrap items-center gap-2"><StatusBadge value={detail.experiment.status}/><Badge tone={detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'blue':'green'}>{detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'PRECOMPUTED VERIFIED DEMO EXPERIMENT':'LIVE RESEARCH EXPERIMENT'}</Badge><span className="text-xs muted">{dateTime(detail.experiment.created_at)}</span><span className="mono text-xs muted">Dataset {shortId(detail.experiment.dataset_id)}</span></div>
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
-      <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('html')}><Download size={13}/>Export HTML</Button><Button variant="outline" disabled={action.isPending} onClick={()=>action.mutate('json')}><Download size={13}/>Export JSON</Button><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
+      <div className="mt-4 flex flex-wrap gap-2"><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
     </Card>
+    <FinalResearchEvidence detail={detail} reportBusy={action.isPending} onReport={format=>action.mutate(format)} packagePanel={<ResearchEvidencePackagePanel experimentId={id}/>}/>
     <ExperimentProtocolPanel experimentId={id}/>
     <PipelineVersionPanel experimentId={id}/>
     <ExperimentLineagePanel experimentId={id}/>
-    <ResearchEvidencePackagePanel experimentId={id}/>
     <ScientificAuditTimelinePanel experimentId={id}/>
     <DatasetQualityPanel experimentId={id} datasetId={detail.experiment.dataset_id} />
     <BiomedicalSubgroupAnalysisPanel experimentId={id}/>
