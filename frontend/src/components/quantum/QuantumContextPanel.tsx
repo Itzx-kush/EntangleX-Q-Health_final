@@ -15,6 +15,8 @@ type Props={
   modelType:QuantumVisualizationModelType;
   capabilityMessage?:string;
   circuitSource:'preview'|'fitted'|null;
+  selectedFeatureIndex?:number|null;
+  onFeatureSelect?:(index:number)=>void;
 };
 
 function value(input:number|string|null|undefined){
@@ -26,7 +28,7 @@ function safeEncodingValue(input:unknown){
   return null;
 }
 
-export function QuantumContextPanel({contract,datasetName,modelType,capabilityMessage,circuitSource}:Props){
+export function QuantumContextPanel({contract,datasetName,modelType,capabilityMessage,circuitSource,selectedFeatureIndex,onFeatureSelect}:Props){
   const circuit=contract?.circuit;
   const provider=contract?.provider;
   const dataset=contract?.dataset_context;
@@ -69,13 +71,13 @@ export function QuantumContextPanel({contract,datasetName,modelType,capabilityMe
         <table className="ql-mapping-table">
           <thead><tr><th>Feature</th><th>Backend parameter</th><th>Qubit</th></tr></thead>
           <tbody>{mappings.map((mapping)=><tr key={`${mapping.feature_index}-${mapping.qubit_index}`}>
-            <td>{mapping.feature_name||`Feature ${mapping.feature_index+1}`}</td>
+            <td><button type="button" className={'ql-feature-link '+(selectedFeatureIndex===mapping.feature_index?'is-selected':'')} onClick={()=>onFeatureSelect?.(mapping.feature_index)} aria-pressed={selectedFeatureIndex===mapping.feature_index}>{mapping.feature_name||'Feature '+(mapping.feature_index+1)}</button></td>
             <td className="ql-mono">{mapping.parameter_name||'Not reported'}</td>
             <td className="ql-mono">q[{mapping.qubit_index}]</td>
           </tr>)}</tbody>
         </table>
       </div>:<p className="ql-encoding-empty">Feature-to-qubit mapping is not available until the backend returns a circuit preview.</p>}
-      {contract?.dataset_context.selected_feature_names?.length? <div className="ql-encoding-tags" aria-label="Backend-selected feature names">{contract.dataset_context.selected_feature_names.map((feature,index)=><span key={`${index}-${feature}`}><small>Selected feature {index+1}</small><strong>{feature}</strong></span>)}</div>:null}
+      {contract?.dataset_context.selected_feature_names?.length? <div className="ql-encoding-tags" aria-label="Backend-selected feature names">{contract.dataset_context.selected_feature_names.map((feature,index)=><button type="button" className={'ql-encoding-tag-button '+(selectedFeatureIndex===index?'is-selected':'')} key={index+'-'+feature} onClick={()=>onFeatureSelect?.(index)} aria-pressed={selectedFeatureIndex===index}><small>Selected feature {index+1}</small><strong>{feature}</strong></button>)}</div>:null}
       {encodingEntries.length>0&&<div className="ql-encoding-tags">{encodingEntries.map(([key,entry])=><span key={key}><small>{key.replaceAll('_',' ')}</small><strong>{safeEncodingValue(entry)}</strong></span>)}</div>}
       {dataset?.limitations.map((limitation,index)=><p className="ql-encoding-limitation" key={`dataset-${index}-${limitation}`}>{limitation}</p>)}
       {contract?.encoding.limitations.map((limitation,index)=><p className="ql-encoding-limitation" key={`encoding-${index}-${limitation}`}>{limitation}</p>)}

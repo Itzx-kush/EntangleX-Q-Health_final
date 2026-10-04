@@ -262,17 +262,23 @@ function LiveRobustness(){
 export function Quantum(){
  const {draft,update,pipeline,quantum}=useDraft();
  const queryClient=useQueryClient();
+ const demo=useVerifiedDemo();
+ const [demoHydrated,setDemoHydrated]=useState(false);
  const cap=useQuery({queryKey:['quantum-capabilities'],queryFn:qh.capabilities});
  const [kind,setKind]=useState<'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch'>('vqc');
  const [contract,setContract]=useState<QuantumVisualizationContract|null>(null);
  const [circuit,setCircuit]=useState<Circuit>();
  const [circuitSource,setCircuitSource]=useState<'preview'|'fitted'|null>(null);
  const [modelId,setModelId]=useState('');
- const [datasetId,setDatasetId]=useState(draft.dataset_id);
+ const [datasetId,setDatasetId]=useState(demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id);
  const [encodedValues,setEncodedValues]=useState<string[]>([]);
  const [lastSimulationRequest,setLastSimulationRequest]=useState<QuantumVisualizationSimulationRequest|null>(null);
  const [savedEvidenceId,setSavedEvidenceId]=useState('');
  const autoPreviewStarted=useRef(false);
+ const [selectedQubit,setSelectedQubit]=useState<number|null>(null);
+ const [selectedFeatureIndex,setSelectedFeatureIndex]=useState<number|null>(null);
+ const [selectedGateIndex,setSelectedGateIndex]=useState<number|null>(null);
+ const visualizationRequestRef=useRef(0);
  const models=useQuery({queryKey:['models'],queryFn:qh.models});
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,staleTime:30000});
  const experiments=useQuery({queryKey:['experiments'],queryFn:qh.experiments});
@@ -281,7 +287,7 @@ export function Quantum(){
  const visualizationArtifacts=useQuery({
   queryKey:['experiment-artifacts',selectedExperiment?.id],
   queryFn:()=>qh.experimentArtifacts(selectedExperiment!.id),
-  enabled:Boolean(modelId&&selectedExperiment?.id),
+  enabled:Boolean(modelId&&selectedExperiment?.id&&!demo.active),
   staleTime:30000,
  });
  const evidenceDataset=useQuery({queryKey:['dataset',selectedModel?.dataset_id],queryFn:()=>qh.dataset(selectedModel!.dataset_id),enabled:Boolean(selectedModel?.dataset_id),staleTime:300000});
@@ -290,38 +296,100 @@ export function Quantum(){
  const diagnostics=useQuery({queryKey:['quantum-diagnostics',modelId],queryFn:()=>qh.quantum_diagnostics_by_run(modelId),enabled:Boolean(modelId),retry:false,staleTime:30000});
  const preview=useMutation({
   mutationFn:(request:QuantumVisualizationPreviewRequest)=>qh.quantumVisualizationPreview(request),
-  onMutate:()=>{setContract(null);setCircuit(undefined);setCircuitSource(null)},
-  onSuccess:(result)=>{setContract(result);setCircuit(undefined);setCircuitSource('preview')},
+  onMutate:()=>{const requestId=++visualizationRequestRef.current;setContract(null);setCircuit(undefined);setCircuitSource(null);return {requestId}},
+  onSuccess:(result,_request,context)=>{if(context?.requestId!==visualizationRequestRef.current)return;setContract(result);setCircuit(undefined);setCircuitSource('preview')},
  });
  const fitted=useMutation({
   mutationFn:()=>qh.fittedCircuit(modelId),
-  onMutate:()=>{setContract(null);setCircuit(undefined);setCircuitSource(null);setLastSimulationRequest(null);setSavedEvidenceId('')},
-  onSuccess:(result)=>{setCircuit(result);setContract(null);setCircuitSource('fitted')},
+  onMutate:()=>{const requestId=++visualizationRequestRef.current;setContract(null);setCircuit(undefined);setCircuitSource(null);return {requestId}},
+  onSuccess:(result,_request,context)=>{if(context?.requestId!==visualizationRequestRef.current)return;setCircuit(result);setContract(null);setCircuitSource('fitted')},
  });
  const simulation=useMutation({
   mutationFn:(request:QuantumVisualizationSimulationRequest)=>qh.quantumVisualizationSimulate(request),
-  onSuccess:(result)=>{setContract(result);setCircuit(undefined);setCircuitSource('preview');setSavedEvidenceId('')},
+  onMutate:()=>({requestId:++visualizationRequestRef.current}),
+  onSuccess:(result,_request,context)=>{if(context?.requestId!==visualizationRequestRef.current)return;setContract(result);setCircuit(undefined);setCircuitSource('preview');setSavedEvidenceId('')},
  });
  const saveEvidence=useMutation({
   mutationFn:(request:QuantumVisualizationEvidenceRequest)=>qh.saveQuantumVisualizationEvidence(request),
-  onSuccess:(result)=>{setContract(result.contract);setCircuit(undefined);setCircuitSource('preview');setSavedEvidenceId(result.artifact_id);void queryClient.invalidateQueries({queryKey:['experiment-artifacts',result.experiment_id]})},
+  onMutate:()=>({requestId:++visualizationRequestRef.current}),
+  onSuccess:(result,_request,context)=>{if(context?.requestId!==visualizationRequestRef.current||demo.active)return;setContract(result.contract);setCircuit(undefined);setCircuitSource('preview');setSavedEvidenceId(result.artifact_id);void queryClient.invalidateQueries({queryKey:['experiment-artifacts',result.experiment_id]})},
  });
  const advisor=useMutation({mutationFn:()=>{if(kind==='hybrid_pennylane_torch')throw new Error('The resource advisor supports VQC, QSVC, and QNN only.');return qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null})}});
- useEffect(()=>{setDatasetId(draft.dataset_id)},[draft.dataset_id]);
+ useEffect(()=>{
+  const nextDatasetId=demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id;
+  if(datasetId!==nextDatasetId)setDatasetId(nextDatasetId||'');
+ },[demo.active,demo.datasetId,draft.dataset_id]);
+ useEffect(()=>{if(!demo.active&&demoHydrated)setDemoHydrated(false)},[demo.active,demoHydrated]);
+ useEffect(()=>{
+  if(!demo.active||demoHydrated||!demo.datasetId||!demo.experimentId||!models.data)return;
+  const candidates=models.data.filter(model=>model.dataset_id===demo.datasetId&&model.experiment_id===demo.experimentId&&isQiskitQuantumModel(model.model_type));
+  const preferred=candidates.find(model=>model.model_type==='vqc')||candidates.find(model=>model.model_type==='qnn')||candidates[0];
+  if(!preferred)return;
+  setDatasetId(demo.datasetId);
+  setModelId(preferred.id);
+  setKind(preferred.model_type as 'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch');
+  setDemoHydrated(true);
+ },[demo.active,demo.datasetId,demo.experimentId,demoHydrated,models.data]);
  useEffect(()=>{advisor.reset()},[kind,draft.quantum,draft.pipeline.pca_components,draft.max_samples,draft.dataset_id,datasetId]);
- useEffect(()=>{setEncodedValues(Array.from({length:kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits},()=>''));setLastSimulationRequest(null);setSavedEvidenceId('');simulation.reset();saveEvidence.reset()},[kind,draft.quantum,draft.hybrid]);
- useEffect(()=>{setContract(null);setCircuit(undefined);setCircuitSource(null);setLastSimulationRequest(null);setSavedEvidenceId('');simulation.reset();saveEvidence.reset()},[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ useEffect(()=>{
+  setEncodedValues(Array.from({length:kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits},()=>''));
+  setLastSimulationRequest(null);
+  setSavedEvidenceId('');
+  simulation.reset();
+  saveEvidence.reset();
+ },[kind,draft.quantum,draft.hybrid]);
+ useEffect(()=>{
+  visualizationRequestRef.current+=1;
+  setContract(null);
+  setCircuit(undefined);
+  setCircuitSource(null);
+  setSelectedQubit(null);
+  setSelectedFeatureIndex(null);
+  setSelectedGateIndex(null);
+  setLastSimulationRequest(null);
+  setSavedEvidenceId('');
+  simulation.reset();
+  saveEvidence.reset();
+ },[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ useEffect(()=>{
+  const activeDataset=datasetId||draft.dataset_id||'';
+  if(!modelId)return;
+  const model=models.data?.find(item=>item.id===modelId);
+  const incompatible=!model
+    || (activeDataset&&model.dataset_id!==activeDataset)
+    || model.model_type!==kind;
+  if(incompatible){
+   setModelId('');
+   visualizationRequestRef.current+=1;
+   setContract(null);
+   setCircuit(undefined);
+   setCircuitSource(null);
+  }
+ },[datasetId,draft.dataset_id,kind,modelId,models.data]);
+ useEffect(()=>{
+  if(!demo.active||!demoHydrated||!selectedModel)return;
+  const quantumDetails=(selectedModel.details?.quantum||{}) as Record<string,unknown>;
+  const persistedCircuit=quantumDetails.circuit as Circuit|undefined;
+  if(!persistedCircuit||!Array.isArray(persistedCircuit.gates)||persistedCircuit.gates.length===0)return;
+  setContract(null);
+  setCircuit(persistedCircuit);
+  setCircuitSource('fitted');
+ },[demo.active,demoHydrated,selectedModel?.id]);
  const advice=advisor.data;
  const history=advice?.historical_evidence;
  const applyRecommendation=()=>{const recommendation=advice?.recommendation.configuration;if(!recommendation)return;quantum(recommendation.quantum);pipeline({pca_components:recommendation.feature_dimension,angle_scaling:true});update({max_samples:recommendation.sample_count})};
  const requestPreview=()=>{
-  setLastSimulationRequest(null);setSavedEvidenceId('');simulation.reset();saveEvidence.reset();
   const context={dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null,seed:draft.seed,...(draft.max_samples?{sample_count:draft.max_samples}:{})};
   if(kind==='hybrid_pennylane_torch')preview.mutate({...context,model_type:kind,hybrid:draft.hybrid});
   else preview.mutate({...context,model_type:kind,quantum:draft.quantum});
  };
+ const handleGateSelection=(gate:{qubits:number[]},position:number)=>{
+  setSelectedGateIndex(position);
+  const nextQubit=gate.qubits.find(qubit=>Number.isInteger(qubit))??null;
+  if(nextQubit!==null)setSelectedQubit(nextQubit);
+ };
  const requestSimulation=()=>{
-  if(kind==='hybrid_pennylane_torch')return;
+  if(kind==='hybrid_pennylane_torch'||demo.active)return;
   const vector=encodedValues.map(value=>Number(value));
   if(vector.length!==draft.quantum.qubits||encodedValues.some(value=>value.trim()==='')||vector.some(value=>!Number.isFinite(value)))return;
   const request:QuantumVisualizationSimulationRequest={
@@ -329,18 +397,22 @@ export function Quantum(){
    dataset_id:selectedDatasetId||null,
    experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null,
   };
-  setLastSimulationRequest(request);setSavedEvidenceId('');saveEvidence.reset();simulation.mutate(request);
+  setLastSimulationRequest(request);
+  setSavedEvidenceId('');
+  saveEvidence.reset();
+  simulation.mutate(request);
  };
  const persistSimulation=()=>{
-  if(!lastSimulationRequest||!selectedModel||selectedModel.model_type!==kind)return;
+  if(demo.active||!lastSimulationRequest||!selectedModel||selectedModel.model_type!==kind||selectedModel.dataset_id!==lastSimulationRequest.dataset_id)return;
   saveEvidence.mutate({model_record_id:modelId,simulation:lastSimulationRequest});
  };
- const vectorValid=kind!=='hybrid_pennylane_torch'&&encodedValues.length===draft.quantum.qubits&&encodedValues.every(value=>value.trim()!==''&&Number.isFinite(Number(value)));
+ const vectorValid=!demo.active&&kind!=='hybrid_pennylane_torch'&&encodedValues.length===draft.quantum.qubits&&encodedValues.every(value=>value.trim()!==''&&Number.isFinite(Number(value)));
  useEffect(()=>{
-  if(!autoPreviewStarted.current&&cap.data?.available){autoPreviewStarted.current=true;requestPreview()}
- },[cap.data?.available,requestPreview]);
+  if(!autoPreviewStarted.current&&!demo.active&&cap.data?.available){autoPreviewStarted.current=true;requestPreview()}
+ },[cap.data?.available,demo.active,requestPreview]);
  return <div className="quantum-lab-page">
   <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
+  {demo.active&&<div className="ql-verified-banner" role="status" aria-label="Verified quantum demo status"><Badge tone="green">VERIFIED DEMO</Badge><Badge tone="blue">PRECOMPUTED / REPRODUCIBLE</Badge><span>Read-only packaged quantum evidence is surfaced through the same Quantum Lab workspace.</span></div>}
   <StageNav current="/quantum"/>
   <WorkbenchRail items={[
    {label:'Model family',value:kind.toUpperCase(),detail:'Backend visualization context',tone:'purple'},
@@ -348,18 +420,33 @@ export function Quantum(){
    {label:'Logical qubits',value:contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits),detail:'Backend-reported logical width',tone:'blue'},
    {label:'Circuit structure',value:contract?.circuit.gate_sequence.length??circuit?.gates.length??'Not loaded',detail:contract?'Ordered backend operations':circuit?'Persisted fitted operations':'No circuit loaded',tone:contract||circuit?'green':'slate'},
   ]}/>
-  <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message||(simulation.error as Error)?.message||(saveEvidence.error as Error)?.message||(visualizationArtifacts.error as Error)?.message}/>
+  <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message||(simulation.error as Error)?.message||(saveEvidence.error as Error)?.message||(!demo.active?(visualizationArtifacts.error as Error)?.message:undefined)}/>
 
-  <QuantumContextPanel contract={contract} datasetName={dataset.data?.provenance.name} modelType={kind} capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution} circuitSource={circuitSource}/>
+  <QuantumContextPanel
+    contract={contract}
+    datasetName={dataset.data?.provenance.name}
+    modelType={kind}
+    capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution}
+    circuitSource={circuitSource}
+    selectedFeatureIndex={selectedFeatureIndex}
+    onFeatureSelect={setSelectedFeatureIndex}
+  />
   <QuantumPipeline contract={contract} hasPersistedEvidence={Boolean(selectedModel)} hasDatasetContext={Boolean(dataset.data?.id)} hasCircuitStructure={Boolean(circuit?.gates.length)}/>
+  {(selectedQubit!==null||selectedFeatureIndex!==null||selectedGateIndex!==null)&&<div className="ql-linked-selection" role="status" aria-label="Quantum cross-visual selection">
+    <span className="ql-eyebrow">LINKED SELECTION</span>
+    {selectedQubit!==null&&<strong>Qubit q[{selectedQubit}]</strong>}
+    {selectedFeatureIndex!==null&&<strong>Feature {selectedFeatureIndex+1}</strong>}
+    {selectedGateIndex!==null&&<strong>Gate step {selectedGateIndex+1}</strong>}
+    <span>Selection is scoped to Quantum Lab and highlights only relationships returned or structurally supported by the backend contract.</span>
+  </div>}
 
   <section className="ql-setup-grid" aria-label="Quantum Lab configuration">
    <Card title="Quantum capability and preview" description="Generate a bounded structural contract from the current quantum configuration. Preview does not train, create jobs, or simulate a state.">
     <div className="ql-form-grid">
      <label className="field"><span>Quantum model</span><Select aria-label="Quantum advisor model" value={kind} onChange={event=>setKind(event.target.value as 'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch')}><option value="vqc">VQC · variational classifier</option><option value="qsvc">QSVC · feature-map kernel</option><option value="qnn">QNN · quantum neural network</option><option value="hybrid_pennylane_torch">PennyLane + PyTorch hybrid</option></Select></label>
-     <label className="field"><span>Dataset context</span><Select aria-label="Quantum dataset context" value={datasetId} onChange={event=>setDatasetId(event.target.value)}><option value="">No registered dataset context</option>{datasetId&&!((datasets.data||[]).some(item=>item.id===datasetId))&&<option value={datasetId}>Active draft dataset · {shortId(datasetId)}</option>}{(datasets.data||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
+     <label className="field"><span>Dataset context</span><Select aria-label="Quantum dataset context" value={datasetId} disabled={demo.active} onChange={event=>setDatasetId(event.target.value)}><option value="">No registered dataset context</option>{datasetId&&!((datasets.data||[]).some(item=>item.id===datasetId))&&<option value={datasetId}>Active draft dataset · {shortId(datasetId)}</option>}{(datasets.data||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
     </div>
-    <div className="ql-persisted-model-row"><label className="field"><span>Persisted model for diagnostics / fitted circuit</span><Select aria-label="Quantum persisted model" value={modelId} onChange={event=>setModelId(event.target.value)}><option value="">No persisted model selected</option>{(models.data||[]).filter(model=>isQiskitQuantumModel(model.model_type)).map(model=><option key={model.id} value={model.id}>{modelLabels[model.model_type]} · {shortId(model.id)}</option>)}</Select></label></div>
+    <div className="ql-persisted-model-row"><label className="field"><span>Persisted model for diagnostics / fitted circuit</span><Select aria-label="Quantum persisted model" value={modelId} onChange={event=>setModelId(event.target.value)}><option value="">No persisted model selected</option>{(models.data||[]).filter(model=>isQiskitQuantumModel(model.model_type)&&(!datasetId||model.dataset_id===datasetId)&&model.model_type===kind).map(model=><option key={model.id} value={model.id}>{modelLabels[model.model_type]} · {shortId(model.id)}</option>)}</Select></label></div>
    <div className="ql-context-note"><span className="ql-eyebrow">CURRENT CONFIGURATION</span><p>{kind==='hybrid_pennylane_torch'?`${draft.hybrid.qubits} qubits · ${draft.hybrid.quantum_layers} PennyLane circuit layers · ${draft.hybrid.backend} local simulator`:`${draft.quantum.qubits} qubits · ${draft.quantum.feature_map_reps} feature-map repetitions · ${draft.quantum.ansatz_reps} ansatz repetitions · ${draft.quantum.backend} local simulator`}</p></div>
     <div className="ql-action-row">
      <Button disabled={(kind!=='hybrid_pennylane_torch'&&cap.data?.available===false)||preview.isPending} onClick={requestPreview}><Play size={14}/>{preview.isPending?'Building backend contract…':'Generate structural preview'}</Button>
@@ -376,21 +463,33 @@ export function Quantum(){
   <section className="ql-main-grid" aria-label="Quantum visualization panels">
    <div className="ql-main-primary">
     <Card title="Circuit explorer" description={contract?.circuit.limitation||circuit?.limitation||'Backend-ordered gates are interactive. Structural playback highlights operations only; it does not evolve or invent a quantum state.'}>
-     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer circuit={contract?.circuit||circuit!} sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}/>:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
+     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer
+       circuit={contract?.circuit||circuit!}
+       sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}
+       selectedQubit={selectedQubit}
+       selectedFeatureIndex={selectedFeatureIndex}
+       featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
+       onSelectionChange={handleGateSelection}
+      />:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
     </Card>
     <Card title="Explicit encoded-vector simulation" description="Enter an encoded vector and run one bounded local simulation. The values are manual inputs—not values read from the selected dataset—and are never prefilled.">
-     {kind==='hybrid_pennylane_torch'?<Notice tone="amber">Hybrid simulation is unavailable without fitted PennyLane/PyTorch model weights.</Notice>:<>
+     {demo.active?<Notice tone="blue">The verified demo is read-only. Its persisted circuit and evidence remain separate from optional interactive simulation.</Notice>:kind==='hybrid_pennylane_torch'?<Notice tone="amber">Hybrid simulation is unavailable without fitted PennyLane/PyTorch model weights.</Notice>:<>
       <div className="ql-encoded-vector-grid">{Array.from({length:draft.quantum.qubits},(_,index)=><label className="field" key={`encoded-${index}`}><span>Encoded value · q[{index}]</span><Input aria-label={`Encoded value for qubit ${index}`} type="number" step="any" value={encodedValues[index]??''} onChange={event=>setEncodedValues(values=>values.map((value,valueIndex)=>valueIndex===index?event.target.value:value))}/></label>)}</div>
       <p className="ql-state-footnote">Encoding-only circuit simulation; QSVC kernel evaluation and fitted classifier output are not computed. Results are local-simulator outputs, not hardware measurements.</p>
       {draft.quantum.noise_probability>0&&<Notice tone="amber">This preview simulator does not apply the configured noise model. Set noise probability to zero to simulate this encoding.</Notice>}
       <div className="ql-action-row"><Button disabled={!vectorValid||simulation.isPending||cap.data?.available===false||draft.quantum.noise_probability>0} onClick={requestSimulation}><Play size={14}/>{simulation.isPending?'Simulating bounded circuit…':'Simulate entered vector'}</Button>
-       {lastSimulationRequest&&contract?.status==='SIMULATION_AVAILABLE'&&<Button variant="outline" disabled={!modelId||!selectedModel||selectedModel.model_type!==kind||selectedModel.dataset_id!==lastSimulationRequest.dataset_id||saveEvidence.isPending||Boolean(savedEvidenceId)} onClick={persistSimulation}>{saveEvidence.isPending?'Saving simulator evidence…':savedEvidenceId?'Evidence saved':'Save simulator evidence to model report'}</Button>}
+       {lastSimulationRequest&&contract?.status==='SIMULATION_AVAILABLE'&&<Button variant="outline" disabled={!modelId||!selectedModel||selectedModel.model_type!==kind||selectedModel.dataset_id!==lastSimulationRequest.dataset_id||saveEvidence.isPending||Boolean(savedEvidenceId)||demo.active} onClick={persistSimulation}>{saveEvidence.isPending?'Saving simulator evidence…':savedEvidenceId?'Evidence saved':'Save simulator evidence to model report'}</Button>}
       </div>
       {selectedModel&&selectedModel.model_type!==kind&&<p className="ql-state-footnote">Select a persisted {kind.toUpperCase()} model to attach this simulation snapshot to its experiment report.</p>}
       {savedEvidenceId&&<Notice tone="green">Backend-generated simulation evidence saved as artifact {savedEvidenceId}. It will appear in the linked experiment report/PDF.</Notice>}
      </>}
     </Card>
-    <QuantumStatePanel contract={contract} unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulator output is available yet. The structural circuit appears automatically when the backend is available; enter a vector above to request an actual bounded simulation.'}/>
+    <QuantumStatePanel
+      contract={contract}
+      selectedQubit={selectedQubit}
+      onQubitSelect={setSelectedQubit}
+      unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulator output is available yet. The structural circuit appears automatically when the backend is available; enter a vector above to request an actual bounded simulation.'}
+     />
    </div>
    <div className="ql-main-secondary">
     <QuantumResourcePanel contract={contract}/>
@@ -413,7 +512,7 @@ export function Quantum(){
   </div>}
 
   <div id="quantum-evidence" className="ql-evidence-anchor">
-   {modelId?<QuantumEvidenceLab mode="live" models={models.data||[]} experiment={selectedExperiment} dataset={evidenceDataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending} visualizationArtifacts={visualizationArtifacts.data} visualizationArtifactsLoading={visualizationArtifacts.isPending}/>:<Card title="Persisted model evidence" description="Select a registered quantum model above to inspect its diagnostics and persisted model evidence."><p className="ql-evidence-prompt">Model evidence remains separate from structural previews and is never created by this visualization flow.</p></Card>}
+   {modelId?<QuantumEvidenceLab mode={demo.active?'verified':'live'} models={models.data||[]} experiment={selectedExperiment} dataset={evidenceDataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending} visualizationArtifacts={demo.active?undefined:visualizationArtifacts.data} visualizationArtifactsLoading={!demo.active&&visualizationArtifacts.isPending}/>:<Card title="Persisted model evidence" description="Select a registered quantum model above to inspect its diagnostics and persisted model evidence."><p className="ql-evidence-prompt">Model evidence remains separate from structural previews and is never created by this visualization flow.</p></Card>}
   </div>
  </div>;
 }

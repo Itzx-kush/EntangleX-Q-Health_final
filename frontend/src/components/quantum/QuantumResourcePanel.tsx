@@ -44,6 +44,16 @@ export function QuantumResourcePanel({contract}:Props){
         <span>Policy {resources.policy_version}</span>
       </div>
       <ResourceMetrics resources={resources} circuitParameterCount={contract?.circuit.parameter_count??null}/>
+      {contract?.circuit.gate_counts&&Object.keys(contract.circuit.gate_counts).length>0&&(()=>{
+        const entries=Object.entries(contract.circuit.gate_counts);
+        const maximum=Math.max(1,...entries.map(([,count])=>Number(count)));
+        return <div className="ql-gate-breakdown" aria-label="Backend gate count breakdown">
+          <div className="ql-gate-breakdown-head"><span>GATE MIX</span><small>backend-reported counts</small></div>
+          {entries.map(([name,count])=><div className="ql-gate-breakdown-row" key={name}>
+            <span>{name}</span><i><b style={{width:Number(count)/maximum*100+'%'}}/></i><strong>{count}</strong>
+          </div>)}
+        </div>;
+      })()}
       {resources.resource_category&&<p className="ql-resource-category"><Scale size={15}/> Backend category: <strong>{resources.resource_category}</strong></p>}
       <ul className="ql-limitation-list">{resources.limitations.map((item)=><li key={item}>{item}</li>)}</ul>
     </>:<div className="ql-state-unavailable">Generate a backend preview to inspect resource fields.</div>}

@@ -39,3 +39,7 @@
 .ql-persisted-model-row{margin-top:10px}.ql-persisted-model-row .field{max-width:100%}
 
 .ql-encoding-description{margin-top:8px;color:var(--tremor-muted);font-size:9px;line-height:1.55}
+
+
+.ql-verified-banner{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:-2px 0 12px;padding:8px 10px;border:1px solid var(--wb-line);border-left:2px solid var(--wb-green);border-radius:7px;background:color-mix(in srgb,var(--wb-green) 4%,var(--tremor-card));color:var(--tremor-muted);font-size:9px;line-height:1.45}
+@media(max-width:700px){.ql-verified-banner{align-items:flex-start}}

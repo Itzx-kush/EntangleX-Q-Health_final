@@ -4,12 +4,12 @@ import {useQuery} from '@tanstack/react-query';
 import {ResearchShell} from './components/ResearchShell';
 import {ThemeToggle} from './components/ThemeToggle';
 import {Loading} from './components/Shared';
-import {VerifiedPipeline,VerifiedQuality,VerifiedQuantum} from './components/VerifiedDemoViews';
-import {useVerifiedDemo} from './hooks/useVerifiedDemo';
+import {VerifiedPipeline,VerifiedQuality} from './components/VerifiedDemoViews';
 import {AiProvider} from './contexts/AiContext';
 import {AiPopup} from './components/AiPopup';
 import {qh} from './lib/api';
 import {useDraft} from './hooks/useDraft';
+import {useVerifiedDemo} from './hooks/useVerifiedDemo';
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -94,6 +94,7 @@ function PreprocessingRoute(){ const demo=useVerifiedDemo(); return demo.active?
 function FeaturesRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="features"/>:<PipelineStage endpoint="/feature-selection/preview" eyebrow="04 / Select" title="Feature selection" description="Inspect training-only feature selection decisions without converting benchmark association into biological causation."/>; }
 function PcaRoute(){ const demo=useVerifiedDemo(); return demo.active?<VerifiedPipeline stage="pca"/>:<PipelineStage endpoint="/pca/preview" eyebrow="05 / Reduce" title="PCA / dimensions" description="Fit a compact training representation before classical and quantum learning while preserving the held-out evaluation boundary."/>; }
 function QuantumRoute(){
-  const demo=useVerifiedDemo();
-  return demo.active?<VerifiedQuantum/>:<Quantum/>;
+  // Verified mode uses the same Quantum Lab workspace so the enhanced
+  // circuit/evidence surface is never bypassed by a legacy demo-only route.
+  return <Quantum/>;
 }
