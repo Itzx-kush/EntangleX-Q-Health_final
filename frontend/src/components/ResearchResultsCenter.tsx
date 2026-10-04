@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import type {ReactNode} from 'react';
 import {Link} from 'react-router-dom';
 import {ArrowRight,Atom,BarChart3,Brain,FileText,GitBranch,LineChart,Microscope,ShieldCheck} from 'lucide-react';
@@ -5,6 +6,7 @@ import {Badge,Card} from './ui';
 import {JsonDisclosure,MetricCard,Notice,StatusBadge} from './Shared';
 import {DiagnosticEvidence} from './DiagnosticEvidence';
 import {metric,modelLabels,seconds,shortId} from '../utils/format';
+import {CvStabilityChart,MetricMatrix,ModelMetricBars,RuntimeComparisonChart,type RuntimeKind} from './Charts';
 import type {Comparison,Dataset,Experiment,MetricName,ModelRecord} from '../types/qhealth';
 
 const metricOrder:MetricName[]=['roc_auc','f1','accuracy','recall','sensitivity','specificity','precision'];
@@ -83,6 +85,11 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
   const samples=field(summary,'sample_count','evaluated_row_count','row_count','samples')??dataset?.provenance.row_count;
   const features=dataset?.provenance.feature_count??field(summary,'feature_count','selected_feature_count','features');
   const pca=pipeline.pca_components;
+  const [analysisView,setAnalysisView]=useState<'performance'|'matrix'|'stability'|'runtime'>('performance');
+  const [analysisMetric,setAnalysisMetric]=useState<MetricName>(criterion||'accuracy');
+  const [analysisFamily,setAnalysisFamily]=useState<Family|'All'>('All');
+  const [runtimeKind,setRuntimeKind]=useState<RuntimeKind>('final_training_seconds');
+  const analysisModels=analysisFamily==='All'?models:models.filter(model=>family(model)===analysisFamily);
   const findings:string[]=[];
   if(leader&&criterion)findings.push(`${modelLabels[leader.model.model_type]} achieved the highest observed held-out ${metricLabel(criterion)} among models with that persisted metric${leader.tied?' (tied at the leading value)':''}.`);
   if(leaderSummary&&finite(leaderSummary.mean)&&finite(leaderSummary.std))findings.push(`The leading model's cross-validation ${metricLabel(criterion as MetricName)} was ${metric(leaderSummary.mean)} ± ${metric(leaderSummary.std)} across ${leaderSummary.valid_folds} valid folds.`);
@@ -119,6 +126,33 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
         </div>
         <div className="rounded-xl border p-5"><div className="metric-label">INTERPRETATION BOUNDARY</div><p className="mt-3 text-sm muted">“Best” means the highest persisted held-out {metricLabel(criterion)} among models where that metric is available. It does not establish clinical validity, causality, statistical significance, robustness, or quantum advantage.</p>{leader.tied&&<div className="mt-3"><Notice tone="amber">The leading value is tied. No unique winner is claimed.</Notice></div>}</div>
       </div>:<Notice tone="amber">No supported held-out primary metric is persisted for these model records, so no best model or ranking is claimed.</Notice>}
+    </Card>
+
+    <Card title="Visual research analysis" description="Interpretation layers over the same persisted model records; the table below remains the authoritative numerical view.">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Research analysis views">
+            {[
+              ['performance','Performance'],
+              ['matrix','Metric matrix'],
+              ['stability','CV stability'],
+              ['runtime','Runtime'],
+            ].map(([value,label])=><button key={value} type="button" role="tab" aria-selected={analysisView===value} className={'btn btn-sm '+(analysisView===value?'btn-primary':'btn-outline')} onClick={()=>setAnalysisView(value as typeof analysisView)}>{label}</button>)}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="field min-w-[190px]"><span>Model family</span><select className="select" value={analysisFamily} onChange={event=>setAnalysisFamily(event.target.value as Family|'All')}><option value="All">All families</option><option value="Classical">Classical</option><option value="Quantum">Quantum</option><option value="Hybrid">Hybrid</option></select></label>
+            <label className="field min-w-[190px]"><span>Metric</span><select className="select" value={analysisMetric} onChange={event=>setAnalysisMetric(event.target.value as MetricName)}>{comparisonMetrics.map(name=><option key={name} value={name}>{metricLabel(name)}</option>)}</select></label>
+            {analysisView==='runtime'&&<label className="field min-w-[210px]"><span>Runtime measurement</span><select className="select" value={runtimeKind} onChange={event=>setRuntimeKind(event.target.value as RuntimeKind)}><option value="final_training_seconds">Final training</option><option value="cv_total_seconds">CV total</option><option value="test_inference_seconds">Held-out inference</option><option value="test_inference_seconds_per_sample">Inference / sample</option></select></label>}
+          </div>
+        </div>
+        {analysisView==='performance'&&<div>
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] muted"><span>Held-out {metricLabel(analysisMetric)} · exact persisted test values</span><span>•</span><span>Blue = classical</span><span>•</span><span>Violet = quantum</span><span>•</span><span>Cyan = hybrid</span></div>
+          <ModelMetricBars models={analysisModels} metricName={analysisMetric}/>
+        </div>}
+        {analysisView==='matrix'&&<MetricMatrix models={analysisModels}/>}
+        {analysisView==='stability'&&<CvStabilityChart models={analysisModels} metricName={analysisMetric}/>}
+        {analysisView==='runtime'&&<RuntimeComparisonChart models={analysisModels} runtimeKind={runtimeKind}/>}
+      </div>
     </Card>
 
     <Card title="Validation, holdout, and runtime" description="Model comparison matrix with held-out performance, cross-validation stability, and runtime evidence kept visibly distinct.">
