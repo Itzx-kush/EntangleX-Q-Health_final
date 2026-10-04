@@ -7,6 +7,7 @@ import {LogoIntro} from '../components/LogoIntro';
 import {PublicExperience} from '../components/PublicExperience';
 import {QuantumNetworkBackground} from '../components/QuantumNetworkBackground';
 import {usePointerMotion} from '../components/motion/usePointerMotion';
+import {ResearchWorkspaceTransition} from '../components/ResearchWorkspaceTransition';
 import {BorderGlow,DecryptedText,OuterAurora,OuterMagnet,OuterSpotlight,ShinyText,SplitReveal} from '../components/reactbits';
 import './auth.css';
 
@@ -37,18 +38,6 @@ function AuthLoading(){
       </div>
     </div>
   </main>;
-}
-
-function AccessTransition({guest}:{guest:boolean}){
-  return <div className={'auth-access-transition '+(guest?'is-guest':'is-authenticated')} role="status" aria-live="polite" aria-busy="true">
-    <div className="auth-convergence" aria-hidden="true">{Array.from({length:16},(_,index)=><i key={index}/>)}</div>
-    <div className="auth-transition-mark"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/><span/></div>
-    <span>{guest?'GUEST RESEARCH SESSION':'AUTHENTICATED WORKSPACE'}</span>
-    <h2>{guest?'Entering research workspace…':'Workspace ready'}</h2>
-    <p>{guest?'Preparing the existing research prototype.':'Restoring your research environment…'}</p>
-    <div className="auth-transition-lockup"><img src="/entanglex-logo-dark.svg" alt="EntangleX"/><b>Q-HEALTH</b></div>
-    <div className="auth-transition-line" aria-hidden="true"><i/></div>
-  </div>;
 }
 
 type PublicTransitionPhase='idle'|'intent'|'accelerate'|'converge'|'core'|'handoff';
@@ -196,7 +185,6 @@ function Welcome({onBack,onOAuthStart}:{onBack:()=>void;onOAuthStart:(provider:'
 
       <p className="auth-footnote">Secure account access · guest exploration remains available</p>
     </section></BorderGlow></OuterSpotlight>
-    {enteringGuest&&<AccessTransition guest/>}
   </main>;
 }
 
@@ -225,11 +213,8 @@ export function AuthGate({children}:{children:ReactNode}){
       return;
     }
     if(isGuest)setAccessKind(current=>current||'guest');
-    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const delay=reduced?140:accessKind==='guest'||isGuest?900:2450;
-    const timer=window.setTimeout(()=>setWorkspaceReady(true),delay);
-    return()=>window.clearTimeout(timer);
-  },[isAuthenticated,isGuest,accessKind]);
+    setWorkspaceReady(false);
+  },[isAuthenticated,isGuest]);
   useEffect(()=>()=>{publicTransitionTimers.current.forEach(timer=>window.clearTimeout(timer));publicTransitionTimers.current=[]},[]);
 
   if(loading)return <AuthLoading/>;
@@ -290,5 +275,8 @@ export function AuthGate({children}:{children:ReactNode}){
   }
 
   const guestAccess=accessKind==='guest'||isGuest;
-  return <>{intro}<div className={'workspace-reveal-shell '+(workspaceReady?'is-ready ':'')+(guestAccess?'is-guest':'is-authenticated')}>{children}</div>{!workspaceReady&&<AccessTransition guest={guestAccess}/>}</>;
+  return <>{intro}
+    <div className={'workspace-reveal-shell '+(workspaceReady?'is-ready ':'')+(guestAccess?'is-guest':'is-authenticated')}>{children}</div>
+    {!workspaceReady&&<ResearchWorkspaceTransition guest={guestAccess} onComplete={()=>setWorkspaceReady(true)}/>}
+  </>;
 }
