@@ -35,7 +35,7 @@ const tone=(status:DemoStageStatus):'green'|'amber'|'red'|'blue'=>
   status==='IN PROGRESS'?'amber':'blue';
 
 export function DemoCenter(){
-  return <VerifiedDemoLanding/>;
+  return <div className="layer3-final-workspace layer3-demo-workspace"><VerifiedDemoLanding/></div>;
 }
 
 export function LegacyDemoCenter(){
@@ -144,7 +144,7 @@ export function SettingsPage(){
   const [motion,setMotion]=useState<'full'|'reduced'>(()=>(localStorage.getItem('qhealth-motion') as 'full'|'reduced')||'full');
   const [inspector,setInspector]=useState(localStorage.getItem('qhealth-inspector')!=='hidden');
   useEffect(()=>{localStorage.setItem('qhealth-theme',theme);localStorage.setItem('qhealth-density',density);localStorage.setItem('qhealth-motion',motion);localStorage.setItem('qhealth-inspector',inspector?'visible':'hidden');window.dispatchEvent(new Event('qhealth-settings-changed'))},[theme,density,motion,inspector]);
-  return <div>
+  return <div className="layer3-final-workspace layer3-settings-workspace">
     <PageHeader eyebrow="Workspace controls" title="Settings center" description="Manage account access, interface preferences, accessibility, and research safeguards."/>
     <WorkbenchRail items={[{label:'Account',value:isAuthenticated?'Signed in':'Guest mode',detail:isAuthenticated?'Personal workspace':'Prototype access',tone:isAuthenticated?'green':'slate'},{label:'Theme',value:theme==='research'?'Research light':'Deep research',detail:'Workspace appearance',tone:theme==='dark'?'purple':'blue'},{label:'Density',value:density,detail:'Layout spacing',tone:'blue'},{label:'Motion',value:motion,detail:'Accessibility preference',tone:motion==='reduced'?'green':'purple'}]}/>
     <StatusStrip items={[{label:'Interface',value:'Applied immediately',status:'good'},{label:'Persistence',value:'Local browser only',status:'good'},{label:'Secrets',value:'Never stored',status:'good'},{label:'Research safeguards',value:'Always enabled',status:'good'}]}/>

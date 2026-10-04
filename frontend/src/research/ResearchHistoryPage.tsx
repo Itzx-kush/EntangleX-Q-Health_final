@@ -110,12 +110,12 @@ export function ResearchHistoryPage(){
   const pageSize=20;
   const history=useResearchHistory(filter,page,pageSize);
 
-  if(!isAuthenticated)return <div>
+  if(!isAuthenticated)return <div className="layer3-final-workspace layer3-history-page">
     <PageHeader eyebrow="Personal research" title="My Research" description="Private cloud research history is available only to an authenticated EntangleX account."/>
     <div className="research-history-empty"><span><History size={22}/></span><h2>Guest mode is active</h2><p>The existing research prototype remains fully available. Guest actions do not write private cloud history.</p><Button onClick={beginUpgrade}><LogIn size={15}/>{hasMigratableState?'Sign in to save this work':'Go to sign in'}</Button></div>
   </div>;
 
-  return <div className="research-history-page">
+  return <div className="layer3-final-workspace layer3-history-page research-history-page">
     <PageHeader eyebrow="Personal research" title="My Research" description="Your private record of meaningful EntangleX research actions, linked back to the existing scientific workspace." actions={<div className="flex gap-2"><Link className="btn btn-outline" to="/my-research/reports">My Research Reports</Link><Link className="btn btn-primary" to="/training">New experiment</Link></div>}/>
 
     <section className="research-history-intro">

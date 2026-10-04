@@ -41,7 +41,7 @@ export function AiAssistantPage(){
     event.target.style.height=`${Math.min(event.target.scrollHeight,200)}px`;
   };
 
-  return <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full p-4 md:p-6 lg:p-8">
+  return <div className="layer3-final-workspace layer3-ai-workspace flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full p-4 md:p-6 lg:p-8">
     <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground"><Bot className="text-primary w-7 h-7"/>EntangleX AI Assistant</h1>

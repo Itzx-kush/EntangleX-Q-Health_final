@@ -1,0 +1,683 @@
+/* MASTER PROMPT 9 — FINAL RESEARCH INSIGHT WORKSPACE POLISH
+   Presentation-only layer. Existing data, state, APIs and research logic remain
+   the source of truth. No new dependency is required. */
+
+.layer3-final-workspace{
+  --final-surface:hsl(var(--card) / .97);
+  --final-surface-soft:hsl(var(--muted) / .42);
+  --final-line:hsl(var(--border) / .78);
+  --final-accent:hsl(var(--primary));
+  --final-shadow:0 12px 34px rgba(15,23,42,.045);
+  --final-shadow-strong:0 18px 46px rgba(15,23,42,.075);
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:visible;
+}
+
+.layer3-final-workspace .page-header,
+.layer3-final-workspace .page-hero{
+  position:relative;
+  min-width:0;
+  margin-bottom:14px;
+}
+
+.layer3-final-workspace .page-header::after,
+.layer3-final-workspace .page-hero::after{
+  content:"";
+  display:block;
+  width:100%;
+  height:1px;
+  margin-top:16px;
+  background:linear-gradient(90deg,hsl(var(--primary) / .16),hsl(var(--border) / .55) 48%,transparent);
+}
+
+.layer3-final-workspace .page-header h1,
+.layer3-final-workspace .page-hero h1,
+.layer3-final-workspace .page-header .headline,
+.layer3-final-workspace .page-hero .headline{
+  max-width:920px;
+  letter-spacing:-.04em;
+}
+
+.layer3-final-workspace .page-header p,
+.layer3-final-workspace .page-hero p,
+.layer3-final-workspace .page-header .subhead,
+.layer3-final-workspace .page-hero .subhead{
+  max-width:900px;
+  line-height:1.62;
+}
+
+.layer3-final-workspace .workbench-rail,
+.layer3-final-workspace .research-pipeline-panel,
+.layer3-final-workspace .verified-context-bar,
+.layer3-final-workspace .evidence-provenance-strip{
+  border-color:var(--final-line);
+}
+
+.layer3-final-workspace .workbench-rail{
+  position:relative;
+  overflow:hidden;
+  background:
+    linear-gradient(110deg,hsl(var(--primary) / .045),transparent 45%),
+    hsl(var(--card) / .92);
+  box-shadow:0 10px 28px rgba(15,23,42,.028);
+}
+
+.layer3-final-workspace .workbench-rail::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:3px;
+  background:hsl(var(--primary) / .72);
+}
+
+.layer3-final-workspace .workbench-rail > *{
+  min-width:0;
+  background:hsl(var(--card) / .64);
+  border-color:hsl(var(--border) / .68);
+}
+
+.layer3-final-workspace .tremor-card,
+.layer3-final-workspace .card{
+  min-width:0;
+  max-width:100%;
+  border-color:var(--final-line);
+  background:
+    linear-gradient(120deg,hsl(var(--primary) / .012),transparent 40%),
+    var(--final-surface);
+  box-shadow:var(--final-shadow);
+  border-radius:14px;
+}
+
+.layer3-final-workspace .tremor-card > header{
+  border-bottom:1px solid hsl(var(--border) / .5);
+}
+
+.layer3-final-workspace .tremor-card:hover{
+  box-shadow:var(--final-shadow-strong);
+}
+
+.layer3-final-workspace .field{
+  min-width:0;
+}
+
+.layer3-final-workspace .input,
+.layer3-final-workspace .select,
+.layer3-final-workspace .textarea,
+.layer3-final-workspace input:not([type="checkbox"]):not([type="radio"]),
+.layer3-final-workspace select,
+.layer3-final-workspace textarea{
+  min-width:0;
+  border-color:hsl(var(--input) / .9);
+  background:hsl(var(--card) / .9);
+}
+
+.layer3-final-workspace .input:focus,
+.layer3-final-workspace .select:focus,
+.layer3-final-workspace .textarea:focus,
+.layer3-final-workspace input:not([type="checkbox"]):not([type="radio"]):focus,
+.layer3-final-workspace select:focus,
+.layer3-final-workspace textarea:focus{
+  border-color:hsl(var(--ring) / .76);
+  box-shadow:0 0 0 3px hsl(var(--ring) / .1);
+}
+
+.layer3-final-workspace .btn{
+  min-height:38px;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+
+.layer3-final-workspace .btn:not(:disabled):hover{
+  transform:translateY(-1px);
+}
+
+.layer3-final-workspace .btn:focus-visible,
+.layer3-final-workspace button:focus-visible,
+.layer3-final-workspace a:focus-visible,
+.layer3-final-workspace summary:focus-visible,
+.layer3-final-workspace input:focus-visible,
+.layer3-final-workspace select:focus-visible,
+.layer3-final-workspace textarea:focus-visible{
+  outline:2px solid hsl(var(--ring));
+  outline-offset:2px;
+}
+
+.layer3-final-workspace .table-wrap{
+  max-width:100%;
+  min-width:0;
+  overflow:auto;
+  border:1px solid hsl(var(--border) / .7);
+  border-radius:12px;
+  background:hsl(var(--card) / .54);
+  scrollbar-width:thin;
+}
+
+.layer3-final-workspace .data-table{
+  min-width:700px;
+}
+
+.layer3-final-workspace .data-table th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:hsl(var(--muted) / .92);
+  backdrop-filter:blur(8px);
+}
+
+.layer3-final-workspace .data-table td,
+.layer3-final-workspace .data-table th{
+  padding-top:10px;
+  padding-bottom:10px;
+}
+
+.layer3-final-workspace .data-table tbody tr{
+  transition:background .14s ease;
+}
+
+.layer3-final-workspace .data-table tbody tr:hover td{
+  background:hsl(var(--primary) / .028);
+}
+
+.layer3-final-workspace .notice,
+.layer3-final-workspace .callout{
+  border-color:hsl(var(--border) / .7);
+}
+
+.layer3-final-workspace .badge,
+.layer3-final-workspace .tremor-badge{
+  white-space:nowrap;
+}
+
+.layer3-final-workspace .rb-reveal{
+  animation-duration:.38s;
+}
+
+.layer3-final-workspace .two-grid,
+.layer3-final-workspace .tremor-grid-main,
+.layer3-final-workspace .tremor-grid-wide{
+  min-width:0;
+  align-items:start;
+}
+
+.layer3-final-workspace .two-grid > *,
+.layer3-final-workspace .tremor-grid-main > *,
+.layer3-final-workspace .tremor-grid-wide > *{
+  min-width:0;
+}
+
+/* Explainability — evidence hierarchy without changing explanation semantics. */
+.layer3-explainability-workspace .tremor-card,
+.layer3-explainability-workspace .card{
+  border-radius:15px;
+}
+
+.layer3-explainability-workspace .tremor-card .rounded-lg.border,
+.layer3-explainability-workspace .tremor-card .rounded-xl.border{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--card) / .62);
+}
+
+.layer3-explainability-workspace .tremor-card .rounded-lg.border:hover,
+.layer3-explainability-workspace .tremor-card .rounded-xl.border:hover{
+  border-color:hsl(var(--primary) / .28);
+  background:hsl(var(--primary) / .025);
+}
+
+.layer3-explainability-workspace .tremor-grid-main{
+  gap:18px;
+}
+
+.layer3-explainability-workspace .data-table{
+  min-width:760px;
+}
+
+/* Prediction — make model → output → evidence visually explicit. */
+.layer3-prediction-workspace .tremor-card,
+.layer3-prediction-workspace .card{
+  border-radius:15px;
+}
+
+.layer3-prediction-workspace .tremor-card .rounded-xl.border{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--card) / .62);
+}
+
+.layer3-prediction-workspace .tremor-card .rounded-xl.border:hover{
+  border-color:hsl(var(--primary) / .28);
+  background:hsl(var(--primary) / .025);
+}
+
+.layer3-prediction-workspace .prediction-result,
+.layer3-prediction-workspace .research-prediction-lab{
+  min-width:0;
+}
+
+/* Experiment Registry / Detail — searchable evidence workspace. */
+.layer3-experiments-workspace .table-wrap,
+.layer3-experiment-detail-workspace .table-wrap{
+  box-shadow:inset 0 1px 0 hsl(var(--card) / .5);
+}
+
+.layer3-experiments-workspace .controls{
+  gap:10px;
+  padding:10px;
+  border:1px solid hsl(var(--border) / .6);
+  border-radius:12px;
+  background:hsl(var(--muted) / .22);
+}
+
+.layer3-experiments-workspace .data-table{
+  min-width:900px;
+}
+
+.layer3-experiment-detail-workspace .tremor-card .rounded-xl.border{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--card) / .58);
+}
+
+.layer3-experiment-detail-workspace .tremor-card .rounded-xl.border:hover{
+  border-color:hsl(var(--primary) / .25);
+}
+
+/* Demo Center — research context, not marketing chrome. */
+.layer3-demo-workspace{
+  --demo-grid:hsl(var(--border) / .42);
+}
+
+.layer3-demo-workspace .flagship-hero,
+.layer3-demo-workspace .verified-demo-landing{
+  border-color:hsl(var(--border) / .72);
+}
+
+.layer3-demo-workspace .flagship-hero{
+  box-shadow:var(--final-shadow);
+}
+
+.layer3-demo-workspace .demo-path-grid a{
+  border:1px solid hsl(var(--border) / .65);
+  background:hsl(var(--card) / .72);
+}
+
+.layer3-demo-workspace .demo-path-grid a:hover{
+  border-color:hsl(var(--primary) / .32);
+  background:hsl(var(--primary) / .035);
+}
+
+.layer3-demo-workspace .flagship-hero-visual{
+  background:
+    linear-gradient(var(--demo-grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--demo-grid) 1px,transparent 1px),
+    hsl(var(--muted) / .22);
+}
+
+/* AI Assistant — same research language, without becoming a consumer chatbot. */
+.layer3-ai-workspace{
+  max-width:1040px;
+  margin-inline:auto;
+  padding-top:22px;
+  min-height:calc(100vh - 6rem);
+}
+
+.layer3-ai-workspace > div:first-child{
+  border-bottom-color:hsl(var(--border) / .62);
+}
+
+.layer3-ai-workspace .ai-research-shell{
+  min-width:0;
+}
+
+.layer3-ai-workspace textarea{
+  color:hsl(var(--foreground));
+}
+
+.layer3-ai-workspace .scrollbar-thin{
+  scrollbar-width:thin;
+  overscroll-behavior:contain;
+}
+
+.layer3-ai-workspace .bg-primary\/10{
+  box-shadow:0 10px 28px hsl(var(--primary) / .11);
+}
+
+.layer3-ai-workspace .shadow-sm{
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+
+.layer3-ai-workspace .bg-card.border{
+  border-color:hsl(var(--border) / .72);
+}
+
+.layer3-ai-workspace .rounded-2xl{
+  border-radius:16px;
+}
+
+.layer3-ai-workspace button.text-left{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--card) / .78);
+}
+
+.layer3-ai-workspace button.text-left:hover{
+  border-color:hsl(var(--primary) / .32);
+  background:hsl(var(--primary) / .05);
+}
+
+.layer3-ai-workspace > .flex.items-end{
+  position:sticky;
+  bottom:0;
+  z-index:3;
+  padding:7px;
+  background:hsl(var(--card) / .92);
+  border-color:hsl(var(--border) / .72);
+  backdrop-filter:blur(14px);
+}
+
+.layer3-ai-workspace > .flex.items-end textarea{
+  min-height:44px;
+  max-height:180px;
+}
+
+.layer3-ai-workspace > .flex.items-end button{
+  min-width:44px;
+  min-height:44px;
+}
+
+.layer3-ai-workspace .text-xs.text-muted-foreground{
+  line-height:1.45;
+}
+
+/* Account / Settings — personal workspace surfaces use the same evidence hierarchy. */
+.layer3-account-page .account-identity-panel,
+.layer3-account-page .account-foundation-note,
+.layer3-account-page .account-research-section,
+.layer3-settings-workspace .settings-section{
+  border-color:hsl(var(--border) / .72);
+}
+
+.layer3-account-page .account-identity-panel{
+  box-shadow:var(--final-shadow);
+}
+
+.layer3-account-page .account-content-grid{
+  align-items:start;
+}
+
+.layer3-account-page .account-details > div,
+.layer3-settings-workspace .settings-card,
+.layer3-settings-workspace .settings-section{
+  background:hsl(var(--card) / .72);
+}
+
+.layer3-account-page .account-preference-list > div{
+  border-color:hsl(var(--border) / .6);
+}
+
+.layer3-account-page .research-activity-list .research-activity-item{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--card) / .68);
+}
+
+.layer3-account-page .research-activity-list .research-activity-item:hover{
+  border-color:hsl(var(--primary) / .28);
+}
+
+/* History — timeline/list first, with clear filter and provenance hierarchy. */
+.layer3-history-page .research-history-intro{
+  border-color:hsl(var(--border) / .72);
+  background:
+    linear-gradient(110deg,hsl(var(--primary) / .04),transparent 58%),
+    hsl(var(--card) / .82);
+  box-shadow:var(--final-shadow);
+}
+
+.layer3-history-page .research-history-toolbar{
+  border-color:hsl(var(--border) / .68);
+  background:hsl(var(--muted) / .22);
+}
+
+.layer3-history-page .research-history-filters button{
+  min-height:38px;
+  border-radius:999px;
+}
+
+.layer3-history-page .research-activity-item{
+  box-shadow:0 8px 24px rgba(15,23,42,.028);
+}
+
+.layer3-history-page .research-activity-open{
+  border-radius:8px;
+}
+
+.layer3-history-page .research-history-pagination{
+  border-top-color:hsl(var(--border) / .62);
+}
+
+/* Reports — artifact list and provenance remain factual and compact. */
+.layer3-reports-page .tremor-card{
+  height:100%;
+}
+
+.layer3-reports-page .report-card,
+.layer3-reports-page .research-report-card{
+  min-width:0;
+}
+
+.layer3-reports-page .mono{
+  overflow-wrap:anywhere;
+}
+
+.layer3-reports-page .tremor-card .grid{
+  min-width:0;
+}
+
+.layer3-reports-page .tremor-card:hover{
+  transform:translateY(-1px);
+}
+
+.layer3-report-detail-page .tremor-card .space-y-2{
+  min-width:0;
+}
+
+.layer3-reports-page .notice{
+  border-left-width:3px;
+}
+
+/* Final cross-section rhythm. */
+.layer3-final-workspace section + section,
+.layer3-final-workspace .tremor-card + .tremor-card{
+  margin-top:16px;
+}
+
+.layer3-final-workspace .metric-label{
+  letter-spacing:.105em;
+}
+
+.layer3-final-workspace code,
+.layer3-final-workspace .mono{
+  overflow-wrap:anywhere;
+}
+
+.layer3-final-workspace [class*="overflow-x"],
+.layer3-final-workspace .table-wrap{
+  scrollbar-width:thin;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .layer3-final-workspace *,
+  .layer3-final-workspace *::before,
+  .layer3-final-workspace *::after{
+    scroll-behavior:auto;
+  }
+
+  .layer3-final-workspace .btn,
+  .layer3-final-workspace .tremor-card,
+  .layer3-final-workspace .data-table tbody tr,
+  .layer3-final-workspace .research-activity-item,
+  .layer3-final-workspace button.text-left{
+    transition:none !important;
+    transform:none !important;
+    animation:none !important;
+  }
+}
+
+[data-motion="reduced"] .layer3-final-workspace .btn,
+[data-motion="reduced"] .layer3-final-workspace .tremor-card,
+[data-motion="reduced"] .layer3-final-workspace .data-table tbody tr,
+[data-motion="reduced"] .layer3-final-workspace .research-activity-item,
+[data-motion="reduced"] .layer3-final-workspace button.text-left{
+  transition:none !important;
+  transform:none !important;
+  animation:none !important;
+}
+
+@media (max-width:1024px){
+  .layer3-final-workspace .page-header::after,
+  .layer3-final-workspace .page-hero::after{
+    margin-top:13px;
+  }
+
+  .layer3-final-workspace .workbench-rail{
+    gap:8px;
+  }
+
+  .layer3-final-workspace .data-table{
+    min-width:680px;
+  }
+
+  .layer3-experiments-workspace .data-table{
+    min-width:860px;
+  }
+}
+
+@media (max-width:768px){
+  .layer3-final-workspace{
+    overflow:visible;
+  }
+
+  .layer3-final-workspace .page-header,
+  .layer3-final-workspace .page-hero{
+    margin-bottom:10px;
+  }
+
+  .layer3-final-workspace .page-header h1,
+  .layer3-final-workspace .page-hero h1{
+    font-size:clamp(25px,7vw,34px);
+  }
+
+  .layer3-final-workspace .workbench-rail{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .layer3-final-workspace .data-table th,
+  .layer3-final-workspace .data-table td{
+    padding-inline:10px;
+  }
+
+  .layer3-ai-workspace{
+    min-height:calc(100vh - 3.5rem);
+    padding:14px 12px calc(86px + env(safe-area-inset-bottom));
+  }
+
+  .layer3-ai-workspace > div:first-child{
+    margin-bottom:12px;
+    padding-bottom:10px;
+  }
+
+  .layer3-ai-workspace > .flex.items-end{
+    bottom:env(safe-area-inset-bottom);
+  }
+
+  .layer3-account-page .account-identity-panel{
+    grid-template-columns:1fr;
+  }
+
+  .layer3-history-page .research-history-intro{
+    gap:12px;
+  }
+}
+
+@media (max-width:520px){
+  .layer3-final-workspace .workbench-rail{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .layer3-final-workspace .data-table{
+    min-width:620px;
+  }
+
+  .layer3-experiments-workspace .data-table{
+    min-width:780px;
+  }
+
+  .layer3-ai-workspace{
+    padding-inline:10px;
+  }
+
+  .layer3-ai-workspace .max-w-\[85\%\]{
+    max-width:91%;
+  }
+}
+
+@media (max-width:390px){
+  .layer3-final-workspace .workbench-rail{
+    grid-template-columns:1fr;
+  }
+
+  .layer3-final-workspace .page-header h1,
+  .layer3-final-workspace .page-hero h1{
+    font-size:27px;
+  }
+
+  .layer3-final-workspace .data-table{
+    min-width:600px;
+  }
+
+  .layer3-ai-workspace{
+    padding-inline:8px;
+  }
+
+  .layer3-ai-workspace > .flex.items-end{
+    padding:5px;
+  }
+}
+
+@media (max-width:375px){
+  .layer3-final-workspace .page-header p,
+  .layer3-final-workspace .page-hero p{
+    font-size:12px;
+  }
+
+  .layer3-ai-workspace .rounded-2xl{
+    border-radius:13px;
+  }
+}
+
+.dark .layer3-final-workspace{
+  --final-surface:hsl(var(--card) / .9);
+  --final-surface-soft:hsl(var(--muted) / .32);
+  --final-shadow:0 12px 34px rgba(0,0,0,.18);
+  --final-shadow-strong:0 18px 46px rgba(0,0,0,.25);
+}
+
+.dark .layer3-final-workspace .page-header::after,
+.dark .layer3-final-workspace .page-hero::after{
+  background:linear-gradient(90deg,hsl(var(--primary) / .22),hsl(var(--border) / .5) 48%,transparent);
+}
+
+.dark .layer3-final-workspace .workbench-rail,
+.dark .layer3-final-workspace .tremor-card,
+.dark .layer3-final-workspace .card{
+  box-shadow:0 10px 28px rgba(0,0,0,.16);
+}
+
+.dark .layer3-final-workspace .data-table th{
+  background:hsl(var(--muted) / .75);
+}
+
+.dark .layer3-ai-workspace > .flex.items-end{
+  background:hsl(var(--card) / .86);
+}
+
+.dark .layer3-ai-workspace .shadow-sm{
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}

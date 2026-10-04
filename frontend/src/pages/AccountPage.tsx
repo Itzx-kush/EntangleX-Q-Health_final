@@ -17,7 +17,7 @@ export function AccountPage(){
   const {user,profile,isAuthenticated,error,signingOut,signOut}=useAuth();
   const {beginUpgrade,hasMigratableState}=useGuestMigration();
 
-  if(!isAuthenticated)return <div>
+  if(!isAuthenticated)return <div className="layer3-final-workspace layer3-account-page">
     <PageHeader eyebrow="Workspace identity" title="Guest research workspace" description="You are using the full current EntangleX research prototype without an account."/>
     <div className="account-guest-panel">
       <div className="account-guest-icon"><UserRound size={24}/></div>
@@ -30,7 +30,7 @@ export function AccountPage(){
   const density=localStorage.getItem('qhealth-density')==='compact'?'Compact':'Comfortable';
   const motion=localStorage.getItem('qhealth-motion')==='reduced'?'Reduced':'Full';
 
-  return <div className="account-page">
+  return <div className="layer3-final-workspace layer3-account-page account-page">
     <PageHeader
       eyebrow="Personal workspace"
       title="My account"
