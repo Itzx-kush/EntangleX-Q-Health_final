@@ -42,6 +42,7 @@ export function Overview(){
  const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
  const readinessLabel=flagship.library.isLoading?'CHECKING READINESS':flagship.available?'VERIFIED DEMO · READY':'VERIFIED DEMO UNAVAILABLE';
  const readinessTone=flagship.library.isLoading?'blue':flagship.available?'green':'red';
+ const modelCount=flagship.models.length||flagship.item?.demo_readiness.model_ids.length||0;
  return <div className="tremor-dashboard">
   <section className="flagship-hero">
    <div className="flagship-hero-copy">
@@ -51,10 +52,10 @@ export function Overview(){
     </div>
     <p className="eyebrow mt-5">SIH 2026 · JUDGE-FIRST DEMONSTRATION</p>
     <h1>{flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}</h1>
-    <p>Primary SIH26139 demonstration: start with the verified Early Stage Diabetes experience, trace the hybrid quantum-classical pipeline, review the controlled seven-model comparison, then inspect prediction and SHAP evidence.</p>
+    <p>Primary SIH26139 demonstration: start with the verified Early Stage Diabetes experience, trace the hybrid quantum-classical pipeline, review the controlled model comparison, then inspect prediction and SHAP evidence.</p>
     <div className="flagship-stats">
      <div><span>DATASET</span><strong>{flagship.item?.name||'Early Stage Diabetes'}</strong></div>
-     <div><span>MODELS</span><strong>{flagship.item?.demo_readiness.model_ids.length??'—'}</strong></div>
+     <div><span>MODELS</span><strong>{modelCount||'—'}</strong></div>
      <div><span>EVIDENCE</span><strong>{flagship.available?'Verified package':'Readiness check'}</strong></div>
      <div><span>EXECUTION</span><strong>{flagship.available?'Precomputed':'Unavailable'}</strong></div>
     </div>
@@ -66,7 +67,7 @@ export function Overview(){
    <div className="flagship-hero-visual" aria-label="SIH flagship model and evidence overview">
     <ShieldCheck size={28}/>
     <strong>EARLY STAGE DIABETES · FLAGSHIP</strong>
-    <div><span>HYBRID</span><span>7 MODELS</span><span>SHAP</span></div>
+    <div><span>HYBRID</span><span>{modelCount?`${modelCount} MODELS`:'MODEL SET'}</span><span>SHAP</span></div>
     <p>Controlled comparison · research evidence · local quantum simulation</p>
    </div>
   </section>
@@ -80,7 +81,7 @@ export function Overview(){
     {[
      {n:'01',label:'Verified Demo',detail:'Early Stage Diabetes',to:'/demo'},
      {n:'02',label:'Hybrid Model',detail:'PennyLane + PyTorch',to:'/quantum'},
-     {n:'03',label:'7-Model Comparison',detail:'Classical · quantum · hybrid',to:'/comparison'},
+     {n:'03',label:'Controlled Comparison',detail:`${modelCount||'Existing'} models · classical · quantum · hybrid`,to:'/comparison'},
      {n:'04',label:'Prediction',detail:'Research risk output',to:'/prediction'},
      {n:'05',label:'Explainability',detail:'SHAP feature contributions',to:'/explainability'},
     ].map(step=><Link key={step.to} to={step.to} className="group rounded-xl border border-[#D8E2EF] bg-white px-3 py-3 transition hover:border-[#1769E0]/35 hover:bg-[#1769E0]/[0.025] focus:outline-none focus:ring-2 focus:ring-[#1769E0]/25">
