@@ -10,12 +10,13 @@ import {StageNav} from '../pages/ResearchPagesCore';
 import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
 import {ResearchResultsCenter} from './ResearchResultsCenter';
+import {ControlledSevenModelComparison} from './ControlledSevenModelComparison';
 import {ExplainabilityResearchLab} from './ExplainabilityResearchLab';
 import {ResearchPredictionLab} from './ResearchPredictionLab';
 import {RobustnessEvidenceLab} from './RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from './QuantumEvidenceLab';
 import {HybridArchitectureVisualization} from './HybridArchitectureVisualization';
-import type {MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
+import type {AlignmentContract,MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
 const toneFor=(kind:ModelKind)=>family(kind)==='Hybrid'?'purple':family(kind)==='Quantum'?'blue':'green';
@@ -29,12 +30,12 @@ function EvidenceStrip({source='Verified artifact package',scope='Early Stage Di
   </div>;
 }
 
-function DemoBoundary({children}:{children:(data:NonNullable<ReturnType<typeof useFlagshipData>['payload']>)=>React.ReactNode}){
+function DemoBoundary({children}:{children:(data:NonNullable<ReturnType<typeof useFlagshipData>['payload']>,alignment:AlignmentContract|undefined)=>React.ReactNode}){
   const data=useFlagshipData(true);
   if(data.verified.isLoading)return <Loading/>;
   if(data.verified.error)return <><ErrorBanner error={(data.verified.error as Error).message}/><EmptyState title="Verified demo unavailable">The verified package could not be loaded. Continue with the normal dataset and training workflow.</EmptyState></>;
   if(!data.payload)return <EmptyState title="Verified demo unavailable">No validated precomputed artifact is available. Continue with the normal research workflow.</EmptyState>;
-  return <>{children(data.payload)}</>;
+  return <>{children(data.payload,data.alignment.data)}</>;
 }
 
 export function VerifiedContextBar(){
@@ -118,7 +119,7 @@ function ModelTable({models}:{models:ModelRecord[]}){
 }
 
 export function VerifiedComparison(){
-  return <DemoBoundary>{data=>{
+  return <DemoBoundary>{(data,alignment)=>{
     const benchmarkModels=(data.evidence.benchmark.models||[]) as Array<Record<string,any>>;
     const benchmarkById=new Map(benchmarkModels.map(model=>[String(model.model_id),model]));
     const models=data.models.map(model=>{
@@ -145,7 +146,19 @@ export function VerifiedComparison(){
       <PageHeader eyebrow="Verified result view · no live computation" title="Research Results Center" description="A complete, read-only interpretation of the packaged experiment, its measured model evidence, variability, conditions, and next investigation paths."/>
       <EvidenceStrip source="Controlled benchmark record" scope={`${models.length} models · one verified experiment`}/>
       <StageNav current="/comparison"/>
-      <div className="mt-5"><ResearchResultsCenter experiment={{...data.experiment,summary:{...data.experiment.summary,sample_count:(data.evidence.benchmark.comparison_contract as Record<string,unknown>).evaluated_row_count}}} dataset={data.dataset} models={models} comparison={comparison} mode="verified"/></div>
+      <div className="mt-5">
+        <ControlledSevenModelComparison
+          dataset={data.dataset}
+          experiment={data.experiment}
+          models={models}
+          evidence={data.evidence}
+          comparisonContract={data.evidence.benchmark.comparison_contract as Record<string,unknown>}
+          alignment={alignment}
+        />
+      </div>
+      <div className="mt-5">
+        <ResearchResultsCenter experiment={{...data.experiment,summary:{...data.experiment.summary,sample_count:(data.evidence.benchmark.comparison_contract as Record<string,unknown>).evaluated_row_count}}} dataset={data.dataset} models={models} comparison={comparison} mode="verified"/>
+      </div>
     </div>;
   }}</DemoBoundary>;
 }
