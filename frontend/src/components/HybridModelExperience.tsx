@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 import {Atom,ArrowRight,BrainCircuit,CheckCircle2,GitBranch,Layers3,LineChart,ShieldCheck,Sparkles} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {Badge,Card} from './ui';
@@ -40,8 +41,8 @@ function FlowStage({
   title:string;
   description:string;
   tone:'blue'|'violet'|'green';
-  icon:React.ReactNode;
-  children?:React.ReactNode;
+  icon:ReactNode;
+  children?:ReactNode;
 }){
   const style=tone==='violet'
     ? 'border-[#6946D9]/25 bg-[#6946D9]/[0.045]'
