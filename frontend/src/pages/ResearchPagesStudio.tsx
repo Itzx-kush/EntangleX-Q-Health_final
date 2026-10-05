@@ -531,7 +531,7 @@ export function ExperimentDetail(){
       {label:'Reported',detail:'Evidence export available',status:detail.models.length?'current':'waiting'}
     ]}/>
     <ErrorBanner error={(action.error as Error)?.message}/>
-    <Card className="mt-5" title="Experiment context" description="A drill-down evidence surface modeled on TICTAC-style research detail views.">
+    <Card className="mt-5" title="Experiment context" description="A drill-down evidence surface for one recorded experiment — configuration, models, jobs, provenance, and measured evidence.">
       <div className="flex flex-wrap items-center gap-2"><StatusBadge value={detail.experiment.status}/><Badge tone={detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'blue':'green'}>{detail.experiment.summary.experiment_kind==='precomputed_verified_demo'?'PRECOMPUTED VERIFIED DEMO EXPERIMENT':'LIVE RESEARCH EXPERIMENT'}</Badge><span className="text-xs muted">{dateTime(detail.experiment.created_at)}</span><span className="mono text-xs muted">Dataset {shortId(detail.experiment.dataset_id)}</span></div>
       <div className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="MODELS" value={detail.models.length} detail="Backend model records"/><MetricCard label="JOBS" value={detail.jobs.length} detail="Execution records"/><MetricCard label="PARENT" value={detail.experiment.parent_id?shortId(detail.experiment.parent_id):'None'} detail="Experiment lineage"/></div>
       <div className="mt-4 flex flex-wrap gap-2"><Link className="btn btn-outline" to="/comparison">Open comparison →</Link></div>
