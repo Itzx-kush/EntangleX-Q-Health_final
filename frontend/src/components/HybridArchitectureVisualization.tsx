@@ -221,7 +221,7 @@ export function HybridArchitectureVisualization({alignment,dataset,experiment,mo
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <Spec label="Shared representation dimension" value={representation.final_representation_dimension??pipeline.pca_components??'—'}/>
+            <Spec label="Shared representation dimension" value={String(representation.final_representation_dimension??pipeline.pca_components??'—')}/>
             <Spec label="Hybrid framework" value="PennyLane + PyTorch"/>
             <Spec label="Local simulation" value={String(quantum.backend||'default.qubit')}/>
             <Spec label="Scientific boundary" value="Research prototype · controlled evaluation"/>
