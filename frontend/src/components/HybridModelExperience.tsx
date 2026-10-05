@@ -120,7 +120,7 @@ export function HybridModelExperience({
             <Badge tone="blue">{mode==='verified'?'VERIFIED / PRECOMPUTED EVIDENCE':'PERSISTED MODEL RECORD'}</Badge>
             <Badge tone="green">PennyLane + PyTorch</Badge>
           </div>
-          <h2 className="mt-3 text-xl font-semibold text-[#102A5C]">{datasetName||'Hybrid model detail'}</h2>
+          <h2 className="mt-3 text-xl font-semibold text-[#102A5C]">{datasetName||experiment.name||'Hybrid model detail'}</h2>
           <p className="mt-1 max-w-4xl text-sm leading-relaxed text-[#56657D]">
             Classical feature preparation feeds a trainable PennyLane quantum transformation; the resulting quantum representation is passed to a PyTorch output head for the final positive-class probability.
           </p>
