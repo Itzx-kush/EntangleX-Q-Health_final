@@ -77,6 +77,7 @@ export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
     </Card>
     <div className="two-grid mt-5">
       <Card title="Controlled flagship model set" description="Statuses and identities come from the verified manifest.">
+        <div className="mb-3 flex justify-end"><Link className="btn btn-outline" to={`/experiments/${data.payload.experiment.id}`}>View hybrid model <ArrowRight size={13}/></Link></div>
         <div className="space-y-2">{models.map(model=><div className="tremor-list-row" key={model.id}><Badge tone={toneFor(model.model_type)}>{family(model.model_type)}</Badge><strong className="ml-2 text-xs">{modelLabels[model.model_type]}</strong><span className="ml-auto"><Badge tone="green">{model.status}</Badge></span></div>)}</div>
       </Card>
       <Card title="Research boundaries" description="Measured evidence is descriptive, not a clinical or hardware claim.">
