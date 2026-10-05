@@ -54,6 +54,12 @@ function frameworkFor(model:ModelRecord,alignment:AlignmentContract|undefined){
   if(family(model.model_type)==='Classical'){
     return capability?.classical_framework||quantum?.classical_framework||'Not recorded';
   }
+  if(family(model.model_type)==='Hybrid'){
+    const quantumFramework=capability?.quantum_framework||quantum?.framework;
+    const classicalFramework=capability?.classical_framework||quantum?.classical_framework;
+    if(quantumFramework&&classicalFramework)return `${quantumFramework} + ${classicalFramework}`;
+    return quantumFramework||classicalFramework||'Not recorded';
+  }
   return capability?.quantum_framework||quantum?.framework||'Not recorded';
 }
 
@@ -82,6 +88,7 @@ export function ControlledSevenModelComparison({
   const benchmarkIds=new Set(evidence.benchmark.model_ids||[]);
   const explainabilityIds=new Set(evidence.explainability.model_ids||[]);
   const robustnessIds=new Set((evidence.robustness.results||[]).map(item=>item.model_id));
+  const completeSevenModelCoverage=orderedKinds.length===7&&orderedModels.length===7&&orderedModels.every(model=>benchmarkIds.has(model.id));
   const orderedModels=orderedKinds
     .map(kind=>models.find(model=>model.model_type===kind))
     .filter((model):model is ModelRecord=>Boolean(model));
@@ -150,7 +157,7 @@ export function ControlledSevenModelComparison({
         <div className="rounded-xl border p-4"><div className="metric-label">THRESHOLD PROTOCOL</div><strong className="mt-1 block text-sm">{thresholdStrategy==='target_sensitivity'?'Target sensitivity':'Configured strategy'}</strong><span className="mt-1 block text-[10px] muted">{finite(targetSensitivity)?`Target ${metric(targetSensitivity)} · OOF-selected where recorded`:'Target not recorded'}</span></div>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <MetricCard label="BENCHMARK EVIDENCE" value={evidence.benchmark.model_ids.length===orderedModels.length?'Complete model-set coverage':'Partial coverage'} detail={`${evidence.benchmark.model_ids.length} benchmark-linked models`}/>
+        <MetricCard label="BENCHMARK EVIDENCE" value={completeSevenModelCoverage?'7-model coverage':'Partial coverage'} detail={`${evidence.benchmark.model_ids.length} benchmark-linked model records`}/>
         <MetricCard label="ROBUSTNESS EVIDENCE" value={robustnessIds.size} detail="Packaged model-linked records"/>
         <MetricCard label="EXPLAINABILITY" value={evidence.explainability.model_ids.length} detail="Packaged explainability-linked models"/>
       </div>
