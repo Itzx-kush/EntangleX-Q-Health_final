@@ -66,7 +66,7 @@ export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
       {label:'Models',value:models.length,detail:'3 classical · 3 quantum · 1 hybrid',tone:'green'},
       {label:'Evidence',value:Object.keys(evidence).length,detail:'Validated evidence artifacts',tone:'amber'},
     ]}/>
-    <HybridArchitectureVisualization alignment={data.alignment.data} dataset={dataset} experiment={data.experiment} models={models} evidence={evidence}/>
+    <HybridArchitectureVisualization alignment={data.alignment.data} dataset={dataset} experiment={data.payload.experiment} models={models} evidence={evidence}/>
     <Card className="mt-5" title="Instant research pathway" description="Every destination below reads the same validated dataset, experiment, model, and evidence identities.">
       <div className="demo-path-grid">{[
         ['Dataset','/datasets'],['Quality','/quality'],['Preprocessing','/preprocessing'],['Features / PCA','/features'],
