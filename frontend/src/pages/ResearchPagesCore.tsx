@@ -23,6 +23,7 @@ export function StageNav({current}:{current:string}){return <AnimatedSection cla
 
 export function Overview(){
  const flagship=useFlagshipData();
+ const {draft}=useDraft();
  const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:7000});
  const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,refetchInterval:15000});
@@ -37,16 +38,62 @@ export function Overview(){
  const implementedCount=system.data?.model_capabilities?.filter(m=>m.implementation_status==='AVAILABLE').length??0;
  const executableCount=system.data?.model_capabilities?.filter(m=>m.executable).length??0;
  const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.implementation_status==='AVAILABLE'?(m.executable?100:75):0}))??[];
- const focus=registered[0];
+ const focus=draft.dataset_id?registered.find(dataset=>dataset.id===draft.dataset_id):undefined;
  const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
+ const readinessLabel=flagship.library.isLoading?'CHECKING READINESS':flagship.available?'VERIFIED DEMO · READY':'VERIFIED DEMO UNAVAILABLE';
+ const readinessTone=flagship.library.isLoading?'blue':flagship.available?'green':'red';
+ const modelCount=flagship.models.length||flagship.item?.demo_readiness.model_ids.length||0;
  return <div className="tremor-dashboard">
   <section className="flagship-hero">
-   <div className="flagship-hero-copy"><div className="flex flex-wrap gap-2"><Badge tone="purple">VERIFIED SIH DEMONSTRATION</Badge><Badge tone={flagship.available?'green':'red'}>{flagship.available?'READY INSTANTLY':'VERIFIED DEMO UNAVAILABLE'}</Badge></div><p className="eyebrow mt-5">ENTANGLEX Q-HEALTH</p><h1>{flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}</h1><p>Open a complete verified research record immediately—dataset, preprocessing, seven-model comparison, robustness, hybrid SHAP, and representative predictions. No upload or training required.</p><div className="flagship-stats"><div><span>SAMPLES</span><strong>{flagship.item?.row_count.toLocaleString()??'—'}</strong></div><div><span>FEATURES</span><strong>{flagship.item?.feature_count??'—'}</strong></div><div><span>MODELS</span><strong>{flagship.item?.demo_readiness.model_ids.length??'—'}</strong></div><div><span>RESULT</span><strong>{flagship.available?'Precomputed':'Unavailable'}</strong></div></div><div className="flex flex-wrap gap-2 mt-6"><Link className="btn btn-primary" to="/demo">Explore instant results <ArrowRight size={14}/></Link><Link className="btn btn-outline" to="/datasets">Explore your own data</Link></div></div>
-   <div className="flagship-hero-visual" aria-label="Classical quantum and hybrid verified evidence"><ShieldCheck size={28}/><strong>VERIFIED ARTIFACT BUNDLE</strong><div><span>CLASSICAL</span><span>QUANTUM</span><span>HYBRID</span></div><p>Benchmark · Robustness · SHAP · Prediction</p></div>
+   <div className="flagship-hero-copy">
+    <div className="flex flex-wrap gap-2">
+     <Badge tone="purple">SIH26139 FLAGSHIP</Badge>
+     <Badge tone={readinessTone}>{readinessLabel}</Badge>
+    </div>
+    <p className="eyebrow mt-5">SIH 2026 · JUDGE-FIRST DEMONSTRATION</p>
+    <h1>{flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}</h1>
+    <p>Primary SIH26139 demonstration: start with the verified Early Stage Diabetes experience, trace the hybrid quantum-classical pipeline, review the controlled model comparison, then inspect prediction and SHAP evidence.</p>
+    <div className="flagship-stats">
+     <div><span>DATASET</span><strong>{flagship.item?.name||'Early Stage Diabetes'}</strong></div>
+     <div><span>MODELS</span><strong>{modelCount||'—'}</strong></div>
+     <div><span>EVIDENCE</span><strong>{flagship.available?'Verified package':'Readiness check'}</strong></div>
+     <div><span>EXECUTION</span><strong>{flagship.available?'Precomputed':'Unavailable'}</strong></div>
+    </div>
+    <div className="flex flex-wrap gap-2 mt-6">
+     <Link className="btn btn-primary" to="/demo">Launch Verified Demo <ArrowRight size={14}/></Link>
+     <Link className="btn btn-outline" to="/datasets">Explore Research Platform</Link>
+    </div>
+   </div>
+   <div className="flagship-hero-visual" aria-label="SIH flagship model and evidence overview">
+    <ShieldCheck size={28}/>
+    <strong>EARLY STAGE DIABETES · FLAGSHIP</strong>
+    <div><span>HYBRID</span><span>{modelCount?`${modelCount} MODELS`:'MODEL SET'}</span><span>SHAP</span></div>
+    <p>Controlled comparison · research evidence · local quantum simulation</p>
+   </div>
   </section>
-  {!flagship.available&&!flagship.library.isLoading&&<Notice tone="amber">Verified demo unavailable. Scientific placeholders are never substituted; use the normal processing workflow below.</Notice>}
+  {!flagship.available&&!flagship.library.isLoading&&<Notice tone="amber">The verified flagship package is currently unavailable. No scientific placeholders are shown; the broader research platform remains available through Data Lab.</Notice>}
+  {flagship.available&&<section className="mt-5 rounded-2xl border border-[#D8E2EF] bg-[#F7FAFD] p-4 md:p-5" aria-label="SIH judge-first journey">
+   <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div><div className="eyebrow">JUDGE-FIRST JOURNEY</div><h2 className="section-title mt-1">See the flagship story in five steps</h2><p className="mt-1 text-sm muted">The primary route is promoted without restricting access to the full EntangleX Q-Health research platform.</p></div>
+    <Link className="btn btn-outline shrink-0" to="/datasets">Explore other datasets &amp; custom CSV</Link>
+   </div>
+   <div className="mt-4 grid gap-2 md:grid-cols-5">
+    {[
+     {n:'01',label:'Verified Demo',detail:'Early Stage Diabetes',to:'/demo'},
+     {n:'02',label:'Hybrid Model',detail:'PennyLane + PyTorch',to:'/quantum'},
+     {n:'03',label:'Controlled Comparison',detail:`${modelCount||'Existing'} models · classical · quantum · hybrid`,to:'/comparison'},
+     {n:'04',label:'Prediction',detail:'Research risk output',to:'/prediction'},
+     {n:'05',label:'Explainability',detail:'SHAP feature contributions',to:'/explainability'},
+    ].map(step=><Link key={step.to} to={step.to} className="group rounded-xl border border-[#D8E2EF] bg-white px-3 py-3 transition hover:border-[#1769E0]/35 hover:bg-[#1769E0]/[0.025] focus:outline-none focus:ring-2 focus:ring-[#1769E0]/25">
+      <span className="text-[9px] font-semibold tracking-[0.14em] text-[#1769E0]">{step.n}</span>
+      <strong className="mt-1 block text-xs text-[#102A5C]">{step.label}</strong>
+      <span className="mt-1 block text-[10px] leading-relaxed muted">{step.detail}</span>
+      <ArrowRight size={12} className="mt-2 text-[#56657D] transition group-hover:translate-x-0.5" aria-hidden="true"/>
+    </Link>)}
+   </div>
+  </section>}
   <section className="tremor-dashboard-top">
-   <div><div className="eyebrow">ENTANGLEX Q-HEALTH · RESEARCH CONTROL CENTER</div><h1 className="tremor-dashboard-title">Biomedical AI &amp; quantum research workspace</h1><p className="tremor-dashboard-subtitle">A production-style analytics surface for datasets, model runs, controlled comparisons, robustness evidence and explainability. Every metric below is sourced from the existing Q‑Health APIs.</p></div>
+   <div><div className="eyebrow">ENTANGLEX Q-HEALTH · FULL RESEARCH PLATFORM</div><h1 className="tremor-dashboard-title">Explore the broader research workspace</h1><p className="tremor-dashboard-subtitle">After the flagship path, continue into datasets, custom CSV upload, model runs, experiments, controlled comparisons, robustness and explainability. Existing research capabilities remain fully accessible.</p></div>
    <div className="tremor-dashboard-actions"><Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link><Link className="btn btn-outline" to="/experiments">Experiment registry</Link></div>
   </section>
 
@@ -81,7 +128,7 @@ export function Overview(){
 
   <div className="tremor-grid-main">
    <Card title="Current dataset class balance" description={focus?focus.name:'Select a dataset in Data Lab'}>
-    {focusClass.length?<div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]"><ValueBars items={focusClass}/><div className="space-y-3">{[['Samples',focus.provenance.row_count.toLocaleString()],['Features',String(focus.provenance.feature_count)],['Target',focus.provenance.target],['Positive',focus.provenance.positive_label]].map(([k,v])=><div className="tremor-list-row" key={k}><span className="tremor-metric-label">{k}</span><strong className="ml-auto text-xs break-all text-right">{v}</strong></div>)}</div></div>:<EmptyState title="No registered dataset">Use Data Lab to register the early-stage diabetes dataset or another biomedical benchmark.</EmptyState>}
+    {focusClass.length?<div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]"><ValueBars items={focusClass}/><div className="space-y-3">{[['Samples',focus.provenance.row_count.toLocaleString()],['Features',String(focus.provenance.feature_count)],['Target',focus.provenance.target],['Positive',focus.provenance.positive_label]].map(([k,v])=><div className="tremor-list-row" key={k}><span className="tremor-metric-label">{k}</span><strong className="ml-auto text-xs break-all text-right">{v}</strong></div>)}</div></div>:<EmptyState title="No active dataset">Open Data Lab to select the flagship dataset or continue with another biomedical benchmark.</EmptyState>}
    </Card>
    <Card title="Runtime monitor" description="Live backend state; no capability is inferred by the UI.">
     <div className="space-y-4"><div className="flex items-center justify-between"><span className="tremor-metric-label">BACKEND</span><Badge tone={health.isError?'red':'green'}>{health.isError?'Offline':health.data?'Connected':'Checking'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">QUANTUM</span><Badge tone={health.data?.quantum.available?'purple':'amber'}>{health.data?.quantum.available?'Available':'Not reported'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">RUNTIME VERIFIED</span><strong className="text-xs">{health.data?.quantum.runtime_verified?'Yes':'No'}</strong></div><div className="rounded-lg border p-3 text-[11px] muted">{health.data?.quantum.execution||'Quantum execution state will appear when reported by the backend.'}</div></div>
@@ -178,11 +225,11 @@ export function Datasets(){
    {label:'Validate',detail:'Quality gates and integrity',status:draft.dataset_id?'current':'waiting'}
   ]}/>
   <ErrorBanner error={error instanceof Error?error.message:undefined}/>
-  <Card className="mt-5 featured-dataset-card" title="Featured SIH Demo" description="The backend-designated instant demonstration. Metadata and readiness are loaded from the dataset library API.">
+  <Card className="mt-5 featured-dataset-card" title="SIH26139 Flagship Demo" description="The backend-designated Early Stage Diabetes demonstration is the primary judge-first path. Metadata and readiness are loaded from the existing dataset library API.">
    {library.isLoading?<Loading/>:library.data?.filter(item=>item.demo_readiness.status==='ready').map(item=><article className="rounded-xl border p-5" key={item.slug}>
     <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap gap-1"><Badge tone="purple">Featured SIH dataset</Badge><Badge tone="green">Verified instant demo</Badge><Badge tone="blue">Precomputed</Badge></div><h2 className="mt-3 text-xl font-semibold">{item.name}</h2><p className="mt-1 text-sm muted">{item.description}</p></div><ShieldCheck className="text-primary" size={28}/></div>
     <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">{[['Samples',item.row_count],['Features',item.feature_count],['Target',item.target],['Classes',item.class_labels.join(' / ')],['Models',item.demo_readiness.model_ids.length]].map(([k,v])=><div className="rounded-xl border p-3" key={String(k)}><span className="metric-label">{k}</span><strong className="block mt-1 break-all">{String(v)}</strong></div>)}</div>
-    <p className="mt-4 text-xs muted">{item.source} · {item.attribution} · {item.license}</p><div className="mt-4 flex flex-wrap gap-2"><Link className="btn btn-primary" to="/demo">Explore instant results <ArrowRight size={14}/></Link><Button variant="outline" disabled={builtIn.isPending} onClick={()=>builtIn.mutate(item.slug)}>Use Dataset</Button></div>
+    <p className="mt-4 text-xs muted">{item.source} · {item.attribution} · {item.license}</p><div className="mt-4 flex flex-wrap gap-2"><Link className="btn btn-primary" to="/demo">Launch Verified Demo <ArrowRight size={14}/></Link><Button variant="outline" disabled={builtIn.isPending} onClick={()=>builtIn.mutate(item.slug)}>Use Dataset</Button></div>
    </article>)}
   </Card>
   <Card className="mt-5" title="Biomedical Tabular Dataset Library" description="Other built-in tabular datasets remain available for the normal research workflow. Their readiness labels come directly from the backend.">
