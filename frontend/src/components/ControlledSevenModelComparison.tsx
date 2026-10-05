@@ -1,5 +1,6 @@
-import {Database,FlaskConical,ShieldCheck} from 'lucide-react';
+import {ArrowRight,Database,FlaskConical,ShieldCheck} from 'lucide-react';
 import {Badge,Card} from './ui';
+import {Link} from 'react-router-dom';
 import {JsonDisclosure,MetricCard,Notice} from './Shared';
 import {metric,modelLabels} from '../utils/format';
 import type {AlignmentContract,Dataset,Experiment,ModelKind,ModelRecord,VerifiedEvidencePackage} from '../types/qhealth';
@@ -196,7 +197,7 @@ export function ControlledSevenModelComparison({
               const execution=executionFor(model,alignment);
               return <tr key={model.id}>
                 <td><Badge tone={tone(fam)}>{fam}</Badge></td>
-                <td><strong>{modelLabels[model.model_type]}</strong><div className="text-[10px] muted">{execution}</div></td>
+                <td><strong>{modelLabels[model.model_type]}</strong><div className="text-[10px] muted">{execution}</div>{model.model_type==='hybrid_pennylane_torch'&&<Link className="mt-1 inline-flex items-center text-[10px] font-semibold text-primary hover:underline" to={`/experiments/${model.experiment_id}`}>View hybrid detail <ArrowRight size={11}/></Link>}</td>
                 <td className="text-xs">{framework}</td>
                 <td>{fam==='Classical'?'No':'Yes'}</td>
                 <td className="numeric">{metric(metrics?.accuracy)}</td>
