@@ -141,7 +141,7 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="field min-w-[190px]"><span>Model family</span><select className="select" value={analysisFamily} onChange={event=>setAnalysisFamily(event.target.value as Family|'All')}><option value="All">All families</option><option value="Classical">Classical</option><option value="Quantum">Quantum</option><option value="Hybrid">Hybrid</option></select></label>
-            <label className="field min-w-[190px]"><span>Metric</span><select className="select" value={analysisMetric} onChange={event=>setAnalysisMetric(event.target.value as MetricName)}>{comparisonMetrics.map(name=><option key={name} value={name}>{metricLabel(name)}</option>)}</select></label>
+            {analysisView!=='matrix'&&<label className="field min-w-[190px]"><span>Metric</span><select className="select" value={analysisMetric} onChange={event=>setAnalysisMetric(event.target.value as MetricName)}>{comparisonMetrics.map(name=><option key={name} value={name}>{metricLabel(name)}</option>)}</select></label>}
             {analysisView==='runtime'&&<label className="field min-w-[210px]"><span>Runtime measurement</span><select className="select" value={runtimeKind} onChange={event=>setRuntimeKind(event.target.value as RuntimeKind)}><option value="final_training_seconds">Final training</option><option value="cv_total_seconds">CV total</option><option value="test_inference_seconds">Held-out inference</option><option value="test_inference_seconds_per_sample">Inference / sample</option></select></label>}
           </div>
         </div>
