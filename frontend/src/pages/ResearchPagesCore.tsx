@@ -40,12 +40,14 @@ export function Overview(){
  const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.implementation_status==='AVAILABLE'?(m.executable?100:75):0}))??[];
  const focus=draft.dataset_id?registered.find(dataset=>dataset.id===draft.dataset_id):undefined;
  const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
+ const readinessLabel=flagship.library.isLoading?'CHECKING READINESS':flagship.available?'VERIFIED DEMO · READY':'VERIFIED DEMO UNAVAILABLE';
+ const readinessTone=flagship.library.isLoading?'blue':flagship.available?'green':'red';
  return <div className="tremor-dashboard">
   <section className="flagship-hero">
    <div className="flagship-hero-copy">
     <div className="flex flex-wrap gap-2">
      <Badge tone="purple">SIH26139 FLAGSHIP</Badge>
-     <Badge tone={flagship.available?'green':'red'}>{flagship.available?'VERIFIED DEMO · READY':'VERIFIED DEMO UNAVAILABLE'}</Badge>
+     <Badge tone={readinessTone}>{readinessLabel}</Badge>
     </div>
     <p className="eyebrow mt-5">SIH 2026 · JUDGE-FIRST DEMONSTRATION</p>
     <h1>{flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}</h1>
