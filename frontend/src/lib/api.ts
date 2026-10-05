@@ -1,4 +1,4 @@
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,HybridRuntimeVerification,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
@@ -113,6 +113,7 @@ export const qh={
 
   health:()=>api.get<Health>('/health'),
   alignment:()=>api.get<AlignmentContract>('/alignment'),
+  hybridRuntimeVerification:()=>api.get<HybridRuntimeVerification>('/hybrid/runtime-verification'),
   systemStatus:()=>api.get<SystemStatus>('/system/status'),
   summary:()=>api.get<{counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number};recent_experiments:Experiment[];disclaimer:string}>('/summary'),
   datasets:()=>api.get<Dataset[]>('/datasets'),
