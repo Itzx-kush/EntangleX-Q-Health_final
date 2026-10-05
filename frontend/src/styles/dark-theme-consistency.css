@@ -8,7 +8,7 @@
  * routing, API, experiment, model, or interaction behavior is changed.
  */
 
-@layer components {
+
   .dark [class*="bg-white"] {
     background-color: hsl(var(--card)) !important;
   }
@@ -98,4 +98,3 @@
    * Keep standard white foreground text on primary/colored controls intact.
    * The selectors above only remap white backgrounds, not text-white.
    */
-}
