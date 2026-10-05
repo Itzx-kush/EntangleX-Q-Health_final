@@ -328,6 +328,31 @@ export interface SystemStatus {status:string;version:string;mode:string;database
 export type ImplementationStatus='AVAILABLE'|'NOT_YET_IMPLEMENTED'|'UNAVAILABLE';
 export interface ModelCapability {model_id:ModelKind;display_name:string;category:'classical'|'quantum'|'hybrid quantum-classical';implementation_status:ImplementationStatus;executable:boolean;quantum_framework?:string|null;classical_framework?:string|null;execution?:string|null;hardware_execution?:string|null;probability_output?:string|null;explainability?:string|null;supported_prediction?:string|null;supported_comparison?:string|null;supported_thresholding?:string|null;supported_robustness?:string|null;training?:string|null}
 export interface FrameworkCapability {package_installed:boolean;package_importable:boolean;model_implemented:boolean;model_executable:boolean;simulator_available:boolean;real_hardware_available:boolean;runtime_verified:boolean}
+export interface HybridRuntimeCheck {status:'PASS'|'FAIL';detail:string}
+export interface HybridRuntimeVerification {
+  status:'VERIFIED'|'FAILED'|'NOT_RUN';
+  verified:boolean;
+  verification_kind:'live_runtime';
+  dataset:string;
+  model_type:'hybrid_pennylane_torch';
+  framework:string;
+  classical_framework:string;
+  execution:string;
+  backend:string;
+  real_hardware:boolean;
+  checks:Record<string,HybridRuntimeCheck>;
+  configuration?:Record<string,unknown>;
+  prediction?:{positive_class_probability:number;predicted_positive_class:number;operating_threshold:number;threshold_source:string;threshold_strategy:string;target_sensitivity:number};
+  quantum?:{expectation_value_dimension:number;quantum_parameters_changed:boolean;metadata?:Record<string,unknown>|null};
+  artifact?:{saved:boolean;reloaded:boolean};
+  shap?:{explained_case_count:number;background_count:number;output_semantics:string};
+  timing?:Record<string,number|number[]>;
+  phases?:string[];
+  verified_at?:string;
+  scientific_status:string;
+  error?:string;
+}
+
 export interface AlignmentContract {contract_version:string;models:ModelCapability[];frameworks:Record<'qiskit'|'qiskit_aer'|'pennylane'|'torch',FrameworkCapability>;showcase:{id:string;display_name:string;label:string;featured_dataset_slug:string;disease_domain:string;target:string;positive_class:string;dataset_hash:string;research_only_disclaimer:string;recommended_models:ModelKind[]};flagship_experiment_preset:{id:string;display_name:string;dataset_slug:string;models:ModelKind[];auto_start_training:false;threshold_strategy:'target_sensitivity';configuration?:Record<string,unknown>;scientific_status?:string;evidence_requirements:string[]};flagship_architecture:{model_id:'hybrid_pennylane_torch';status:'IMPLEMENTED'|'UNAVAILABLE';stages:string[]}}
 
 export interface VerifiedRobustnessResult {model_id:string;model_type:ModelKind;condition:string;configuration:Record<string,unknown>;perturbation:Record<string,unknown>;baseline:Metrics;degraded:Metrics;delta:Record<string,number|null>;relative_delta:Record<string,number|null>;evaluation_indices:number[]}
