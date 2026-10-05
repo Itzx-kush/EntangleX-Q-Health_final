@@ -17,6 +17,7 @@ import {RobustnessEvidenceLab} from './RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from './QuantumEvidenceLab';
 import {HybridArchitectureVisualization} from './HybridArchitectureVisualization';
 import {WhyHybridExperience} from './WhyHybridExperience';
+import {ResearchGapSolutionExperience} from './ResearchGapSolutionExperience';
 import type {AlignmentContract,MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
 const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
@@ -68,10 +69,13 @@ export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
       {label:'Models',value:models.length,detail:'3 classical · 3 quantum · 1 hybrid',tone:'green'},
       {label:'Evidence',value:Object.keys(evidence).length,detail:'Validated evidence artifacts',tone:'amber'},
     ]}/>
+    <ResearchGapSolutionExperience datasetName={dataset.name} hybridDetailPath={`/experiments/${data.experimentId}`}/>
     <div id="hybrid-architecture" className="scroll-mt-24">
       <HybridArchitectureVisualization alignment={data.alignment.data} dataset={dataset} experiment={data.payload.experiment} models={models} evidence={evidence}/>
     </div>
-    <WhyHybridExperience datasetName={dataset.name} hybridDetailPath={`/experiments/${data.experimentId}`}/>
+    <div id="why-hybrid" className="scroll-mt-24">
+      <WhyHybridExperience datasetName={dataset.name} hybridDetailPath={`/experiments/${data.experimentId}`}/>
+    </div>
     <Card className="mt-5" title="Instant research pathway" description="Every destination below reads the same validated dataset, experiment, model, and evidence identities.">
       <div className="demo-path-grid">{[
         ['Dataset','/datasets'],['Quality','/quality'],['Preprocessing','/preprocessing'],['Features / PCA','/features'],
