@@ -88,10 +88,10 @@ export function ControlledSevenModelComparison({
   const benchmarkIds=new Set(evidence.benchmark.model_ids||[]);
   const explainabilityIds=new Set(evidence.explainability.model_ids||[]);
   const robustnessIds=new Set((evidence.robustness.results||[]).map(item=>item.model_id));
-  const completeSevenModelCoverage=orderedKinds.length===7&&orderedModels.length===7&&orderedModels.every(model=>benchmarkIds.has(model.id));
   const orderedModels=orderedKinds
     .map(kind=>models.find(model=>model.model_type===kind))
     .filter((model):model is ModelRecord=>Boolean(model));
+  const completeSevenModelCoverage=orderedKinds.length===7&&orderedModels.length===7&&orderedModels.every(model=>benchmarkIds.has(model.id));
 
   const representation=(comparisonContract.representation||{}) as Record<string,unknown>;
   const selection=(readRecord(representation,'feature_selection')||{}) as Record<string,unknown>;
