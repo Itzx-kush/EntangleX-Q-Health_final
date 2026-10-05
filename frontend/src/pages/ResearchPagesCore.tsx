@@ -23,6 +23,7 @@ export function StageNav({current}:{current:string}){return <AnimatedSection cla
 
 export function Overview(){
  const flagship=useFlagshipData();
+ const {draft}=useDraft();
  const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:7000});
  const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
  const datasets=useQuery({queryKey:['datasets'],queryFn:qh.datasets,refetchInterval:15000});
@@ -37,7 +38,7 @@ export function Overview(){
  const implementedCount=system.data?.model_capabilities?.filter(m=>m.implementation_status==='AVAILABLE').length??0;
  const executableCount=system.data?.model_capabilities?.filter(m=>m.executable).length??0;
  const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.implementation_status==='AVAILABLE'?(m.executable?100:75):0}))??[];
- const focus=registered[0];
+ const focus=draft.dataset_id?registered.find(dataset=>dataset.id===draft.dataset_id):undefined;
  const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
  return <div className="tremor-dashboard">
   <section className="flagship-hero">
@@ -124,7 +125,7 @@ export function Overview(){
 
   <div className="tremor-grid-main">
    <Card title="Current dataset class balance" description={focus?focus.name:'Select a dataset in Data Lab'}>
-    {focusClass.length?<div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]"><ValueBars items={focusClass}/><div className="space-y-3">{[['Samples',focus.provenance.row_count.toLocaleString()],['Features',String(focus.provenance.feature_count)],['Target',focus.provenance.target],['Positive',focus.provenance.positive_label]].map(([k,v])=><div className="tremor-list-row" key={k}><span className="tremor-metric-label">{k}</span><strong className="ml-auto text-xs break-all text-right">{v}</strong></div>)}</div></div>:<EmptyState title="No registered dataset">Use Data Lab to register the early-stage diabetes dataset or another biomedical benchmark.</EmptyState>}
+    {focusClass.length?<div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]"><ValueBars items={focusClass}/><div className="space-y-3">{[['Samples',focus.provenance.row_count.toLocaleString()],['Features',String(focus.provenance.feature_count)],['Target',focus.provenance.target],['Positive',focus.provenance.positive_label]].map(([k,v])=><div className="tremor-list-row" key={k}><span className="tremor-metric-label">{k}</span><strong className="ml-auto text-xs break-all text-right">{v}</strong></div>)}</div></div>:<EmptyState title="No active dataset">Open Data Lab to select the flagship dataset or continue with another biomedical benchmark.</EmptyState>}
    </Card>
    <Card title="Runtime monitor" description="Live backend state; no capability is inferred by the UI.">
     <div className="space-y-4"><div className="flex items-center justify-between"><span className="tremor-metric-label">BACKEND</span><Badge tone={health.isError?'red':'green'}>{health.isError?'Offline':health.data?'Connected':'Checking'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">QUANTUM</span><Badge tone={health.data?.quantum.available?'purple':'amber'}>{health.data?.quantum.available?'Available':'Not reported'}</Badge></div><div className="flex items-center justify-between"><span className="tremor-metric-label">RUNTIME VERIFIED</span><strong className="text-xs">{health.data?.quantum.runtime_verified?'Yes':'No'}</strong></div><div className="rounded-lg border p-3 text-[11px] muted">{health.data?.quantum.execution||'Quantum execution state will appear when reported by the backend.'}</div></div>
