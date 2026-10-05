@@ -506,3 +506,72 @@ export interface SavedResearchReport {
   primary_result:{model:string;metric:string;value:number}|null;
   already_saved?:boolean;
 }
+
+export type HybridRuntimeCheckStatus = 'PASS' | 'FAIL';
+export interface HybridRuntimeCheck {
+  status: HybridRuntimeCheckStatus;
+  detail: string;
+}
+
+export interface HybridRuntimeConfiguration {
+  qubits?: number | null;
+  quantum_layers?: number | null;
+  hidden_dimensions?: number[] | null;
+  epochs?: number | null;
+  batch_size?: number | null;
+  sample_cap?: number | null;
+  cv_folds?: number | null;
+  seed?: number | null;
+}
+
+export interface HybridRuntimePrediction {
+  positive_class_probability?: number | null;
+  predicted_positive_class?: number | null;
+  operating_threshold?: number | null;
+  threshold_source?: string | null;
+  threshold_strategy?: string | null;
+  target_sensitivity?: number | null;
+}
+
+export interface HybridRuntimeQuantum {
+  expectation_value_dimension?: number | null;
+  quantum_parameters_changed?: boolean | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface HybridRuntimeArtifact {
+  saved?: boolean;
+  reloaded?: boolean;
+}
+
+export interface HybridRuntimeShap {
+  explained_case_count?: number | null;
+  background_count?: number | null;
+  output_semantics?: string | null;
+}
+
+export type HybridRuntimeVerificationStatus = 'NOT_RUN' | 'RUNNING' | 'VERIFIED' | 'FAILED';
+
+export interface HybridRuntimeVerification {
+  status: HybridRuntimeVerificationStatus;
+  verified: boolean;
+  verification_kind?: string | null;
+  dataset?: string | null;
+  model_type?: string | null;
+  framework?: string | null;
+  classical_framework?: string | null;
+  execution?: string | null;
+  backend?: string | null;
+  real_hardware?: boolean | null;
+  verified_at?: string | null;
+  scientific_status?: string | null;
+  checks?: Record<string, HybridRuntimeCheck> | null;
+  configuration?: HybridRuntimeConfiguration | null;
+  prediction?: HybridRuntimePrediction | null;
+  quantum?: HybridRuntimeQuantum | null;
+  artifact?: HybridRuntimeArtifact | null;
+  shap?: HybridRuntimeShap | null;
+  timing?: Record<string, unknown> | null;
+  phases?: string[] | null;
+  error?: string | null;
+}
