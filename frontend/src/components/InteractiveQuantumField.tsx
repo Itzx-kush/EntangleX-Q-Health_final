@@ -82,7 +82,7 @@ export function InteractiveQuantumField(){
       y:-1000,
       active:false,
       energy:0,
-      releaseTimer:0 as ReturnType<typeof window.setTimeout>|0
+      releaseTimer:0 as number
     };
 
     const buildField=()=>{

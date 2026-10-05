@@ -413,7 +413,7 @@ def _reconcile_verified_demo_registry(session, checked: dict) -> None:
         model.run_id = None
         model.model_type = stored["model_type"]
         model.status = stored["status"]
-        model.progress = stored["progress"]
+        model.progress = stored.get("progress")
         model.artifact_sha256 = stored["artifact_sha256"]
         model.details = stored["details"]
         model.metrics = stored["metrics"]
