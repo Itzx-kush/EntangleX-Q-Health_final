@@ -1,0 +1,101 @@
+/*
+ * Dark-mode consistency layer
+ *
+ * The application already exposes semantic theme tokens through :root/.dark.
+ * This layer bridges legacy/hard-coded light palette utility classes used by
+ * older and newer research surfaces back onto those semantic tokens whenever
+ * dark mode is active. It is intentionally presentation-only: no data,
+ * routing, API, experiment, model, or interaction behavior is changed.
+ */
+
+@layer components {
+  .dark [class*="bg-white"] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark [class*="bg-[#F7FAFD]"] {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  .dark [class*="bg-[#D8E2EF]"] {
+    background-color: hsl(var(--border)) !important;
+  }
+
+  .dark [class*="border-[#D8E2EF]"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark [class*="border-[#102A5C]"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark [class*="text-[#102A5C]"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark [class*="text-[#17233C]"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark [class*="text-[#56657D]"] {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  /*
+   * Common neutral utility variants used by legacy research screens.
+   * Accent/quantum colors such as blue, cyan, violet and green intentionally
+   * remain unchanged so the existing visual language is preserved.
+   */
+  .dark .bg-slate-50,
+  .dark .bg-slate-100,
+  .dark .bg-gray-50,
+  .dark .bg-gray-100,
+  .dark .bg-zinc-50,
+  .dark .bg-zinc-100,
+  .dark .bg-neutral-50,
+  .dark .bg-neutral-100 {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  .dark .border-slate-200,
+  .dark .border-slate-300,
+  .dark .border-gray-200,
+  .dark .border-gray-300,
+  .dark .border-zinc-200,
+  .dark .border-zinc-300,
+  .dark .border-neutral-200,
+  .dark .border-neutral-300 {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .text-slate-500,
+  .dark .text-slate-600,
+  .dark .text-slate-700,
+  .dark .text-gray-500,
+  .dark .text-gray-600,
+  .dark .text-gray-700,
+  .dark .text-zinc-500,
+  .dark .text-zinc-600,
+  .dark .text-zinc-700,
+  .dark .text-neutral-500,
+  .dark .text-neutral-600,
+  .dark .text-neutral-700 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .text-slate-800,
+  .dark .text-slate-900,
+  .dark .text-gray-800,
+  .dark .text-gray-900,
+  .dark .text-zinc-800,
+  .dark .text-zinc-900,
+  .dark .text-neutral-800,
+  .dark .text-neutral-900 {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /*
+   * Keep standard white foreground text on primary/colored controls intact.
+   * The selectors above only remap white backgrounds, not text-white.
+   */
+}
