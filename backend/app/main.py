@@ -112,8 +112,8 @@ def health():
     return {"status": "ok", "version": "0.1.0", "mode": "single-workstation research prototype", "authentication_required": bool(settings.api_token), "quantum": availability(), "disclaimer": DISCLAIMER}
 
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
-from .api import calibration, threshold
-for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, audit.router, data_quality.router, subgroups.router, saved_reports.router]:
+from .api import calibration, threshold, hybrid
+for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, hybrid.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, audit.router, data_quality.router, subgroups.router, saved_reports.router]:
     api.include_router(router)
 
 
