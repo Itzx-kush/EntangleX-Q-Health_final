@@ -1,0 +1,25 @@
+# Optional overlay: adds the custom Java Redis server without altering the
+# default docker-compose.yml. Q-Health keeps SQLite as its source of truth.
+services:
+  backend:
+    environment:
+      QHEALTH_REDIS_ENABLED: "true"
+      QHEALTH_REDIS_HOST: redis-server
+      QHEALTH_REDIS_PORT: "6380"
+      QHEALTH_REDIS_TIMEOUT_SECONDS: "1.0"
+    depends_on:
+      redis-server:
+        condition: service_started
+
+  redis-server:
+    build:
+      context: .
+      dockerfile: backend/redis-server-java/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - qhealth_redis_data:/data
+    # Deliberately no host-published port: Redis is reachable only on the
+    # internal Compose network through the FastAPI bridge.
+
+volumes:
+  qhealth_redis_data:
