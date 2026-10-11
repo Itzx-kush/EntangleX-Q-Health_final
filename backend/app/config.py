@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     job_max_resume_attempts: int = Field(default=5, ge=1, le=50)
     log_level: str = "INFO"
 
+    # Optional custom Java Redis sidecar; disabled unless explicitly enabled.
+    redis_enabled: bool = False
+    redis_host: str = "127.0.0.1"
+    redis_port: int = Field(default=6380, ge=1, le=65535)
+    redis_timeout_seconds: float = Field(default=0.8, ge=0.1, le=5.0)
+
     # Backend-only Supabase bridge for authenticated saved research reports.
     supabase_url: str = ""
     supabase_service_role_key: str = ""

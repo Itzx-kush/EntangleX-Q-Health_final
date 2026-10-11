@@ -60,6 +60,9 @@ const navGroups:NavGroup[]=[
     {label:'Experiment registry',path:'/experiments',icon:FlaskConical},
     {label:'SIH Demo Center',path:'/demo',icon:PlayCircle},
   ]},
+  {label:'Systems',items:[
+    {label:'Redis Lab',path:'/redis',icon:Database},
+  ]},
 ];
 
 const pageNames:Record<string,string>=Object.fromEntries(
@@ -109,6 +112,7 @@ function CommandPalette({onClose}:{onClose:()=>void}){
     {label:'Open Research Prediction',hint:'Navigation',run:()=>navigate('/prediction')},
     {label:'Open Experiments',hint:'Navigation',run:()=>navigate('/experiments')},
     {label:'Open AI Assistant',hint:'Navigation',run:()=>navigate('/ai')},
+    {label:'Open Redis Lab',hint:'Systems',run:()=>navigate('/redis')},
     {label:'Launch SIH Demo',hint:'Navigation',run:()=>navigate('/demo')},
     ...(isAuthenticated?[{label:'Open My Account',hint:'Account',run:()=>navigate('/account')}]:[]),
     ...(isAuthenticated?[{label:'Open My Research',hint:'Account',run:()=>navigate('/my-research')}]:[]),

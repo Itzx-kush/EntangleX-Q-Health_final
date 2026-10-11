@@ -30,6 +30,7 @@ const ResearchHistoryPage=lazy(()=>import('./research/ResearchHistoryPage').then
 const ResearchReportsPage=lazy(()=>import('./research/ResearchReportsPage').then(m=>({default:m.ResearchReportsPage})));
 const ResearchReportDetailPage=lazy(()=>import('./research/ResearchReportsPage').then(m=>({default:m.ResearchReportDetailPage})));
 const AiAssistantPage=lazy(()=>import('./pages/AiAssistantPage').then(m=>({default:m.AiAssistantPage})));
+const RedisLab=lazy(()=>import('./pages/RedisLab').then(m=>({default:m.RedisLab})));
 
 export default function App(){
   return <AiProvider>
@@ -67,6 +68,7 @@ function WorkspaceRoutes(){
       <Route path="/my-research/reports/:savedReportId" element={<ResearchReportDetailPage/>}/>
       <Route path="/ai" element={<AiAssistantPage/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
+      <Route path="/redis" element={<RedisLab/>}/>
       <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></Suspense>
   </div>;
