@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, File, Form, Query, UploadFile, Response
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, Response
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 from ..config import get_settings
@@ -7,6 +7,7 @@ from ..database import session_scope
 from ..data import service
 from ..dataset_versions import service as version_service
 from ..data.quality import quality_report
+from ..ratelimit.limiter import rate_limit_expensive
 from ..storage.entities import Dataset
 from ..storage.repository import recent, require
 from ..utils.errors import AppError
@@ -52,7 +53,7 @@ def register_library_dataset(slug: str, request: BuiltInRegistrationRequest | No
     request = request or BuiltInRegistrationRequest()
     return service.register_builtin(slug, request.target, request.positive_label)
 
-@router.post("/inspect", response_model=DatasetInspectionOut)
+@router.post("/inspect", response_model=DatasetInspectionOut, dependencies=[Depends(rate_limit_expensive)])
 async def inspect_dataset(
     file: UploadFile = File(...),
     target: str | None = Form(default=None),
@@ -66,7 +67,7 @@ async def inspect_dataset(
     finally:
         await file.close()
 
-@router.post("/upload", response_model=DatasetOut, status_code=201)
+@router.post("/upload", response_model=DatasetOut, status_code=201, dependencies=[Depends(rate_limit_expensive)])
 async def upload_dataset(metadata_json: str = Form(...), file: UploadFile = File(...)):
     try:
         try:

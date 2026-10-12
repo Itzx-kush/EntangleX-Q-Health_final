@@ -58,10 +58,10 @@ class Experiment(Base):
     pipeline_version_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_versions.id"), nullable=True, index=True)
     protocol_version_id: Mapped[str | None] = mapped_column(ForeignKey("experiment_protocol_versions.id"), nullable=True, index=True)
     protocol_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String(24), default="queued")
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
     config: Mapped[dict] = mapped_column(JSON)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
 class ModelRecord(Base):
@@ -69,14 +69,14 @@ class ModelRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
     run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, index=True)
-    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"))
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
     model_type: Mapped[str] = mapped_column(String(32))
-    status: Mapped[str] = mapped_column(String(24))
+    status: Mapped[str] = mapped_column(String(24), index=True)
     progress: Mapped[int | None] = mapped_column(Integer, nullable=True)
     artifact_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -84,7 +84,7 @@ class Job(Base):
     experiment_id: Mapped[str] = mapped_column(ForeignKey("experiments.id"), index=True)
     run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, unique=True)
     job_type: Mapped[str] = mapped_column(String(48), default="training", index=True)
-    status: Mapped[str] = mapped_column(String(24), default="queued")
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
     priority: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[int] = mapped_column(Integer, default=0)
     total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -113,7 +113,7 @@ class Job(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 class JobCheckpoint(Base):

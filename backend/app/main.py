@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from threading import Thread
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -24,6 +25,10 @@ from .dataset_versions.service import ensure_legacy_versions
 from .jobs.manager import manager
 from .quantum.backends import availability
 from .storage.entities import Dataset, Experiment, Job, ModelRecord
+from .telemetry.db_probe import probe_database, probe_storage
+from .telemetry.registry import telemetry_registry
+from .telemetry.schemas import DiagnosticsResponse, TelemetryResponse
+from .telemetry.service import get_system_diagnostics, get_system_telemetry
 from .utils.errors import AppError
 
 settings = get_settings()
@@ -76,6 +81,7 @@ app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     request.state.request_id = str(uuid4())
+    start_time = time.perf_counter()
     try:
         response = await call_next(request)
     except Exception as exc:
@@ -83,6 +89,19 @@ async def request_context(request: Request, call_next):
         # could otherwise cause the ASGI server to log raw exception text.
         logger.error("request_failure request_id=%s exception_type=%s", request.state.request_id, type(exc).__name__)
         response = JSONResponse({"error": {"code": "internal_error", "message": "The operation failed. Raw biomedical inputs are not logged.", "request_id": request.state.request_id}}, status_code=500)
+
+    duration_ms = (time.perf_counter() - start_time) * 1000.0
+    if settings.telemetry_enabled:
+        try:
+            telemetry_registry.record_request(
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
+        except Exception:
+            pass
+
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -112,6 +131,21 @@ async def unexpected_error(request: Request, exc: Exception):
 def health():
     return {"status": "ok", "version": "0.1.0", "mode": "single-workstation research prototype", "authentication_required": bool(settings.api_token), "quantum": availability(), "disclaimer": DISCLAIMER}
 
+@app.get("/api/health/ready", tags=["health"])
+def health_ready():
+    """Readiness probe for orchestrators and workstation health checkers."""
+    db_probe = probe_database()
+    storage_probe = probe_storage(settings)
+    is_ready = db_probe["available"] and storage_probe["available"]
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "database": db_probe["available"],
+        "storage": storage_probe["available"],
+        "version": "0.1.0",
+        "disclaimer": DISCLAIMER,
+    }
+    return JSONResponse(payload, status_code=200 if is_ready else 503)
+
 api = APIRouter(prefix="/api", dependencies=[Depends(authorize)])
 from .api import calibration, threshold, hybrid
 for router in [ai.router, datasets.router, pipeline.router, pipelines.router, protocols.router, training.router, jobs.router, models.router, model_cards.router, experiments.router, controlled_comparison.router, runs.router, quantum.router, alignment.router, hybrid.router, studies.router, validation.router, shift.router, shift.dataset_shift_router, calibration.router, threshold.router, condition_tasks.router, ablation.router, quantum_diagnostics.router, redis_lab.router, audit.router, data_quality.router, subgroups.router, saved_reports.router]:
@@ -139,12 +173,16 @@ def summary():
 @api.get("/system/status", tags=["dashboard"])
 def system_status():
     """Expose safe, read-only runtime facts for the research workspace shell."""
-    jobs = []
+    job_counts: dict[str, int] = {}
     database_available = True
     database_error = None
     try:
         with session_scope() as session:
-            jobs = list(session.scalars(select(Job)))
+            job_counts = dict(
+                session.execute(
+                    select(Job.status, func.count()).group_by(Job.status)
+                ).all()
+            )
     except Exception as exc:
         database_available = False
         database_error = type(exc).__name__
@@ -171,10 +209,24 @@ def system_status():
             "pennylane_hybrid": ["hybrid_pennylane_torch"],
         },
         "jobs": {
-            "queued": sum(job.status == "queued" for job in jobs),
-            "running": sum(job.status == "running" for job in jobs),
-            "active": sum(job.status in {"queued", "running", "cancel_requested"} for job in jobs),
+            "queued": job_counts.get("queued", 0),
+            "running": job_counts.get("running", 0),
+            "active": (
+                job_counts.get("queued", 0)
+                + job_counts.get("running", 0)
+                + job_counts.get("cancel_requested", 0)
+            ),
         },
     }
+
+@api.get("/system/telemetry", tags=["dashboard"], response_model=TelemetryResponse)
+def system_telemetry():
+    """Aggregate operational telemetry for research dashboards."""
+    return get_system_telemetry()
+
+@api.get("/system/diagnostics", tags=["dashboard"], response_model=DiagnosticsResponse)
+def system_diagnostics():
+    """Safe, read-only system diagnostics for operators and researchers."""
+    return get_system_diagnostics()
 
 app.include_router(api)

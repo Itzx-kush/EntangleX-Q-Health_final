@@ -12,7 +12,7 @@ from ..storage.entities import Artifact, Experiment, ModelRecord, ExplanationRec
 from ..pipelines.service import pipeline_payload
 from ..storage.repository import require
 from ..storage.files import atomic_bytes, safe_path
-from ..utils.serialization import utcnow
+from ..utils.serialization import clean_json, utcnow
 from .comparison import comparison
 
 
@@ -246,7 +246,7 @@ def html_report(identity: str) -> str:
     def escaped(value):
         return html.escape(str(value), quote=True)
     def pre(value):
-        return "<pre>" + escaped(json.dumps(value, indent=2, ensure_ascii=False)) + "</pre>"
+        return "<pre>" + escaped(json.dumps(clean_json(value), indent=2, ensure_ascii=False)) + "</pre>"
     sections = ["<h1>EntangleX Q-Health</h1><p>" + escaped(data["experiment_label"]) + "</p>", "<aside>" + escaped(DISCLAIMER) + "</aside>",
         "<h2>Dataset and provenance</h2>" + pre(data["dataset"]),
         "<h2>Preprocessing and feature engineering</h2>" + pre(data["preprocessing"]),

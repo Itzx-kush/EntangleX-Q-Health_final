@@ -6,6 +6,7 @@ import json
 from importlib.resources import files
 from threading import Lock
 
+from ..cache.service import cache
 from ..utils.errors import AppError
 
 _lock = Lock()
@@ -41,6 +42,11 @@ def _load_manifest() -> tuple[dict, ...]:
 
 
 def list_builtin_datasets(*, include_readiness: bool = True) -> list[dict]:
+    cache_key = f"catalog:builtin:{include_readiness}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return [dict(item) for item in cached]
+
     items = [
         {
             **{key: value for key, value in entry.items() if key != "filename"},
@@ -53,6 +59,8 @@ def list_builtin_datasets(*, include_readiness: bool = True) -> list[dict]:
         from ..demo_readiness import readiness_for
         for item in items:
             item["demo_readiness"] = readiness_for(item["slug"])
+
+    cache.set(cache_key, items, ttl_seconds=60.0)
     return items
 
 

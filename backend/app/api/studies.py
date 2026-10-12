@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from uuid import UUID
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, Depends, Header, Query
 
 from ..database import session_scope
 from ..jobs.manager import manager
+from ..ratelimit.limiter import rate_limit_expensive
 from ..storage.repository import require
 from ..storage.entities import MultiSeedStudy
 from ..studies.schemas import (
@@ -22,7 +23,7 @@ from ..utils.errors import AppError
 router = APIRouter(prefix="/studies/multi-seed", tags=["multi-seed evaluation"])
 
 
-@router.post("", response_model=MultiSeedStudyResponse, status_code=202)
+@router.post("", response_model=MultiSeedStudyResponse, status_code=202, dependencies=[Depends(rate_limit_expensive)])
 def create_multi_seed_study(
     request: MultiSeedStudyRequest,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),

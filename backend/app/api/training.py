@@ -1,8 +1,9 @@
 from uuid import UUID
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy import select
 from ..database import session_scope
 from ..jobs.manager import manager
+from ..ratelimit.limiter import rate_limit_expensive
 from ..storage.entities import Experiment, Job, ModelRecord
 from ..storage.repository import recent, require
 from .schemas import JobOut, TrainingConfig, TrainingResponse
@@ -20,7 +21,7 @@ def _job_payload(session, job: Job) -> dict:
     ))
     return payload
 
-@router.post("", response_model=TrainingResponse, status_code=202)
+@router.post("", response_model=TrainingResponse, status_code=202, dependencies=[Depends(rate_limit_expensive)])
 def create_job(config: TrainingConfig, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key")):
     # Preserve the historical manager call shape when no optional idempotency
     # header is supplied; several integrations replace this boundary in tests.
