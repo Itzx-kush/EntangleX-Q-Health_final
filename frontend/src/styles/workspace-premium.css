@@ -31,7 +31,7 @@
   mask-image:linear-gradient(120deg,#000,transparent 72%);
 }
 .research-shell>.rb-ambient{opacity:.34}
-.research-sidebar,.research-workspace,.mobile-bottom-nav{position:relative;z-index:2}
+.research-sidebar,.research-workspace{position:relative;z-index:2}
 
 /* Sidebar */
 .research-sidebar{

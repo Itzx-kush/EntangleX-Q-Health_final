@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState,type ReactNode} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {NavLink,useLocation,useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {
@@ -79,12 +79,14 @@ function readSettings():UiSettings{
   const storedTheme=localStorage.getItem('qhealth-theme')||localStorage.getItem('qhealth-tictac-theme')||'research';
   const storedSidebar=localStorage.getItem('qhealth-sidebar-variant')||'inset';
   const storedLayout=localStorage.getItem('qhealth-layout')||'default';
+  const storedDensity=localStorage.getItem('qhealth-density')||'comfortable';
+  const storedMotion=localStorage.getItem('qhealth-motion')||'full';
   return {
     theme:(['research','dark','system'].includes(storedTheme)?storedTheme:'research') as ThemeMode,
     sidebar:(['sidebar','floating','inset'].includes(storedSidebar)?storedSidebar:'inset') as SidebarVariant,
     layout:(['default','icon','offcanvas'].includes(storedLayout)?storedLayout:'default') as LayoutMode,
-    density:(localStorage.getItem('qhealth-density')||'comfortable') as 'comfortable'|'compact',
-    motion:(localStorage.getItem('qhealth-motion')||'full') as 'full'|'reduced',
+    density:(['comfortable','compact'].includes(storedDensity)?storedDensity:'comfortable') as 'comfortable'|'compact',
+    motion:(['full','reduced'].includes(storedMotion)?storedMotion:'full') as 'full'|'reduced',
   };
 }
 
@@ -97,40 +99,66 @@ function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken
   </div>;
 }
 
+function fuzzyMatch(query:string,value:string){
+  if(!query)return true;
+  let cursor=0;
+  for(const character of query.toLowerCase()){
+    cursor=value.toLowerCase().indexOf(character,cursor);
+    if(cursor===-1)return false;
+    cursor+=1;
+  }
+  return true;
+}
+
 function CommandPalette({onClose}:{onClose:()=>void}){
   const navigate=useNavigate(); const [query,setQuery]=useState(''); const [activeIndex,setActiveIndex]=useState(0);
   const {isAuthenticated}=useAuth();
+  const inputRef=useRef<HTMLInputElement|null>(null);
+  const dialogRef=useRef<HTMLDivElement|null>(null);
+  const previousFocusRef=useRef<HTMLElement|null>(null);
   const applyLocal=(key:string,value:string)=>{localStorage.setItem(key,value);window.dispatchEvent(new Event('qhealth-settings-changed'));onClose()};
   const toggleLocal=(key:string,on:string,off:string)=>applyLocal(key,localStorage.getItem(key)===on?off:on);
-  const commands=[
-    {label:'Open Overview',hint:'Navigation',run:()=>navigate('/')},
-    {label:'Open Datasets',hint:'Navigation',run:()=>navigate('/datasets')},
-    {label:'Open Training',hint:'Navigation',run:()=>navigate('/training')},
-    {label:'Open Comparison',hint:'Navigation',run:()=>navigate('/comparison')},
-    {label:'Open Quantum Lab',hint:'Navigation',run:()=>navigate('/quantum')},
-    {label:'Open Explainability',hint:'Navigation',run:()=>navigate('/explainability')},
-    {label:'Open Research Prediction',hint:'Navigation',run:()=>navigate('/prediction')},
-    {label:'Open Experiments',hint:'Navigation',run:()=>navigate('/experiments')},
-    {label:'Open AI Assistant',hint:'Navigation',run:()=>navigate('/ai')},
-    {label:'Open Redis Lab',hint:'Systems',run:()=>navigate('/redis')},
-    {label:'Launch SIH Demo',hint:'Navigation',run:()=>navigate('/demo')},
-    ...(isAuthenticated?[{label:'Open My Account',hint:'Account',run:()=>navigate('/account')}]:[]),
-    ...(isAuthenticated?[{label:'Open My Research',hint:'Account',run:()=>navigate('/my-research')}]:[]),
-    {label:'Open Settings',hint:'Workspace',run:()=>navigate('/settings')},
-    {label:'Toggle sidebar',hint:'Workspace',run:()=>toggleLocal('qhealth-layout','icon','default')},
-    {label:'Toggle compact density',hint:'Workspace',run:()=>toggleLocal('qhealth-density','compact','comfortable')},
-    {label:'Toggle reduced motion',hint:'Workspace',run:()=>toggleLocal('qhealth-motion','reduced','full')},
-    {label:'Toggle light / dark theme',hint:'Workspace',run:()=>toggleLocal('qhealth-theme','dark','research')},
-    {label:'Show context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','visible')},
-    {label:'Hide context inspector',hint:'Workspace',run:()=>applyLocal('qhealth-inspector','hidden')},
-  ];
-  const filtered=commands.filter(command=>command.label.toLowerCase().includes(query.toLowerCase())||command.hint.toLowerCase().includes(query.toLowerCase()));
+  const commands=useMemo(()=>[
+    ...navGroups.flatMap(group=>group.items.map(item=>({label:`Open ${item.label}`,hint:'Navigation',keywords:[group.label,item.label],run:()=>navigate(item.path)}))),
+    {label:'Launch SIH Demo',hint:'Navigation',keywords:['presentation','demo'],run:()=>navigate('/demo')},
+    ...(isAuthenticated?[{label:'Open My Account',hint:'Account',keywords:['profile'],run:()=>navigate('/account')}]:[]),
+    ...(isAuthenticated?[{label:'Open My Research',hint:'Account',keywords:['history','reports'],run:()=>navigate('/my-research')}]:[]),
+    {label:'Open Settings',hint:'Workspace',keywords:['preferences','appearance'],run:()=>navigate('/settings')},
+    {label:'Toggle sidebar',hint:'Workspace',keywords:['navigation','collapse'],run:()=>toggleLocal('qhealth-layout','icon','default')},
+    {label:'Toggle compact density',hint:'Workspace',keywords:['spacing'],run:()=>toggleLocal('qhealth-density','compact','comfortable')},
+    {label:'Toggle reduced motion',hint:'Workspace',keywords:['accessibility','motion'],run:()=>toggleLocal('qhealth-motion','reduced','full')},
+    {label:'Toggle light / dark theme',hint:'Workspace',keywords:['appearance','theme'],run:()=>toggleLocal('qhealth-theme','dark','research')},
+    {label:'Show context inspector',hint:'Workspace',keywords:['live status','jobs'],run:()=>applyLocal('qhealth-inspector','visible')},
+    {label:'Hide context inspector',hint:'Workspace',keywords:['live status','jobs'],run:()=>applyLocal('qhealth-inspector','hidden')},
+  ],[isAuthenticated,navigate]);
+  const filtered=useMemo(()=>commands.filter(command=>fuzzyMatch(query,`${command.label} ${command.hint} ${(command.keywords||[]).join(' ')}`)),[commands,query]);
   useEffect(()=>setActiveIndex(0),[query]);
-  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if(e.key==='ArrowDown'){e.preventDefault();setActiveIndex(i=>Math.min(i+1,Math.max(filtered.length-1,0)))}else if(e.key==='ArrowUp'){e.preventDefault();setActiveIndex(i=>Math.max(i-1,0))}else if(e.key==='Enter'&&filtered[activeIndex]){e.preventDefault();filtered[activeIndex].run();onClose()} };window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[activeIndex,filtered,onClose]);
+  useEffect(()=>{
+    previousFocusRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    inputRef.current?.focus();
+    return()=>previousFocusRef.current?.focus({preventScroll:true});
+  },[]);
+  useEffect(()=>{
+    const active=dialogRef.current?.querySelector<HTMLElement>(`#command-option-${activeIndex}`);
+    active?.scrollIntoView?.({block:'nearest'});
+  },[activeIndex]);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{
+    if(e.key==='Tab'){
+      const focusable=dialogRef.current?.querySelectorAll<HTMLElement>('button,input,[href],select,textarea,[tabindex]:not([tabindex="-1"])');
+      if(!focusable?.length)return;
+      const first=focusable[0]; const last=focusable[focusable.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+      return;
+    }
+    if(e.key==='ArrowDown'){e.preventDefault();setActiveIndex(i=>Math.min(i+1,Math.max(filtered.length-1,0)))}
+    else if(e.key==='ArrowUp'){e.preventDefault();setActiveIndex(i=>Math.max(i-1,0))}
+    else if(e.key==='Enter'&&filtered[activeIndex]){e.preventDefault();filtered[activeIndex].run();onClose()}
+  };window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[activeIndex,filtered,onClose]);
   return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
-    <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
-      <div className="command-search"><Search size={17}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands"/><kbd>ESC</kbd></div>
-      <div className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><div className="command-entry" role="presentation" key={command.label}>{(index===0||filtered[index-1]?.hint!==command.hint)&&<p className="command-group-label">{command.hint}</p>}<button role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button></div>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
+    <div ref={dialogRef} className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
+      <div className="command-search"><Search size={17}/><input ref={inputRef} autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands" aria-controls="command-results" aria-activedescendant={filtered[activeIndex]?`command-option-${activeIndex}`:undefined}/><kbd>ESC</kbd></div>
+      <div id="command-results" className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><div className="command-entry" role="presentation" key={command.label}>{(index===0||filtered[index-1]?.hint!==command.hint)&&<p className="command-group-label">{command.hint}</p>}<button id={`command-option-${index}`} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button></div>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
       <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
     </div>
   </div>;
@@ -138,33 +166,33 @@ function CommandPalette({onClose}:{onClose:()=>void}){
 
 function ConfigDrawer({prefs,onChange,onReset,onClose}:{prefs:UiSettings;onChange:(patch:Partial<UiSettings>)=>void;onReset:()=>void;onClose:()=>void}){
   const choice=(label:string,active:boolean,patch:Partial<UiSettings>)=>
-    <button type="button" className={'config-choice '+(active?'is-active':'')} onClick={()=>onChange(patch)} aria-pressed={active}>{label}</button>;
+    <button type="button" className={'config-choice '+(active?'is-selected':'')} onClick={()=>onChange(patch)} aria-pressed={active}>{label}</button>;
   return <div className="config-overlay" role="presentation" onMouseDown={onClose}>
     <aside className="config-drawer" role="dialog" aria-modal="true" aria-label="Theme and layout settings" onMouseDown={e=>e.stopPropagation()}>
       <div className="config-drawer-head">
         <div><p className="eyebrow">Workspace</p><h2>Theme &amp; layout</h2><p className="muted">Customize the research shell without changing the research workflow.</p></div>
         <button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close theme and layout"><X size={15}/></button>
       </div>
-      <div className="config-section"><p className="config-title">Theme</p><div className="config-choice-grid">
+      <div className="config-section"><p className="config-section-title">Theme</p><div className="config-choice-grid">
         {choice('Research light',prefs.theme==='research',{theme:'research'})}
         {choice('Deep research',prefs.theme==='dark',{theme:'dark'})}
         {choice('System',prefs.theme==='system',{theme:'system'})}
       </div></div>
-      <div className="config-section"><p className="config-title">Sidebar</p><div className="config-choice-grid">
+      <div className="config-section"><p className="config-section-title">Sidebar</p><div className="config-choice-grid">
         {choice('Standard',prefs.sidebar==='sidebar',{sidebar:'sidebar'})}
         {choice('Floating',prefs.sidebar==='floating',{sidebar:'floating'})}
         {choice('Inset',prefs.sidebar==='inset',{sidebar:'inset'})}
       </div></div>
-      <div className="config-section"><p className="config-title">Layout</p><div className="config-choice-grid">
+      <div className="config-section"><p className="config-section-title">Layout</p><div className="config-choice-grid">
         {choice('Default',prefs.layout==='default',{layout:'default'})}
         {choice('Compact',prefs.layout==='icon',{layout:'icon'})}
         {choice('Off-canvas',prefs.layout==='offcanvas',{layout:'offcanvas'})}
       </div></div>
-      <div className="config-section"><p className="config-title">Density</p><div className="config-choice-grid">
+      <div className="config-section"><p className="config-section-title">Density</p><div className="config-choice-grid">
         {choice('Comfortable',prefs.density==='comfortable',{density:'comfortable'})}
         {choice('Compact',prefs.density==='compact',{density:'compact'})}
       </div></div>
-      <div className="config-section"><p className="config-title">Motion</p><div className="config-choice-grid">
+      <div className="config-section"><p className="config-section-title">Motion</p><div className="config-choice-grid">
         {choice('Full',prefs.motion==='full',{motion:'full'})}
         {choice('Reduced',prefs.motion==='reduced',{motion:'reduced'})}
       </div></div>
@@ -245,8 +273,9 @@ export function ResearchShell({children}:{children:ReactNode}){
   const isActiveGroup=useMemo(()=>navGroups.find(group=>group.items.some(item=>item.path===pathname))?.label,[pathname]);
 
   useEffect(()=>{
+    const prefersDark=window.matchMedia?.('(prefers-color-scheme: dark)').matches??false;
     const resolved=uiSettings.theme==='system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'research')
+      ? (prefersDark?'dark':'research')
       : uiSettings.theme;
     document.documentElement.classList.toggle('dark',resolved==='dark');
     document.documentElement.dataset.theme=uiSettings.theme;
@@ -261,8 +290,17 @@ export function ResearchShell({children}:{children:ReactNode}){
     localStorage.setItem('qhealth-motion',uiSettings.motion);
   },[uiSettings]);
 
-  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false);setMobileMore(false);setMobile(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
-  useEffect(()=>{const handler=()=>setUiSettings(readSettings());window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
+  useEffect(()=>{
+    if(uiSettings.theme!=='system')return;
+    const media=window.matchMedia?.('(prefers-color-scheme: dark)');
+    if(!media)return;
+    const apply=()=>document.documentElement.classList.toggle('dark',media.matches);
+    apply();
+    media.addEventListener?.('change',apply);
+    return()=>media.removeEventListener?.('change',apply);
+  },[uiSettings.theme]);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false);setConfig(false);setMobileMore(false);setMobile(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
+  useEffect(()=>{const handler=()=>{setUiSettings(readSettings());setShowInspector(localStorage.getItem('qhealth-inspector')!=='hidden')};window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
   useEffect(()=>{
     if(!window.matchMedia)return;
     const media=window.matchMedia('(max-width: 767px)');

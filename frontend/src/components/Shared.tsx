@@ -1,6 +1,6 @@
 import type {ReactNode} from 'react';
 import {Link} from 'react-router-dom';
-import {ArrowRight,Atom,Database,LoaderCircle} from 'lucide-react';
+import {ArrowRight,Atom,Database,LoaderCircle,RefreshCw} from 'lucide-react';
 import {Card,Badge,Select} from './ui';
 import {modelLabels,metric,shortId} from '../utils/format';
 import type {Dataset,ModelRecord,Metrics,MetricName} from '../types/qhealth';
@@ -10,9 +10,31 @@ import {TremorAccordion,TremorCallout,TremorMetric} from './TremorUI';
 export function PageHeader({eyebrow,title,description,actions}:{eyebrow:string;title:string;description:string;actions?:ReactNode}){return <AnimatedSection className="page-hero"><div className="flex flex-wrap items-end justify-between gap-5"><div><div className="eyebrow"><ShinyText>{eyebrow}</ShinyText></div><h1 className="headline"><BlurText>{title}</BlurText></h1><p className="subhead"><GradientText>{description}</GradientText></p></div>{actions&&<div className="flex flex-wrap gap-2">{actions}</div>}</div></AnimatedSection>}
 export function StatusBadge({value}:{value:string}){const tone=['ready','succeeded','completed'].includes(value)?'green':['failed','cancelled','interrupted'].includes(value)?'red':value==='running'||value==='queued'?'amber':'blue';return <Badge tone={tone}>{value.replaceAll('_',' ')}</Badge>}
 export function MetricCard({label,value,detail,icon}:{label:string;value:ReactNode;detail?:string;icon?:ReactNode}){return <TremorMetric label={label} value={value} detail={detail} icon={icon}/>}
-export function ErrorBanner({error}:{error?:string}){return error?<TremorCallout tone="red" title="Request failed">{error}</TremorCallout>:null}
-export function EmptyState({title,children}:{title:string;children:ReactNode}){return <Card className="py-12 text-center"><div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-muted"><Atom size={18}/></div><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm muted">{children}</p></Card>}
-export function Loading(){return <Reveal><div className="tremor-card rb-shimmer flex items-center gap-2 p-5 text-sm muted"><LoaderCircle size={15} className="animate-spin"/>Loading research data…</div></Reveal>}
+function errorTitle(error:string){
+  if(/\b404\b|not found|does not exist/i.test(error))return 'Research record not found';
+  if(/\b401\b|\b403\b|permission|unauthori[sz]ed|forbidden/i.test(error))return 'Research access is unavailable';
+  if(/network|fetch|offline|unavailable|timed out|timeout/i.test(error))return 'Research service is unavailable';
+  return 'Unable to load research data';
+}
+
+export function ErrorBanner({error,retry}:{error?:string;retry?:()=>void}){
+  if(!error)return null;
+  return <TremorCallout tone="red" title={errorTitle(error)}>
+    <div className="error-banner-content"><span>{error}</span>{retry&&<button className="btn btn-outline error-banner-retry" type="button" onClick={retry}><RefreshCw size={13}/>Retry</button>}</div>
+  </TremorCallout>;
+}
+
+export function EmptyState({title,children,action}:{title:string;children:ReactNode;action?:ReactNode}){
+  return <Card className="empty-state-card py-12 text-center"><div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-muted"><Atom size={18}/></div><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm muted">{children}</p>{action&&<div className="mt-4 flex justify-center">{action}</div>}</Card>;
+}
+
+export function Loading(){
+  return <Reveal><div className="research-loading-state tremor-card" role="status" aria-live="polite" aria-busy="true">
+    <div className="research-loading-header"><span className="research-skeleton research-skeleton-eyebrow"/><span className="research-loading-label"><LoaderCircle size={14} className="animate-spin"/>Loading research data…</span></div>
+    <span className="research-skeleton research-skeleton-title"/><span className="research-skeleton research-skeleton-copy"/>
+    <div className="research-loading-grid"><span className="research-skeleton research-skeleton-panel"/><span className="research-skeleton research-skeleton-panel"/><span className="research-skeleton research-skeleton-panel research-skeleton-panel-wide"/></div>
+  </div></Reveal>;
+}
 export function Notice({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'amber'|'green'}){return <TremorCallout tone={tone}>{children}</TremorCallout>}
 export function JsonDisclosure({label,value}:{label:string;value:unknown}){return <TremorAccordion className="mt-4" label={label}><pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed muted">{JSON.stringify(value,null,2)}</pre></TremorAccordion>}
 export function ModelSelect({models,value,onChange,quantumOnly=false}:{models:ModelRecord[];value:string;onChange:(v:string)=>void;quantumOnly?:boolean}){const available=models.filter(m=>m.status==='ready'&&(!quantumOnly||['vqc','qsvc','qnn'].includes(m.model_type)));return <label className="field"><span>Registered model</span><Select value={value} onChange={e=>onChange(e.target.value)}><option value="">Choose completed model</option>{available.map(m=><option key={m.id} value={m.id}>{modelLabels[m.model_type]} · {shortId(m.id)}</option>)}</Select></label>}
