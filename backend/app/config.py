@@ -44,6 +44,19 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "qwen/qwen3.8-27b"
 
+    # Platform 2.0: Telemetry, Cache, and Resilience
+    telemetry_enabled: bool = True
+    telemetry_window_seconds: int = Field(default=900, ge=60, le=86400)
+    telemetry_max_recent_samples: int = Field(default=1000, ge=100, le=10000)
+
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = Field(default=300, ge=5, le=86400)
+    cache_max_entries: int = Field(default=2000, ge=50, le=50000)
+
+    rate_limit_enabled: bool = True
+    rate_limit_window_seconds: int = Field(default=60, ge=5, le=3600)
+    rate_limit_max_requests: int = Field(default=30, ge=1, le=1000)
+
     @model_validator(mode="after")
     def production_network_boundaries(self):
         if self.deployment_mode != "production":

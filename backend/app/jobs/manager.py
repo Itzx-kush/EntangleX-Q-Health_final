@@ -35,6 +35,7 @@ class TrainingManager:
         self.lock = Lock()
         self.futures = {}
         self.worker_id = f"training-worker-{uuid4()}"
+        self.last_activity = None
 
     def start(self):
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="qhealth-training")
@@ -136,6 +137,54 @@ class TrainingManager:
         except Exception as exc:
             logger.warning("study_execution_failure study_id=%s exception=%s", study_id, type(exc).__name__)
 
+
+    def get_health_telemetry(self, session) -> dict:
+        now = utcnow()
+        jobs = list(session.scalars(select(Job)))
+        queued = sum(1 for j in jobs if j.status == "queued")
+        running = sum(1 for j in jobs if j.status in {"running", "resuming", "checkpointing"})
+        recoverable = sum(1 for j in jobs if j.status == "recoverable")
+        failed = sum(1 for j in jobs if j.status == "failed")
+        cancelled = sum(1 for j in jobs if j.status == "cancelled")
+        succeeded = sum(1 for j in jobs if j.status in {"succeeded", "partial"})
+        active = sum(1 for j in jobs if j.status in ACTIVE)
+
+        stale_leases = sum(
+            1 for j in jobs
+            if j.status in ACTIVE and j.lease_id is not None and j.lease_expires_at is not None and j.lease_expires_at <= now
+        )
+
+        durations = [
+            (j.completed_at - j.started_at).total_seconds()
+            for j in jobs
+            if j.started_at and j.completed_at and (j.completed_at >= j.started_at)
+        ]
+        avg_duration = round(sum(durations) / len(durations), 1) if durations else 0.0
+
+        max_capacity = get_settings().max_queued_jobs
+        utilization = round((active / max_capacity) * 100, 1) if max_capacity > 0 else 0.0
+
+        return {
+            "queued": queued,
+            "running": running,
+            "recoverable": recoverable,
+            "failed": failed,
+            "cancelled": cancelled,
+            "succeeded": succeeded,
+            "active": active,
+            "stale_leases": stale_leases,
+            "queue_capacity": max_capacity,
+            "queue_utilization_pct": utilization,
+            "avg_duration_seconds": avg_duration,
+            "worker": {
+                "started": self.executor is not None,
+                "available": self.executor is not None and len(self.futures) < 1,
+                "worker_id": self.worker_id,
+                "queue_depth": len(self.futures),
+                "active_job_ids": list(self.futures.keys()),
+                "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            },
+        }
 
     def _enqueue(
         self,
@@ -437,6 +486,7 @@ class TrainingManager:
     def _run(self, job_id: str, experiment_id: str, run_id: str, config: TrainingConfig,
              executions: list[tuple[str, str]], lease_id: str | None = None, checkpoint_id: str | None = None):
         failures, successes = 0, 0
+        self.last_activity = utcnow()
         try:
             if lease_id is None:
                 lease_id, _ = acquire_lease(job_id, self.worker_id)
@@ -529,6 +579,7 @@ class TrainingManager:
             logger.warning("job_failure job_id=%s exception_type=%s", job_id, type(exc).__name__)
             self._finish(job_id, experiment_id, run_id, "failed", "Job failed; inspect dataset integrity, configuration, and dependency installation.", successes=successes, failures=failures, lease_id=lease_id)
         finally:
+            self.last_activity = utcnow()
             self.futures.pop(job_id, None)
 
     def _publish_training_checkpoint(self, job_id, lease_id, completed_keys, logical_key, successes):

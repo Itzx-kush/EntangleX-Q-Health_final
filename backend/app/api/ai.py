@@ -1,11 +1,12 @@
 import json
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from groq import AsyncGroq, APIError
 
 from ..alignment import alignment_contract
 from ..config import get_settings
+from ..ratelimit.limiter import rate_limit_expensive
 from ..utils.errors import AppError
 from .schemas import ChatRequest, ChatResponse
 
@@ -54,13 +55,13 @@ def _normalize_history(request: ChatRequest) -> list[dict[str, str]]:
     return messages
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(rate_limit_expensive)])
 async def chat_with_assistant(request: ChatRequest):
     settings = get_settings()
     if not settings.groq_api_key:
         raise AppError("ai_not_configured", "AI assistant is not configured.", 503)
 
-    client = AsyncGroq(api_key=settings.groq_api_key)
+    client = AsyncGroq(api_key=settings.groq_api_key, timeout=15.0)
 
     try:
         response = await client.chat.completions.create(

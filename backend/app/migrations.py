@@ -39,6 +39,7 @@ DATASET_QUALITY_SCORECARD_MIGRATION_ID = "20261003_15_advanced_dataset_quality_s
 BIOMEDICAL_SUBGROUP_ANALYSIS_MIGRATION_ID = "20261003_16_biomedical_subgroup_analysis"
 DATASET_VERSION_SIGNATURE_REPAIR_MIGRATION_ID = "20261003_17_dataset_version_signature_repair"
 DATASET_QUALITY_SCORECARD_REPAIR_MIGRATION_ID = "20261003_18_dataset_quality_scorecard_schema_repair"
+PLATFORM_OBSERVABILITY_INDEXES_MIGRATION_ID = "20261011_01_platform_observability_indexes"
 
 
 
@@ -1172,4 +1173,24 @@ def apply_migrations() -> None:
             connection.execute(
                 text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
                 {"id": DATASET_QUALITY_SCORECARD_REPAIR_MIGRATION_ID, "applied_at": utcnow()},
+            )
+
+        observability_indexes_applied = connection.execute(
+            text("SELECT 1 FROM schema_migrations WHERE id = :id"),
+            {"id": PLATFORM_OBSERVABILITY_INDEXES_MIGRATION_ID},
+        ).scalar()
+        if not observability_indexes_applied:
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS ix_experiments_created_at ON experiments(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_experiments_status ON experiments(status)",
+                "CREATE INDEX IF NOT EXISTS ix_models_status ON models(status)",
+                "CREATE INDEX IF NOT EXISTS ix_models_dataset_id ON models(dataset_id)",
+                "CREATE INDEX IF NOT EXISTS ix_models_created_at ON models(created_at)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_status ON jobs(status)",
+                "CREATE INDEX IF NOT EXISTS ix_jobs_created_at ON jobs(created_at)",
+            ]:
+                connection.execute(text(statement))
+            connection.execute(
+                text("INSERT INTO schema_migrations (id, applied_at) VALUES (:id, :applied_at)"),
+                {"id": PLATFORM_OBSERVABILITY_INDEXES_MIGRATION_ID, "applied_at": utcnow()},
             )

@@ -7,6 +7,7 @@ from uuid import NAMESPACE_URL, uuid5
 from sqlalchemy import select
 
 from ..artifacts.service import register_metadata
+from ..cache.service import cache
 from ..demo_readiness import ARTIFACT_VERSION, READY_DEMO_DATASETS, validate_packaged_dataset
 from ..storage.entities import (
     AblationStudy,
@@ -525,6 +526,11 @@ def preflight_package(session, experiment_id: str) -> dict:
 
 
 def package_payload(session, package: ResearchEvidencePackage) -> dict:
+    cache_key = f"evidence_package:{package.id}:{package.package_fingerprint}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     artifact = require(session, Artifact, package.artifact_id)
     payload = clean_json(dict(package.manifest))
     payload["created_at"] = _time(package.created_at)
@@ -536,6 +542,7 @@ def package_payload(session, package: ResearchEvidencePackage) -> dict:
         "hash_algorithm": artifact.hash_algorithm,
         "immutable": artifact.immutable,
     }
+    cache.set(cache_key, payload, ttl_seconds=3600.0)
     return payload
 
 
