@@ -74,9 +74,12 @@ function MiniFlow({items,tone='blue'}:{items:{title:string;detail:string}[];tone
 }
 
 export function HybridArchitectureVisualization({alignment,dataset,experiment,models,evidence}:ArchitectureProps){
-  const preprocessing=evidence.preprocessing.configuration;
-  const pipeline=preprocessing.pipeline;
-  const representation=(evidence.preprocessing.representation||{}) as Record<string,unknown>;
+  // A partial verified artifact should leave an honest unavailable detail
+  // rather than crashing the entire research workspace.
+  const evidenceView=evidence as unknown as Record<string,any>;
+  const preprocessing=evidenceView.preprocessing?.configuration||{};
+  const pipeline=preprocessing.pipeline||{};
+  const representation=(evidenceView.preprocessing?.representation||{}) as Record<string,unknown>;
   const hybrid=models.find(model=>model.model_type==='hybrid_pennylane_torch');
   const quantum=(hybrid?.details.quantum||{}) as Record<string,any>;
   const operating=(hybrid?.metrics.operating_point||hybrid?.details.operating_point||null) as Record<string,any>|null;
@@ -88,7 +91,7 @@ export function HybridArchitectureVisualization({alignment,dataset,experiment,mo
   const targetSensitivity=operating?.target_sensitivity??preprocessing.target_sensitivity;
   const threshold=operating?.selected_threshold??null;
   const thresholdSource=operating?.threshold_source||'OOF validation';
-  const shapMethod=evidence.explainability.method||'SHAP';
+  const shapMethod=evidenceView.explainability?.method||'SHAP';
   const hybridStatus=alignment?.flagship_architecture?.status||'IMPLEMENTED';
 
   return <section className="mt-5" aria-label="SIH hybrid quantum-classical architecture">
@@ -101,7 +104,7 @@ export function HybridArchitectureVisualization({alignment,dataset,experiment,mo
               <Badge tone={hybridStatus==='IMPLEMENTED'?'green':'amber'}>{hybridStatus}</Badge>
               <Badge tone="blue">FLAGSHIP · SIH26139</Badge>
             </div>
-            <h2 className="mt-3 text-xl font-semibold text-[#102A5C]">{dataset.name}</h2>
+            <p className="mt-3 text-xl font-semibold text-[#102A5C]">{dataset.name}</p>
             <p className="mt-1 max-w-4xl text-sm leading-relaxed text-[#56657D]">Classical preprocessing + PennyLane quantum transformation + PyTorch classification, evaluated under the project's sensitivity-first research protocol.</p>
           </div>
           <div className="grid shrink-0 gap-2 sm:grid-cols-2">
@@ -143,7 +146,13 @@ export function HybridArchitectureVisualization({alignment,dataset,experiment,mo
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1.15fr_auto_1fr]">
-            <StageCard eyebrow="01 · DATA SOURCE" title={dataset.name} description="Structured tabular risk data enters the controlled research pipeline." tone="navy" icon={<Database size={17}/>}>
+            <StageCard
+              eyebrow="01 · DATA SOURCE"
+              title="Registered dataset"
+              description={`${dataset.name} enters the controlled research pipeline as a structured tabular research input.`}
+              tone="navy"
+              icon={<Database size={17}/>}
+            >
               <div className="grid grid-cols-2 gap-2">
                 <Spec label="Rows" value={dataset.provenance.row_count.toLocaleString()}/>
                 <Spec label="Features" value={dataset.provenance.feature_count}/>

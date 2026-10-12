@@ -64,7 +64,7 @@ export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
   const {dataset,models,evidence,artifact_version}=data.payload;
   return <div className="tremor-dashboard">
     <PageHeader eyebrow="SIH26139 FLAGSHIP · verified precomputed result" title={dataset.name} description="Launch the primary Early Stage Diabetes demonstration, inspect the hybrid quantum-classical path, review the controlled seven-model evidence, and then explore the full research platform." actions={<Link className="btn btn-primary" to="/comparison">Explore model evidence <ArrowRight size={14}/></Link>}/>
-    <StatusStrip items={[{label:'Flagship',value:'SIH26139',status:'good'},{label:'Dataset',value:dataset.name,status:'good'},{label:'Computation',value:'Precomputed',status:'good'},{label:'Models',value:String(models.length),status:'good'},{label:'Artifact',value:artifact_version,status:'neutral'}]}/>
+    <StatusStrip items={[{label:'Flagship',value:'SIH26139',status:'good'},{label:'Dataset',value:dataset.name,status:'good'},{label:'Computation',value:'Precomputed',status:'good'},{label:'Models',value:`${models.length} registered`,status:'good'},{label:'Artifact',value:artifact_version,status:'neutral'}]}/>
     <WorkbenchRail items={[
       {label:'Samples',value:dataset.provenance.row_count.toLocaleString(),detail:'Packaged source rows',tone:'blue'},
       {label:'Features',value:dataset.provenance.feature_count,detail:dataset.provenance.target,tone:'purple'},

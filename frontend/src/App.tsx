@@ -1,4 +1,4 @@
-import {lazy,Suspense,useEffect} from 'react';
+import {lazy,Suspense,useEffect,useRef} from 'react';
 import {Navigate,Route,Routes,useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {ResearchShell} from './components/ResearchShell';
@@ -44,7 +44,15 @@ export default function App(){
 
 function WorkspaceRoutes(){
   const location=useLocation();
-  return <div className="workspace-route-frame" key={location.pathname}>
+  const frameRef=useRef<HTMLDivElement|null>(null);
+
+  useEffect(()=>{
+    const workspace=document.querySelector<HTMLElement>('.research-workspace');
+    workspace?.scrollTo?.({top:0,behavior:'auto'});
+    frameRef.current?.focus({preventScroll:true});
+  },[location.pathname]);
+
+  return <div ref={frameRef} className="workspace-route-frame" key={location.pathname} tabIndex={-1} aria-label="Research page content">
     <ActiveDatasetGuard/>
     <Suspense fallback={<Loading/>}><Routes location={location}>
       <Route path="/" element={<Overview/>}/>
