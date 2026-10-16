@@ -114,13 +114,16 @@
   color:var(--qh-sidebar-foreground,#fff)!important;
 }
 .sidebar-link:hover svg{opacity:1;color:var(--qh-sidebar-active-accent,#a69aff)}
-.sidebar-link.active{
-  border-color:color-mix(in srgb,var(--qh-sidebar-active-accent,#a69aff) 26%,transparent)!important;
-  background:linear-gradient(90deg,rgba(143,124,255,.16),rgba(143,124,255,.055))!important;
+.sidebar-link.active,
+.sidebar-link.is-active{
+  border-color:color-mix(in srgb,var(--qh-color-primary, var(--qh-sidebar-active-accent,#a69aff)) 26%,transparent)!important;
+  background:linear-gradient(90deg,rgba(23,105,224,.14),rgba(23,105,224,.04))!important;
   color:var(--qh-sidebar-foreground,#fff)!important;
-  box-shadow:inset 2px 0 var(--qh-sidebar-active-accent,#a69aff),0 7px 22px rgba(9,7,20,.08)!important;
+  box-shadow:inset 3px 0 var(--qh-color-primary, var(--qh-sidebar-active-accent,#a69aff)),0 7px 22px rgba(9,7,20,.08)!important;
+  font-weight:700!important;
 }
-.sidebar-link.active svg{opacity:1;color:var(--qh-sidebar-active-accent,#a69aff)!important}
+.sidebar-link.active svg,
+.sidebar-link.is-active svg{opacity:1;color:var(--qh-color-primary, var(--qh-sidebar-active-accent,#a69aff))!important}
 .sidebar-pulse{width:5px!important;height:5px!important;background:#9c88ff!important;box-shadow:0 0 0 4px rgba(156,136,255,.09)!important}
 .sidebar-bottom{
   gap:2px!important;
