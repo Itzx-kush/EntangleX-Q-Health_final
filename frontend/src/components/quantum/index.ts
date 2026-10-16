@@ -5,3 +5,4 @@ export {QuantumResourcePanel} from './QuantumResourcePanel';
 export {QuantumStatePanel} from './QuantumStatePanel';
 export {QuantumBlochExplorer} from './QuantumBlochExplorer';
 export {QuantumGateInspector} from './QuantumGateInspector';
+export {QuantumSimulatorCatalog} from './QuantumSimulatorCatalog';

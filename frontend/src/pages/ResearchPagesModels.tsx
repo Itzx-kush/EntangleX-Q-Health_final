@@ -18,7 +18,7 @@ import {ExplainabilityResearchLab} from '../components/ExplainabilityResearchLab
 import {ResearchPredictionLab,type CrossModelPrediction} from '../components/ResearchPredictionLab';
 import {RobustnessEvidenceLab} from '../components/RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
-import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumPipeline,QuantumResourcePanel,QuantumStatePanel,gateSequence} from '../components/quantum';
+import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumPipeline,QuantumResourcePanel,QuantumSimulatorCatalog,QuantumStatePanel,gateSequence} from '../components/quantum';
 import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 import type {Circuit} from '../types/qhealth';
 import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
@@ -418,6 +418,17 @@ export function Quantum(){
   const nextQubit=gate.qubits.find(qubit=>Number.isInteger(qubit))??null;
   if(nextQubit!==null)setSelectedQubit(nextQubit);
  };
+ const handleSelectBackend=(providerId:string,backendId:string)=>{
+  if(providerId==='pennylane_local'||backendId==='default.qubit'){
+   setKind('hybrid_pennylane_torch');
+   update({hybrid:{...draft.hybrid,backend:'default.qubit'}});
+  }else{
+   if(kind==='hybrid_pennylane_torch'){
+    setKind('vqc');
+   }
+   quantum({backend:backendId as 'statevector'|'aer'});
+  }
+ };
  return <div className="quantum-lab-page layer3-modeling-workspace layer3-quantum-workspace">
   <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
   {demo.active&&<div className="ql-verified-banner" role="status" aria-label="Verified quantum demo status"><Badge tone="green">VERIFIED DEMO</Badge><Badge tone="blue">PRECOMPUTED / REPRODUCIBLE</Badge><span>Read-only packaged quantum evidence is surfaced through the same Quantum Lab workspace.</span></div>}
@@ -468,6 +479,12 @@ export function Quantum(){
     <p className="ql-boundary-note">Circuit preview describes structure only. No simulator state, measurement, or quantum advantage is inferred from gate connectivity.</p>
    </Card>
   </section>
+
+  <QuantumSimulatorCatalog
+   activeBackendId={kind==='hybrid_pennylane_torch'?draft.hybrid.backend:draft.quantum.backend}
+   activeProviderId={kind==='hybrid_pennylane_torch'?'pennylane_local':'qiskit_local'}
+   onSelectBackend={handleSelectBackend}
+  />
 
   <section className="ql-main-grid" aria-label="Quantum visualization panels">
    <div className="ql-main-primary">
