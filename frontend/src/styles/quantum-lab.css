@@ -43,3 +43,24 @@
 
 .ql-verified-banner{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:-2px 0 12px;padding:8px 10px;border:1px solid var(--wb-line);border-left:2px solid var(--wb-green);border-radius:7px;background:color-mix(in srgb,var(--wb-green) 4%,var(--tremor-card));color:var(--tremor-muted);font-size:9px;line-height:1.45}
 @media(max-width:700px){.ql-verified-banner{align-items:flex-start}}
+
+/* Quantum Gate and Parameter Inspector styling */
+.ql-gate-inspector-panel{padding:16px;border:1px solid var(--wb-line);border-radius:11px;background:var(--tremor-card)}
+.ql-inspector-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--wb-line)}
+.ql-inspector-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,var(--qh-color-primary,#1769e0) 10%,transparent);color:var(--qh-color-primary,#1769e0)}
+.ql-inspector-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.ql-tab-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--wb-line);border-radius:7px;background:transparent;color:var(--tremor-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .16s ease}
+.ql-tab-btn:hover,.ql-tab-btn.is-active{background:color-mix(in srgb,var(--qh-color-primary,#1769e0) 8%,transparent);color:var(--qh-color-primary,#1769e0);border-color:color-mix(in srgb,var(--qh-color-primary,#1769e0) 30%,transparent)}
+.ql-tab-btn:focus-visible{outline:2px solid var(--qh-color-primary,#1769e0);outline-offset:2px}
+.ql-modified-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;margin-left:4px}
+.ql-gate-card{display:grid;gap:12px}
+.ql-gate-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ql-gate-symbol{display:grid;place-items:center;min-width:36px;height:36px;padding:0 8px;border-radius:8px;font-weight:800;font-family:var(--qh-font-mono,ui-monospace);font-size:11px;background:color-mix(in srgb,var(--qh-color-primary,#1769e0) 12%,transparent);color:var(--qh-color-primary,#1769e0);border:1px solid color-mix(in srgb,var(--qh-color-primary,#1769e0) 25%,transparent)}
+.ql-math-callout{padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--qh-color-primary,#1769e0) 4%,var(--tremor-bg-soft));border-left:3px solid var(--qh-color-primary,#1769e0)}
+.ql-math-formula{font-family:var(--qh-font-mono,ui-monospace);font-size:10px;background:rgba(0,0,0,.04);padding:4px 8px;border-radius:4px;color:var(--qh-color-primary,#1769e0)}
+.ql-inspector-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ql-meta-box{display:grid;gap:3px;padding:8px 10px;border:1px solid var(--wb-line);border-radius:7px;background:var(--tremor-bg-soft)}
+.ql-meta-label{font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tremor-muted)}
+.ql-params-table-wrap{overflow-x:auto;border:1px solid var(--wb-line);border-radius:8px}
+@media(max-width:900px){.ql-inspector-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ql-inspector-grid{grid-template-columns:1fr}}
