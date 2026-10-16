@@ -50,49 +50,62 @@
   --qh-z-toast: 80;
   --qh-z-intro: 100;
 
-  --qh-color-background: #f8f9fc;
-  --qh-color-foreground: #171b26;
-  --qh-color-muted-foreground: #667085;
-  --qh-color-subtle-foreground: #98a3b3;
+  /* EntangleX Core Brand Palette */
+  --qh-color-navy: #102a5c;
+  --qh-color-deep-navy: #17233c;
+  --qh-color-blue: #1769e0;
+  --qh-color-cyan: #18b6c9;
+  --qh-color-violet: #6946d9;
+  --qh-color-green: #159a70;
+
+  /* Layout and Dimension Tokens */
+  --qh-sidebar-width: 256px;
+  --qh-sidebar-collapsed-width: 76px;
+  --qh-topbar-height: 70px;
+
+  --qh-color-background: #f7fafd;
+  --qh-color-foreground: #102a5c;
+  --qh-color-muted-foreground: #56657d;
+  --qh-color-subtle-foreground: #8a99ad;
   --qh-color-surface: #ffffff;
-  --qh-color-surface-soft: #f1f3f9;
+  --qh-color-surface-soft: #f1f4fa;
   --qh-color-surface-raised: #ffffff;
-  --qh-color-surface-inset: #f8f9fc;
-  --qh-color-overlay: rgba(17, 20, 24, 0.4);
-  --qh-color-border: #e2e6ef;
-  --qh-color-border-subtle: #eef0f5;
-  --qh-color-border-strong: #cbd2e0;
-  --qh-color-primary: #5b5bd6;
-  --qh-color-primary-strong: #4949b8;
+  --qh-color-surface-inset: #f7fafd;
+  --qh-color-overlay: rgba(16, 42, 92, 0.45);
+  --qh-color-border: #d8e2ef;
+  --qh-color-border-subtle: #e2e8f0;
+  --qh-color-border-strong: #cbd5e1;
+  --qh-color-primary: #1769e0;
+  --qh-color-primary-strong: #104eb2;
   --qh-color-primary-foreground: #ffffff;
-  --qh-color-secondary: #f3f4f6;
-  --qh-color-secondary-foreground: #475467;
-  --qh-color-accent: #1da9bc;
-  --qh-color-accent-soft: #e8f7fa;
-  --qh-color-quantum: #7c4dff;
-  --qh-color-quantum-soft: #f1edff;
-  --qh-color-research: #18865c;
-  --qh-color-research-soft: #e9f8f1;
-  --qh-color-success: #10b981;
+  --qh-color-secondary: #f1f4fa;
+  --qh-color-secondary-foreground: #102a5c;
+  --qh-color-accent: #18b6c9;
+  --qh-color-accent-soft: rgba(24, 182, 201, 0.08);
+  --qh-color-quantum: #6946d9;
+  --qh-color-quantum-soft: rgba(105, 70, 217, 0.08);
+  --qh-color-research: #159a70;
+  --qh-color-research-soft: rgba(21, 154, 112, 0.08);
+  --qh-color-success: #159a70;
   --qh-color-success-soft: #ecfdf5;
   --qh-color-warning: #f59e0b;
   --qh-color-warning-soft: #fffbeb;
   --qh-color-danger: #ef4444;
   --qh-color-danger-soft: #fef2f2;
-  --qh-color-info: #3987c9;
-  --qh-color-info-soft: #eaf4ff;
-  --qh-color-focus: rgba(91, 91, 214, 0.45);
+  --qh-color-info: #1769e0;
+  --qh-color-info-soft: rgba(23, 105, 224, 0.08);
+  --qh-color-focus: rgba(23, 105, 224, 0.35);
   --qh-color-sidebar: #ffffff;
-  --qh-color-sidebar-raised: #f1f3f9;
-  --qh-color-sidebar-foreground: #171b26;
-  --qh-color-sidebar-muted: #667085;
+  --qh-color-sidebar-raised: #f7fafd;
+  --qh-color-sidebar-foreground: #102a5c;
+  --qh-color-sidebar-muted: #56657d;
 
   /* Semantic visual layer. Components should consume these meanings, not palette literals. */
   --qh-color-text-primary: var(--qh-color-foreground);
   --qh-color-text-secondary: var(--qh-color-muted-foreground);
   --qh-color-text-muted: var(--qh-color-subtle-foreground);
   --qh-color-text-inverse: var(--qh-color-primary-foreground);
-  --qh-color-surface-hover: #f1f0ff;
+  --qh-color-surface-hover: rgba(23, 105, 224, 0.04);
   --qh-color-surface-selected: var(--qh-color-research-soft);
   --qh-color-border-interactive: var(--qh-border-interactive);
   --qh-color-data-accent: #3987c9;
@@ -170,6 +183,13 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+  --qh-color-navy: #8fc8ff;
+  --qh-color-deep-navy: #a6b0bf;
+  --qh-color-blue: #8fc8ff;
+  --qh-color-cyan: #22c4d6;
+  --qh-color-violet: #bba7ff;
+  --qh-color-green: #53d48f;
+
   --qh-color-background: #080a0d;
   --qh-color-foreground: #f4f7fb;
   --qh-color-muted-foreground: #a6b0bf;
@@ -182,9 +202,9 @@
   --qh-color-border: rgba(202, 213, 225, 0.14);
   --qh-color-border-subtle: rgba(202, 213, 225, 0.09);
   --qh-color-border-strong: rgba(202, 213, 225, 0.24);
-  --qh-color-primary: #8a83ff;
-  --qh-color-primary-strong: #a29dff;
-  --qh-color-primary-foreground: #080a0d;
+  --qh-color-primary: #1769e0;
+  --qh-color-primary-strong: #8fc8ff;
+  --qh-color-primary-foreground: #ffffff;
   --qh-color-secondary: #151c25;
   --qh-color-secondary-foreground: #e8edf5;
   --qh-color-accent: #22c4d6;
@@ -201,11 +221,11 @@
   --qh-color-danger-soft: rgba(255, 143, 143, 0.14);
   --qh-color-info: #8fc8ff;
   --qh-color-info-soft: rgba(143, 200, 255, 0.14);
-  --qh-color-focus: #a29dff;
-  --qh-color-sidebar: #0b0e12;
-  --qh-color-sidebar-raised: #121923;
+  --qh-color-focus: rgba(143, 200, 255, 0.4);
+  --qh-color-sidebar: #11161d;
+  --qh-color-sidebar-raised: #151c25;
   --qh-color-sidebar-foreground: #f4f7fb;
-  --qh-color-sidebar-muted: #9aa7b7;
+  --qh-color-sidebar-muted: #a6b0bf;
   --qh-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 5px 16px rgba(0, 0, 0, 0.12);
   --qh-shadow-md: 0 14px 34px rgba(0, 0, 0, 0.24), 0 3px 8px rgba(0, 0, 0, 0.16);
   --qh-shadow-low: 0 6px 18px rgba(0, 0, 0, .18);
@@ -230,6 +250,13 @@
 
 @media (prefers-color-scheme: dark) {
   [data-theme="system"] {
+    --qh-color-navy: #8fc8ff;
+    --qh-color-deep-navy: #a6b0bf;
+    --qh-color-blue: #8fc8ff;
+    --qh-color-cyan: #22c4d6;
+    --qh-color-violet: #bba7ff;
+    --qh-color-green: #53d48f;
+
     --qh-color-background: #080a0d;
     --qh-color-foreground: #f4f7fb;
     --qh-color-muted-foreground: #a6b0bf;
@@ -241,8 +268,8 @@
     --qh-color-border: rgba(202, 213, 225, 0.14);
     --qh-color-border-subtle: rgba(202, 213, 225, 0.09);
     --qh-color-border-strong: rgba(202, 213, 225, 0.24);
-    --qh-color-primary: #8a83ff;
-    --qh-color-primary-strong: #a29dff;
+    --qh-color-primary: #8fc8ff;
+    --qh-color-primary-strong: #bba7ff;
     --qh-color-primary-foreground: #080a0d;
     --qh-color-secondary: #151c25;
     --qh-color-secondary-foreground: #e8edf5;
@@ -260,11 +287,11 @@
     --qh-color-danger-soft: rgba(255, 143, 143, 0.14);
     --qh-color-info: #8fc8ff;
     --qh-color-info-soft: rgba(143, 200, 255, 0.14);
-    --qh-color-focus: #a29dff;
-    --qh-color-sidebar: #0b0e12;
-    --qh-color-sidebar-raised: #121923;
+    --qh-color-focus: rgba(143, 200, 255, 0.4);
+    --qh-color-sidebar: #11161d;
+    --qh-color-sidebar-raised: #151c25;
     --qh-color-sidebar-foreground: #f4f7fb;
-    --qh-color-sidebar-muted: #9aa7b7;
+    --qh-color-sidebar-muted: #a6b0bf;
     --qh-shadow-low: 0 6px 18px rgba(0, 0, 0, .18);
     --qh-shadow-medium: 0 12px 28px rgba(0, 0, 0, .25);
     --qh-shadow-high: 0 22px 56px rgba(0, 0, 0, .4);
@@ -296,3 +323,38 @@
 /* Q-Health 3.3 motion language: short, purposeful, and removable. */
 :root { --qh-motion-page-enter: 260ms; --qh-motion-page-exit: 180ms; --qh-motion-reveal: 420ms; --qh-motion-modal: 220ms; --qh-motion-state: 240ms; --qh-motion-hover: 140ms; --qh-motion-intro: 1680ms; --qh-ease-enter: cubic-bezier(0.16, 1, 0.3, 1); --qh-ease-exit: cubic-bezier(0.7, 0, 0.84, 0); }
 @media (prefers-reduced-motion: reduce) { :root { --qh-motion-page-enter: 1ms; --qh-motion-page-exit: 1ms; --qh-motion-reveal: 1ms; --qh-motion-modal: 1ms; --qh-motion-state: 1ms; --qh-motion-hover: 1ms; --qh-motion-intro: 550ms; --motion-fast: 0ms; --motion-standard: 0ms; --motion-moderate: 0ms; --motion-slow: 0ms; } }
+
+/* EntangleX Shared Design System: Focus Styles & Navigation Indicators */
+:focus-visible {
+  outline: 2px solid var(--qh-color-primary, #1769e0);
+  outline-offset: 2px;
+}
+
+.sidebar-link.is-active,
+.sidebar-link.active {
+  color: var(--qh-color-primary, #1769e0) !important;
+  background: var(--qh-color-surface-hover, rgba(23, 105, 224, 0.08)) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 3px 0 0 var(--qh-color-primary, #1769e0) !important;
+}
+
+.sidebar-link.is-active svg,
+.sidebar-link.active svg {
+  color: var(--qh-color-primary, #1769e0) !important;
+}
+
+[data-theme="dark"] .sidebar-link.is-active,
+[data-theme="dark"] .sidebar-link.active,
+.dark .sidebar-link.is-active,
+.dark .sidebar-link.active {
+  color: var(--qh-color-primary, #8fc8ff) !important;
+  background: rgba(143, 200, 255, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--qh-color-primary, #8fc8ff) !important;
+}
+
+[data-theme="dark"] .sidebar-link.is-active svg,
+[data-theme="dark"] .sidebar-link.active svg,
+.dark .sidebar-link.is-active svg,
+.dark .sidebar-link.active svg {
+  color: var(--qh-color-primary, #8fc8ff) !important;
+}

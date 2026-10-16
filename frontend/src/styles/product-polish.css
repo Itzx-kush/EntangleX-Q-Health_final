@@ -49,16 +49,22 @@
 }
 .sidebar-link svg{width:15px;height:15px}
 .sidebar-link:hover{background:var(--tremor-hover)!important;color:var(--tremor-text)!important}
-.sidebar-link.active{
-  color:var(--tremor-text)!important;
-  background:color-mix(in srgb,var(--tremor-accent) 8%,var(--tremor-card))!important;
-  box-shadow:inset 2px 0 var(--tremor-accent)!important;
+.sidebar-link.active,
+.sidebar-link.is-active{
+  color:var(--qh-color-primary, var(--tremor-accent))!important;
+  background:var(--qh-color-surface-hover, color-mix(in srgb,var(--tremor-accent) 8%,var(--tremor-card)))!important;
+  box-shadow:inset 3px 0 var(--qh-color-primary, var(--tremor-accent))!important;
+  font-weight:700!important;
+}
+.sidebar-link.active svg,
+.sidebar-link.is-active svg{
+  color:var(--qh-color-primary, var(--tremor-accent))!important;
 }
 .sidebar-link:focus-visible,.mobile-nav-link:focus-visible,.mobile-more-link:focus-visible{
-  outline:2px solid var(--tremor-accent);outline-offset:2px;
+  outline:2px solid var(--qh-color-primary, var(--tremor-accent));outline-offset:2px;
 }
 .research-topbar{
-  min-height:58px!important;
+  min-height:var(--qh-topbar-height, 70px)!important;
   padding:8px 20px!important;
   background:color-mix(in srgb,var(--tremor-card) 92%,transparent)!important;
   border-bottom:1px solid var(--tremor-border)!important;
