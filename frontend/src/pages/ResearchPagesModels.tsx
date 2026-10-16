@@ -18,7 +18,7 @@ import {ExplainabilityResearchLab} from '../components/ExplainabilityResearchLab
 import {ResearchPredictionLab,type CrossModelPrediction} from '../components/ResearchPredictionLab';
 import {RobustnessEvidenceLab} from '../components/RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
-import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumPipeline,QuantumResourcePanel,QuantumSimulatorCatalog,QuantumStatePanel,gateSequence} from '../components/quantum';
+import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumJobManager,QuantumPipeline,QuantumResourcePanel,QuantumSimulatorCatalog,QuantumStatePanel,gateSequence} from '../components/quantum';
 import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 import type {Circuit} from '../types/qhealth';
 import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
@@ -553,6 +553,8 @@ export function Quantum(){
    <Card title="Observed historical runs" description={history?.matching_policy}>{history&&history.matched_runs>0?<div className="grid gap-3 md:grid-cols-3"><MetricCard label="MATCHED RUNS" value={history.matched_runs} detail="Recorded completed models"/><MetricCard label="MEDIAN TRAINING" value={seconds(history.median_training_seconds)} detail="Observed, not estimated"/><MetricCard label="OBSERVED RANGE" value={`${seconds(history.min_training_seconds)} – ${seconds(history.max_training_seconds)}`} detail="Recorded final-fit timing"/></div>:<Notice>Insufficient historical evidence for a measured runtime comparison.</Notice>}<p className="mt-3 text-xs muted">Observed historical runtime is not a guaranteed runtime estimate for this request.</p></Card>
    <Notice tone="amber">Hardware execution is not available in the current verified configuration. Logical resources and simulator workload do not predict real-QPU performance.</Notice>
   </div>}
+
+  <QuantumJobManager />
 
   <div id="quantum-evidence" className="ql-evidence-anchor">
    {modelId?<QuantumEvidenceLab mode="live" models={models.data||[]} experiment={selectedExperiment} dataset={evidenceDataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending}/>:<Card title="Persisted model evidence" description="Select a registered quantum model above to inspect its diagnostics and persisted model evidence."><p className="ql-evidence-prompt">Model evidence remains separate from structural previews and is never created by this visualization flow.</p></Card>}

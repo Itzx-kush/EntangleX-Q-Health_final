@@ -1,4 +1,4 @@
-import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,HybridRuntimeVerification,Job,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,QuantumProviderHealthResponse,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
+import type {AlignmentContract,AuditFilterParams,AuditIntegrity,AuditTimeline,Comparison,ControlledComparisonProtocol,Circuit,Dataset,DatasetInspection,DatasetLibraryItem,DatasetQualityPreflightResponse,DatasetQualityScorecard,EvidencePackagePreflight,Explanation,Experiment,ExperimentDetail,ExperimentPipelineResponse,ExperimentProtocolResponse,ExperimentProtocolVersion,Health,HybridRuntimeVerification,Job,JobCheckpointItem,JobEventItem,JobProgress,LineageSnapshot,ModelCard,ModelRecord,ModelInputSchema,PipelineDiff,PipelinePreflight,PipelineVersion,Prediction,Preview,ProtocolComplianceResponse,ProtocolDiff,ProtocolPreflight,ProtocolTemplate,Quality,QuantumProviderDescriptor,QuantumProviderHealthResponse,ResearchEvidencePackage,ResourceAdvisorResponse,ScorecardComparison,RobustnessResponse,RobustnessScenario,ScientificAuditEvent,SubgroupAnalysisRequest,SubgroupPreflightResponse,SubgroupStudy,SystemStatus,SavedResearchReport,TrainingConfig,VerifiedEvidencePackage} from '../types/qhealth';
 import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 
 export function resolveApiBase(configured:string|undefined,production:boolean){
@@ -126,6 +126,10 @@ export const qh={
   demo:()=>api.post<Dataset>('/datasets/demo'),
   upload:(form:FormData)=>api.upload<Dataset>('/datasets/upload',form),
   jobs:()=>api.get<Job[]>('/jobs'),
+  job:(id:string)=>api.get<Job>(`/jobs/${id}`),
+  jobProgress:(id:string)=>api.get<JobProgress>(`/jobs/${id}/progress`),
+  jobHistory:(id:string,limit=100)=>api.get<JobEventItem[]>(`/jobs/${id}/history?limit=${limit}`),
+  jobCheckpoints:(id:string)=>api.get<JobCheckpointItem[]>(`/jobs/${id}/checkpoints`),
   createJob:(config:TrainingConfig)=>api.post<{job:Job;experiment:Experiment}>('/training/jobs',config),
   pauseJob:(id:string)=>api.post<Job>(`/jobs/${id}/pause`),
   resumeJob:(id:string)=>api.post<Job>(`/jobs/${id}/resume`),
