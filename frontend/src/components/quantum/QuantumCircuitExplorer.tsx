@@ -4,17 +4,19 @@ import {Button,Badge} from '../ui';
 import type {Circuit} from '../../types/qhealth';
 import type {QuantumVisualizationCircuit,QuantumVisualizationFeatureMapping,QuantumVisualizationGate} from '../../types/quantumVisualization';
 
-type CircuitSource=QuantumVisualizationCircuit|Circuit;
-type Props={
+export type CircuitSource=QuantumVisualizationCircuit|Circuit;
+export type Props={
   circuit:CircuitSource;
   sourceLabel?:string;
   selectedQubit?:number|null;
   selectedFeatureIndex?:number|null;
+  selectedGateIndex?:number|null;
   featureMappings?:QuantumVisualizationFeatureMapping[];
   onSelectionChange?:(gate:QuantumVisualizationGate,position:number)=>void;
+  showInlineInspector?:boolean;
 };
 
-function gateSequence(circuit:CircuitSource):QuantumVisualizationGate[]{
+export function gateSequence(circuit:CircuitSource):QuantumVisualizationGate[]{
   if('gate_sequence' in circuit)return [...circuit.gate_sequence].sort((left,right)=>left.gate_index-right.gate_index);
   return circuit.gates.map((gate,gateIndex)=>({
     gate_index:gateIndex,
@@ -40,8 +42,10 @@ export function QuantumCircuitExplorer({
   sourceLabel='Backend circuit',
   selectedQubit=null,
   selectedFeatureIndex=null,
+  selectedGateIndex=null,
   featureMappings=[],
   onSelectionChange,
+  showInlineInspector=true,
 }:Props){
   const gates=useMemo(()=>gateSequence(circuit),[circuit]);
   const qubitCount=circuit.qubits??0;
@@ -55,6 +59,13 @@ export function QuantumCircuitExplorer({
     setPlaying(false);
     if(gates[0])onSelectionChange?.(gates[0],0);
   },[circuit]);
+
+  useEffect(()=>{
+    if(selectedGateIndex!==null&&selectedGateIndex!==undefined&&selectedGateIndex!==selectedIndex){
+      const safe=Math.max(0,Math.min(gates.length-1,selectedGateIndex));
+      setSelectedIndex(safe);
+    }
+  },[selectedGateIndex,gates.length]);
 
   useEffect(()=>{
     if(!playing)return;
@@ -132,7 +143,18 @@ export function QuantumCircuitExplorer({
       {circuit.measurement_path&&<span><small>Measurement path</small><strong>{circuit.measurement_path}</strong></span>}
     </div>}
 
-    <div className="ql-circuit-viewport" role="region" aria-label="Scrollable multi-qubit circuit" tabIndex={0}>
+    <div
+      className="ql-circuit-viewport"
+      role="region"
+      aria-label="Scrollable multi-qubit circuit"
+      tabIndex={0}
+      onKeyDown={(event)=>{
+        if(event.key==='ArrowRight'){event.preventDefault();step(1);}
+        else if(event.key==='ArrowLeft'){event.preventDefault();step(-1);}
+        else if(event.key==='Home'){event.preventDefault();selectPosition(0);}
+        else if(event.key==='End'){event.preventDefault();selectPosition(gates.length-1);}
+      }}
+    >
       <div className="ql-circuit-stage" style={{width:scaledWidth,height:scaledHeight}}>
         <svg
           className="ql-circuit-svg"
@@ -148,7 +170,7 @@ export function QuantumCircuitExplorer({
             </marker>
           </defs>
           {Array.from({length:qubitCount},(_,qubit)=>{
-            const rowSelected=selectedQubit===qubit;
+            const rowSelected=selectedQubit===qubit||Boolean(selectedGate?.qubits.includes(qubit));
             return <g key={'wire-'+qubit}>
               <text x="12" y={yFor(qubit)+4} className={'ql-qubit-label '+(rowSelected?'is-selected':'')}>q[{qubit}]</text>
               <line x1={left-12} x2={width-18} y1={yFor(qubit)} y2={yFor(qubit)} className={'ql-qubit-wire '+(rowSelected?'is-selected':'')}/>
@@ -217,7 +239,7 @@ export function QuantumCircuitExplorer({
       <p className="ql-playback-note"><Info size={14}/> This timeline follows the backend operation order. Per-gate circuit-layer indices are not inferred when the backend does not return them.</p>
     </div>
 
-    <div className="ql-gate-inspector" aria-live="polite" aria-atomic="true">
+    {showInlineInspector&&<div className="ql-gate-inspector" aria-live="polite" aria-atomic="true">
       <div><span className="ql-eyebrow">SELECTED OPERATION</span><strong>{displayGateName(selectedGate.name)}</strong></div>
       <dl>
         <div><dt>Backend order</dt><dd>{selectedGate.gate_index+1}</dd></div>
@@ -228,7 +250,7 @@ export function QuantumCircuitExplorer({
         <div><dt>Targets</dt><dd>{selectedGate.target_qubits.length?selectedGate.target_qubits.map(qubit=>'q['+qubit+']').join(', '):'Not reported'}</dd></div>
         <div><dt>Feature link</dt><dd>{selectedMapping&&gateMatchesFeature(selectedGate,selectedMapping)?'Matches '+(selectedMapping.feature_name||'feature '+(selectedMapping.feature_index+1)):'Not returned'}</dd></div>
       </dl>
-    </div>
+    </div>}
 
     {circuit.gate_counts&&Object.keys(circuit.gate_counts).length>0&&<details className="ql-circuit-counts">
       <summary>Backend gate counts</summary>

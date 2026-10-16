@@ -18,7 +18,7 @@ import {ExplainabilityResearchLab} from '../components/ExplainabilityResearchLab
 import {ResearchPredictionLab,type CrossModelPrediction} from '../components/ResearchPredictionLab';
 import {RobustnessEvidenceLab} from '../components/RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
-import {QuantumCircuitExplorer,QuantumContextPanel,QuantumPipeline,QuantumResourcePanel,QuantumStatePanel} from '../components/quantum';
+import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumPipeline,QuantumResourcePanel,QuantumStatePanel,gateSequence} from '../components/quantum';
 import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest} from '../types/quantumVisualization';
 import type {Circuit} from '../types/qhealth';
 import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
@@ -351,6 +351,14 @@ export function Quantum(){
   if(kind==='hybrid_pennylane_torch')preview.mutate({...context,model_type:kind,hybrid:draft.hybrid});
   else preview.mutate({...context,model_type:kind,quantum:draft.quantum});
  };
+ const isConfigModified = Boolean(
+  contract && (
+   kind === 'hybrid_pennylane_torch'
+    ? (draft.hybrid.qubits !== contract.circuit.qubits || draft.hybrid.backend !== contract.circuit.backend_id)
+    : (draft.quantum.qubits !== contract.circuit.qubits || draft.quantum.backend !== contract.circuit.backend_id)
+  )
+ );
+ const activeGates = (contract?.circuit || circuit) ? gateSequence(contract?.circuit || circuit!) : [];
  const handleGateSelection=(gate:{qubits:number[]},position:number)=>{
   setSelectedGateIndex(position);
   const nextQubit=gate.qubits.find(qubit=>Number.isInteger(qubit))??null;
@@ -414,10 +422,30 @@ export function Quantum(){
        sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}
        selectedQubit={selectedQubit}
        selectedFeatureIndex={selectedFeatureIndex}
+       selectedGateIndex={selectedGateIndex}
        featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
        onSelectionChange={handleGateSelection}
+       showInlineInspector={false}
       />:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
     </Card>
+    {(contract||circuit)&&<QuantumGateInspector
+      selectedGate={selectedGateIndex!==null?(activeGates[selectedGateIndex]||null):(activeGates[0]||null)}
+      gateIndex={selectedGateIndex??0}
+      totalGates={activeGates.length}
+      qubitCount={contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits)}
+      featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
+      selectedFeatureIndex={selectedFeatureIndex}
+      onFeatureSelect={setSelectedFeatureIndex}
+      onGateSelect={(idx)=>{setSelectedGateIndex(idx);const g=activeGates[idx];if(g&&g.qubits.length){setSelectedQubit(g.qubits[0]);}}}
+      quantumConfig={draft.quantum}
+      hybridConfig={draft.hybrid}
+      modelType={kind}
+      onQuantumConfigChange={(patch)=>quantum(patch)}
+      onHybridConfigChange={(patch)=>update({hybrid:{...draft.hybrid,...patch}})}
+      isConfigModified={isConfigModified}
+      onRegeneratePreview={requestPreview}
+      isRegenerating={preview.isPending}
+     />}
     <QuantumStatePanel
       contract={contract}
       selectedQubit={selectedQubit}
