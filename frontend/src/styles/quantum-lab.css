@@ -121,3 +121,112 @@
 .ql-reduced-explanation-banner strong{font-size:10px}
 .ql-reduced-explanation-banner p{margin-top:2px;font-size:9px;color:var(--tremor-muted);line-height:1.5}
 @media(max-width:700px){.ql-sim-controls-grid{grid-template-columns:1fr}}
+
+/* Quantum Simulator & Provider Discovery Catalog Styles */
+.ql-catalog-container{display:grid;gap:14px;padding:clamp(14px,2vw,20px);border:1px solid var(--wb-line);border-radius:11px;background:var(--tremor-card);box-shadow:0 1px 3px rgba(15,23,42,.03)}
+.ql-catalog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ql-catalog-title-group{display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1}
+.ql-catalog-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:color-mix(in srgb,var(--wb-purple) 12%,var(--tremor-card));border:1px solid color-mix(in srgb,var(--wb-purple) 25%,var(--wb-line));color:var(--wb-purple);flex-shrink:0}
+.ql-catalog-heading{margin:2px 0 0;font-size:clamp(15px,1.5vw,18px);font-weight:750;letter-spacing:-.02em;color:var(--tremor-text)}
+.ql-catalog-description{margin:4px 0 0;font-size:11px;color:var(--tremor-muted);line-height:1.5}
+.ql-catalog-header-actions{display:flex;align-items:center;gap:8px}
+.ql-refresh-btn{min-height:36px;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+.ql-spin{animation:ql-spin 1s linear infinite}
+@keyframes ql-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.ql-catalog-disclaimer{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--wb-line);border-left:3px solid var(--wb-amber);border-radius:8px;background:color-mix(in srgb,var(--wb-amber) 6%,var(--tremor-card));color:var(--tremor-text)}
+.ql-disclaimer-icon{color:var(--wb-amber);flex-shrink:0;margin-top:2px}
+.ql-disclaimer-content strong{display:block;font-size:11px;font-weight:700}
+.ql-disclaimer-content p{margin:2px 0 0;font-size:10px;color:var(--tremor-muted);line-height:1.5}
+
+.ql-catalog-toolbar{display:grid;gap:10px}
+.ql-search-box{position:relative;display:flex;align-items:center}
+.ql-search-icon{position:absolute;left:11px;color:var(--tremor-muted);pointer-events:none}
+.ql-search-input{width:100%;height:38px;padding:0 34px 0 34px;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);font-size:12px;color:var(--tremor-text);outline:none;transition:border-color .15s ease}
+.ql-search-input:focus{border-color:var(--wb-blue);background:var(--tremor-card);box-shadow:0 0 0 2px color-mix(in srgb,var(--wb-blue) 20%,transparent)}
+.ql-search-clear{position:absolute;right:10px;display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;color:var(--tremor-muted);font-size:16px;cursor:pointer;border-radius:50%}
+.ql-search-clear:hover{color:var(--tremor-text)}
+
+.ql-filter-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ql-filter-chip{padding:5px 12px;border:1px solid var(--wb-line);border-radius:20px;background:var(--tremor-bg-soft);color:var(--tremor-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s ease}
+.ql-filter-chip:hover{border-color:color-mix(in srgb,var(--wb-purple) 40%,var(--wb-line));color:var(--tremor-text)}
+.ql-filter-chip.is-active{background:color-mix(in srgb,var(--wb-purple) 12%,var(--tremor-card));color:var(--wb-purple);border-color:var(--wb-purple)}
+
+.ql-catalog-skeleton{display:grid;gap:12px;padding:24px;border:1px dashed var(--wb-line);border-radius:9px;background:var(--tremor-bg-soft);text-align:center}
+.ql-skeleton-banner{height:40px;border-radius:6px;background:color-mix(in srgb,var(--wb-line) 50%,transparent);animation:ql-shimmer 1.5s infinite alternate}
+.ql-skeleton-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.ql-skeleton-card{height:160px;border-radius:8px;background:color-mix(in srgb,var(--wb-line) 40%,transparent);animation:ql-shimmer 1.5s infinite alternate}
+.ql-skeleton-text{font-size:11px;color:var(--tremor-muted)}
+@keyframes ql-shimmer{from{opacity:.4}to{opacity:.8}}
+
+.ql-catalog-error{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid var(--wb-red);border-left:3px solid var(--wb-red);border-radius:8px;background:color-mix(in srgb,var(--wb-red) 6%,var(--tremor-card))}
+.ql-error-icon{color:var(--wb-red);flex-shrink:0}
+.ql-error-copy{flex:1;min-width:0}
+.ql-error-copy strong{display:block;font-size:12px;color:var(--tremor-text)}
+.ql-error-copy p{margin:2px 0 0;font-size:11px;color:var(--tremor-muted)}
+
+.ql-catalog-empty{display:grid;place-items:center;text-align:center;gap:8px;padding:28px 16px;border:1px dashed var(--wb-line);border-radius:9px;background:var(--tremor-bg-soft)}
+.ql-empty-icon{color:var(--tremor-muted)}
+.ql-catalog-empty h3{margin:0;font-size:13px;font-weight:700;color:var(--tremor-text)}
+.ql-catalog-empty p{margin:0;font-size:11px;color:var(--tremor-muted);max-width:440px}
+
+.ql-providers-list{display:grid;gap:16px}
+.ql-provider-section{border:1px solid var(--wb-line);border-radius:9px;background:color-mix(in srgb,var(--tremor-card) 95%,var(--tremor-bg-soft));padding:14px;display:grid;gap:12px}
+.ql-provider-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--wb-line);padding-bottom:10px}
+.ql-provider-info{display:grid;gap:6px;min-width:0;flex:1}
+.ql-provider-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ql-provider-name{margin:0;font-size:14px;font-weight:750;letter-spacing:-.01em;color:var(--tremor-text)}
+.ql-provider-id-tag code{padding:2px 6px;border-radius:4px;background:var(--tremor-bg-soft);font-size:10px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted)}
+.ql-type-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:color-mix(in srgb,var(--wb-blue) 10%,transparent);color:var(--wb-blue);border:1px solid color-mix(in srgb,var(--wb-blue) 25%,transparent)}
+.ql-status-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:4px}
+.ql-status-badge.is-available{background:color-mix(in srgb,var(--wb-green) 12%,transparent);color:var(--wb-green);border:1px solid color-mix(in srgb,var(--wb-green) 30%,transparent)}
+.ql-status-badge.is-unavailable{background:color-mix(in srgb,var(--wb-red) 12%,transparent);color:var(--wb-red);border:1px solid color-mix(in srgb,var(--wb-red) 30%,transparent)}
+
+.ql-provider-execution-note{margin:0;font-size:10px;color:var(--tremor-muted);line-height:1.45}
+.ql-packages-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px}
+.ql-packages-label{font-size:10px;font-weight:600;color:var(--tremor-muted)}
+.ql-pkg-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:var(--qh-font-mono,ui-monospace);padding:2px 7px;border-radius:4px}
+.ql-pkg-pill.is-installed{background:color-mix(in srgb,var(--wb-green) 10%,transparent);color:var(--wb-green);border:1px solid color-mix(in srgb,var(--wb-green) 25%,transparent)}
+.ql-pkg-pill.is-missing{background:color-mix(in srgb,var(--wb-red) 10%,transparent);color:var(--wb-red);border:1px solid color-mix(in srgb,var(--wb-red) 25%,transparent)}
+.ql-backend-count-badge{font-size:10px;font-weight:600;color:var(--tremor-muted);padding:3px 8px;border-radius:12px;background:var(--tremor-bg-soft);border:1px solid var(--wb-line)}
+
+.ql-backends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ql-backend-card{display:flex;flex-direction:column;justify-content:space-between;padding:12px;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-card);transition:all .16s ease}
+.ql-backend-card:hover{border-color:color-mix(in srgb,var(--wb-purple) 30%,var(--wb-line))}
+.ql-backend-card.is-active-backend{border:2px solid var(--wb-blue);box-shadow:0 0 0 1px var(--wb-blue),0 4px 12px rgba(23,105,224,.08);background:color-mix(in srgb,var(--wb-blue) 3%,var(--tremor-card))}
+
+.ql-backend-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ql-backend-name-box{display:grid;gap:2px}
+.ql-backend-display-name{margin:0;font-size:13px;font-weight:700;color:var(--tremor-text)}
+.ql-backend-id-pill code{font-size:10px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted)}
+.ql-backend-badge-box{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ql-active-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,var(--wb-blue) 12%,transparent);color:var(--wb-blue);border:1px solid color-mix(in srgb,var(--wb-blue) 25%,transparent)}
+.ql-backend-avail-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px}
+.ql-backend-avail-badge.is-available{color:var(--wb-green);background:color-mix(in srgb,var(--wb-green) 8%,transparent)}
+.ql-backend-avail-badge.is-unavailable{color:var(--wb-red);background:color-mix(in srgb,var(--wb-red) 8%,transparent)}
+
+.ql-backend-guidance{margin:8px 0;font-size:10px;color:var(--tremor-muted);line-height:1.45;min-height:30px}
+
+.ql-cap-matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px 0;border-top:1px solid var(--wb-line);border-bottom:1px solid var(--wb-line);margin:8px 0}
+.ql-cap-item{display:grid;gap:2px}
+.ql-cap-name{font-size:8px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--tremor-muted)}
+.ql-cap-tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600}
+.ql-cap-tag.is-supported{color:var(--wb-green)}
+.ql-cap-tag.is-unsupported{color:var(--tremor-muted)}
+.ql-cap-tag.is-unknown{color:var(--tremor-muted)}
+.ql-cap-tag.is-hardware-unsupported{color:var(--wb-red)}
+
+.ql-backend-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;flex-wrap:wrap}
+.ql-backend-meta-specs{display:grid;gap:2px;font-size:9px;color:var(--tremor-muted)}
+.ql-backend-meta-specs strong{color:var(--tremor-text)}
+.ql-btn-selected{border-color:var(--wb-blue);color:var(--wb-blue);background:color-mix(in srgb,var(--wb-blue) 6%,transparent)}
+
+@media(max-width:900px){
+  .ql-backends-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .ql-catalog-header{flex-direction:column;align-items:stretch}
+  .ql-catalog-header-actions{justify-content:flex-end}
+  .ql-filter-chips{overflow-x:auto;padding-bottom:4px}
+  .ql-cap-matrix{grid-template-columns:1fr}
+}

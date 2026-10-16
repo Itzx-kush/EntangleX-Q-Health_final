@@ -14,8 +14,54 @@ export interface QuantumConfig {
   entanglement:'linear'|'full'; optimizer:'COBYLA'|'SPSA'; maxiter:number; shots:number; noise_probability:number;
 }
 export interface HybridModelConfig {model_type:'hybrid_pennylane_torch';provider_id?:'pennylane_local';execution_mode?:'local_simulator';qubits:number;feature_map:'angle';quantum_layers:number;classical_hidden_dimensions:number[];classical_activation:'relu'|'tanh';optimizer:'adam'|'sgd';learning_rate:number;epochs:number;batch_size:number;deterministic_seed:number;sample_cap:number;backend:'default.qubit'}
-export interface QuantumBackendDescriptor {backend_id:string;display_name:string;provider_id:string;backend_type:string;available:boolean;capabilities:Record<string,string|number|null>}
-export interface QuantumProviderDescriptor {provider_id:string;display_name:string;provider_type:'LOCAL_SIMULATOR'|'REMOTE_SIMULATOR'|'HARDWARE'|'CUSTOM';enabled:boolean;availability:string;backends:QuantumBackendDescriptor[]}
+export type CapabilitySupport = 'SUPPORTED' | 'UNSUPPORTED' | 'UNKNOWN';
+
+export interface QuantumBackendCapabilities {
+  supports_sampling?: CapabilitySupport;
+  supports_statevector?: CapabilitySupport;
+  supports_estimator?: CapabilitySupport;
+  supports_shots?: CapabilitySupport;
+  supports_noise_model?: CapabilitySupport;
+  supports_hardware_execution?: CapabilitySupport;
+  supports_async_jobs?: CapabilitySupport;
+  supports_cancellation?: CapabilitySupport;
+  supports_batching?: CapabilitySupport;
+  supports_gradients?: CapabilitySupport;
+  supports_parameterized_circuits?: CapabilitySupport;
+  max_qubits?: number | null;
+  max_shots?: number | null;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface QuantumBackendDescriptor {
+  backend_id: string;
+  display_name: string;
+  provider_id: string;
+  backend_type: string;
+  available: boolean;
+  capabilities: QuantumBackendCapabilities;
+}
+
+export interface QuantumProviderDescriptor {
+  provider_id: string;
+  display_name: string;
+  provider_type: 'LOCAL_SIMULATOR' | 'REMOTE_SIMULATOR' | 'HARDWARE' | 'CUSTOM';
+  enabled: boolean;
+  availability: string;
+  backends: QuantumBackendDescriptor[];
+}
+
+export interface QuantumProviderHealthItem {
+  provider_id: string;
+  availability: 'AVAILABLE' | 'UNAVAILABLE' | 'MISCONFIGURED' | 'DISABLED' | 'UNKNOWN';
+  packages_present: Record<string, boolean>;
+  runtime_verified: boolean;
+  execution: string;
+}
+
+export interface QuantumProviderHealthResponse {
+  providers: QuantumProviderHealthItem[];
+}
 export interface QuantumDiagnosticFinding {severity:string;code:string;title:string;description:string;evidence?:Record<string,unknown>|null;recommendation?:string|null}
 export interface QuantumDiagnosticReport {id:string;experiment_id:string;model_record_id:string;model_type:string;status:string;created_at:string;model_configuration:Record<string,unknown>;feature_encoding:Record<string,unknown>;circuit_structure:Record<string,unknown>;resource_profile:Record<string,unknown>;optimizer_profile:Record<string,unknown>;training_profile:Record<string,unknown>;execution_profile:Record<string,unknown>;stability_profile:Record<string,unknown>;noise_profile:Record<string,unknown>;warnings:QuantumDiagnosticFinding[];limitations:string[];configuration_fingerprint?:string|null;provenance:Record<string,unknown>}
 export interface TrainingConfig {
