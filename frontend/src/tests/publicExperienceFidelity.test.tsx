@@ -152,13 +152,13 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       expect(classicalTab).toHaveAttribute('aria-selected', 'true');
       expect(hybridTab).toHaveAttribute('aria-selected', 'false');
       expect(screen.getByText(/GradientBoostingClassifier/i)).toBeInTheDocument();
-      expect(screen.getByText(/XGBoost \/ RF/i)).toBeInTheDocument();
+      expect(screen.getByText(/XGBoost \/ Random Forest/i)).toBeInTheDocument();
 
       // Switch to Quantum Kernel
       fireEvent.click(kernelTab);
       expect(kernelTab).toHaveAttribute('aria-selected', 'true');
       expect(screen.getByText(/FidelityQuantumKernel/i)).toBeInTheDocument();
-      expect(screen.getByText(/Hilbert Dimension/i)).toBeInTheDocument();
+      expect(screen.getByText('2^4 = 16 Dimension')).toBeInTheDocument();
     });
 
     it('supports interactive qubit selection and code copying', () => {
@@ -195,11 +195,11 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       expect(screen.getByRole('heading', {name: /Hybrid VQC Modelling/i})).toBeInTheDocument();
       expect(screen.getByRole('heading', {name: /Controlled Evaluation & Validation/i})).toBeInTheDocument();
 
-      // Metric checks
-      expect(screen.getByText(/SHA-256 Signed/i)).toBeInTheDocument();
-      expect(screen.getByText(/RY Rotation/i)).toBeInTheDocument();
-      expect(screen.getByText(/CNOT Ring/i)).toBeInTheDocument();
-      expect(screen.getByText(/Depolarizing Sweep/i)).toBeInTheDocument();
+      // Verifiable property checks
+      expect(screen.getByText(/SHA-256 Digest Rule/i)).toBeInTheDocument();
+      expect(screen.getByText(/RY Angle Rotation/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ring CNOT Topology/i)).toBeInTheDocument();
+      expect(screen.getByText(/Depolarizing Sweeps/i)).toBeInTheDocument();
     });
 
     it('updates active stage when clicking stepper items', () => {
@@ -208,6 +208,68 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       const stage3Btn = screen.getByRole('tab', {name: /03 Hybrid VQC Modelling/i});
       fireEvent.click(stage3Btn);
       expect(stage3Btn).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+
+  describe('Scientific Integrity, Disclosure & Evidence Verification', () => {
+    it('does not display unverified performance metrics or hardcoded runtime claims in the public demo', () => {
+      render(<PublicResearchDemonstration />);
+
+      // Must NOT display unverified quantitative performance claims
+      expect(screen.queryByText(/Reported AUROC/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/0\.864/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/0\.842/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/0\.851/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Simulation Runtime/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/18\.4 ms/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Full Rank \(16\)/i)).not.toBeInTheDocument();
+    });
+
+    it('renders prominent illustrative preview disclosure and honest status tags', () => {
+      render(<PublicResearchDemonstration />);
+
+      // Prominent disclosure banner
+      expect(screen.getByRole('note', {name: /Scientific evidence disclosure/i})).toBeInTheDocument();
+      expect(screen.getByText('ILLUSTRATIVE RESEARCH PREVIEW')).toBeInTheDocument();
+      expect(screen.getByText(/conceptual research architectures and synthetic test samples/i)).toBeInTheDocument();
+
+      // Telemetry header must explicitly indicate conceptual/illustrative nature
+      expect(screen.getByText(/Conceptual Simulation Preview/i)).toBeInTheDocument();
+      expect(screen.getByText(/Illustrative Sample/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Measured Benchmark Output/i)).not.toBeInTheDocument();
+    });
+
+    it('displays verified protocol parameters and clearly identified visualization titles across tabs', () => {
+      render(<PublicResearchDemonstration />);
+
+      // Tab 1: Hybrid VQC
+      expect(screen.getByText(/Circuit Depth/i)).toBeInTheDocument();
+      expect(screen.getByText(/8 gates\/wire/i)).toBeInTheDocument();
+      expect(screen.getByText(/Parameter-Shift Rule/i)).toBeInTheDocument();
+      expect(screen.getByText(/Illustrative Statevector Projection \(Synthetic Sample\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Synthetic 1024-shot sample/i)).toBeInTheDocument();
+
+      // Switch to Classical Baseline
+      const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
+      fireEvent.click(classicalTab);
+      expect(screen.getByText(/Stratified 5-Fold Protocol/i)).toBeInTheDocument();
+      expect(screen.getByText(/Identical Holdout Partitions/i)).toBeInTheDocument();
+      expect(screen.getByText(/Illustrative Feature Attribution \(Conceptual Weights\)/i)).toBeInTheDocument();
+
+      // Switch to Quantum Kernel
+      const kernelTab = screen.getByRole('tab', {name: /03 Quantum Kernel/i});
+      fireEvent.click(kernelTab);
+      expect(screen.getByText(/Fidelity State Overlap/i)).toBeInTheDocument();
+      expect(screen.getByText(/Synthetic Pairwise State Fidelity \(Conceptual Overlap\)/i)).toBeInTheDocument();
+    });
+
+    it('does not assert completed empirical execution in guided methodology cards', () => {
+      render(<PublicGuidedProcess />);
+
+      expect(screen.queryByText(/100% Verified/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/16 Selected/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Schema Audit Protocol/i)).toBeInTheDocument();
+      expect(screen.getByText(/Configurable \(4-16\)/i)).toBeInTheDocument();
     });
   });
 });

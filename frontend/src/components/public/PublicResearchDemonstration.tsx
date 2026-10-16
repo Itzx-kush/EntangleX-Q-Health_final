@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {Check, Copy, Terminal, Activity, Layers, Cpu, Sparkles} from 'lucide-react';
+import {Check, Copy, Terminal, Activity, Sparkles} from 'lucide-react';
 
 interface DemonstrationTab {
   id: string;
@@ -12,6 +12,8 @@ interface DemonstrationTab {
   shots: number;
   probabilities: {state: string; prob: number}[];
   metrics: {label: string; value: string}[];
+  visualizationTitle: string;
+  visualizationIndicator: string;
 }
 
 const DEMO_TABS: DemonstrationTab[] = [
@@ -19,8 +21,9 @@ const DEMO_TABS: DemonstrationTab[] = [
     id: 'hybrid-vqc',
     name: '01 Hybrid VQC',
     badge: 'QUANTUM ML',
-    description: 'Variational quantum classifier with parameterized rotation gates and CNOT entanglement.',
-    code: `# EntangleX Hybrid VQC Workflow
+    description: 'Variational quantum classifier with parameterized rotation gates and ring-topology CNOT entanglement.',
+    code: `# EntangleX Hybrid VQC Workflow Specification
+# Illustrative parameterized ansatz for normalized clinical biomarker encoding
 import pennylane as qml
 from entanglex.models import QuantumClassifier
 
@@ -40,9 +43,9 @@ def quantum_circuit(weights, x):
         
     return [qml.expval(qml.PauliZ(i)) for i in range(4)]
 
-# Initialize model bound to SIH-26139 benchmark
+# Model configuration bound to reproducible evaluation protocol
 model = QuantumClassifier(circuit=quantum_circuit, n_qubits=4)
-print(f"Parameters: {model.trainable_params} | Device: Local Statevector")`,
+print(f"Ansatz: 2 Layers | Entanglement: Ring CNOT | Target: Statevector")`,
     qubitCount: 4,
     circuitDepth: 8,
     shots: 1024,
@@ -53,55 +56,61 @@ print(f"Parameters: {model.trainable_params} | Device: Local Statevector")`,
       {state: '|11⟩', prob: 0.31},
     ],
     metrics: [
-      {label: 'Circuit Depth', value: '8 layers'},
-      {label: 'Entangling Gates', value: '4 CNOTs'},
-      {label: 'Simulation Runtime', value: '18.4 ms'},
-      {label: 'Reported AUROC', value: '0.864'},
+      {label: 'Circuit Depth', value: '8 gates/wire'},
+      {label: 'Entangling Pattern', value: '4 CNOTs (Ring)'},
+      {label: 'Encoding Method', value: 'RY Angle Mapping'},
+      {label: 'Optimization Protocol', value: 'Parameter-Shift Rule'},
     ],
+    visualizationTitle: 'Illustrative Statevector Projection (Synthetic Sample)',
+    visualizationIndicator: 'Synthetic 1024-shot sample',
   },
   {
     id: 'classical-baseline',
     name: '02 Classical Baseline',
     badge: 'CLASSICAL BENCHMARK',
-    description: 'Controlled classical models evaluated under identical cross-validation splits.',
-    code: `# EntangleX Controlled Baseline Comparison
+    description: 'Controlled classical estimators evaluated under identical cross-validation splits and data partitions.',
+    code: `# EntangleX Controlled Baseline Comparison Specification
+# Standardized evaluation protocol across classical and quantum model families
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from entanglex.evaluation import ProtocolComparator
 
-# Standardized data preprocessing across all model families
-comparator = ProtocolComparator(dataset="diabetes_risk_sih26139")
+comparator = ProtocolComparator(dataset="breast_cancer_wisconsin_diagnostic")
 
-# Train baseline gradient boosting on identical training fold
+# Train baseline gradient boosting on identical training partition
 xgb_baseline = GradientBoostingClassifier(n_estimators=100, max_depth=3)
 comparator.fit_and_evaluate(xgb_baseline, name="XGBoost_Baseline")
 
+# Train random forest baseline under identical fold boundaries
 rf_baseline = RandomForestClassifier(n_estimators=100, random_state=42)
 comparator.fit_and_evaluate(rf_baseline, name="Random_Forest_Baseline")
 
-# Summary of shared evaluation bounds
-print(comparator.summary_table())`,
+# Enforce identical train/validation/test holdouts
+print(comparator.protocol_summary())`,
     qubitCount: 0,
     circuitDepth: 0,
     shots: 0,
     probabilities: [
-      {state: 'Polyuria', prob: 0.38},
-      {state: 'Polydipsia', prob: 0.29},
-      {state: 'Age/BMI', prob: 0.19},
-      {state: 'Alopecia', prob: 0.14},
+      {state: 'Bio-01 (Radius)', prob: 0.38},
+      {state: 'Bio-02 (Texture)', prob: 0.29},
+      {state: 'Bio-03 (Perimeter)', prob: 0.19},
+      {state: 'Bio-04 (Area)', prob: 0.14},
     ],
     metrics: [
-      {label: 'Baseline Model', value: 'XGBoost / RF'},
-      {label: 'Cross-Validation', value: '5-fold stratified'},
-      {label: 'Feature Count', value: '16 attributes'},
-      {label: 'Reported AUROC', value: '0.842'},
+      {label: 'Baseline Model', value: 'XGBoost / Random Forest'},
+      {label: 'Validation Protocol', value: 'Stratified 5-Fold Protocol'},
+      {label: 'Biomarker Budget', value: '16 Selected Features'},
+      {label: 'Splitting Policy', value: 'Identical Holdout Partitions'},
     ],
+    visualizationTitle: 'Illustrative Feature Attribution (Conceptual Weights)',
+    visualizationIndicator: 'Conceptual importance sample',
   },
   {
     id: 'quantum-kernel',
     name: '03 Quantum Kernel',
     badge: 'KERNEL ESTIMATION',
     description: 'High-dimensional Hilbert space mapping via quantum state fidelity estimation.',
-    code: `# EntangleX Quantum Kernel Estimation
+    code: `# EntangleX Quantum Kernel Estimation Template
+# Pairwise quantum state fidelity overlap evaluation in 2^4 Hilbert space
 import pennylane as qml
 from entanglex.kernels import FidelityQuantumKernel
 
@@ -133,11 +142,13 @@ gram_matrix = kernel.compute_matrix(X_train[:16])`,
       {state: 'Overlap (0,3)', prob: 0.39},
     ],
     metrics: [
-      {label: 'Kernel Type', value: 'Fidelity Overlap'},
-      {label: 'Hilbert Dimension', value: '2^4 = 16'},
-      {label: 'Gram Matrix Rank', value: 'Full Rank (16)'},
-      {label: 'Reported AUROC', value: '0.851'},
+      {label: 'Kernel Formulation', value: 'Fidelity State Overlap'},
+      {label: 'Feature Dimension', value: '4 Normalized Inputs'},
+      {label: 'Hilbert Space', value: '2^4 = 16 Dimension'},
+      {label: 'Gram Target', value: 'Pairwise Inner Product'},
     ],
+    visualizationTitle: 'Synthetic Pairwise State Fidelity (Conceptual Overlap)',
+    visualizationIndicator: 'Synthetic matrix sample',
   },
 ];
 
@@ -166,8 +177,9 @@ export function PublicResearchDemonstration() {
         </h2>
         <p className="public-demo-description">
           Toggle between classical baselines, variational quantum circuits, and quantum kernel
-          formulations. All metrics and circuit structures represent reproducible benchmark
-          configurations from the EntangleX repository.
+          formulations. All metrics and circuit structures represent protocol specifications
+          from the EntangleX repository. Output distributions are illustrative synthetic samples
+          for workflow demonstration.
         </p>
       </div>
 
@@ -217,6 +229,17 @@ export function PublicResearchDemonstration() {
           </div>
         </div>
 
+        {/* Prominent Scientific Integrity Disclosure Banner */}
+        <div className="public-demo-disclosure" role="note" aria-label="Scientific evidence disclosure">
+          <div className="public-demo-disclosure-badge">
+            <Sparkles size={12} className="text-violet-400" />
+            <span>ILLUSTRATIVE RESEARCH PREVIEW</span>
+          </div>
+          <p className="public-demo-disclosure-text">
+            Displayed code samples, circuit metrics, and distributions represent conceptual research architectures and synthetic test samples. No live quantum hardware execution or unverified benchmark claim is asserted. Verified empirical datasets and execution records can be inspected in the authenticated workspace.
+          </p>
+        </div>
+
         {/* Tab Panel Body (2-Column Grid) */}
         <div
           id={`panel-${activeTab.id}`}
@@ -261,8 +284,8 @@ export function PublicResearchDemonstration() {
           <div className="public-telemetry-panel">
             <div className="public-telemetry-header">
               <Activity size={15} className="text-cyan-400" />
-              <strong>Measured Benchmark Output</strong>
-              <span className="public-telemetry-tag">Simulated State</span>
+              <strong>Conceptual Simulation Preview</strong>
+              <span className="public-telemetry-tag">Illustrative Sample</span>
             </div>
 
             <p className="public-telemetry-description">{activeTab.description}</p>
@@ -277,12 +300,12 @@ export function PublicResearchDemonstration() {
               ))}
             </div>
 
-            {/* Measurement Probability / Feature Weight Histogram */}
+            {/* Synthetic Sample / Feature Weight Histogram */}
             <div className="public-histogram-container">
               <div className="public-histogram-title">
-                <span>{activeTab.id === 'classical-baseline' ? 'Relative Feature Influence' : 'Measurement Probability Distribution'}</span>
+                <span>{activeTab.visualizationTitle}</span>
                 <span className="public-shots-indicator">
-                  {activeTab.shots > 0 ? `${activeTab.shots} shots` : '100% test fold'}
+                  {activeTab.visualizationIndicator}
                 </span>
               </div>
 
@@ -306,8 +329,8 @@ export function PublicResearchDemonstration() {
             <div className="public-scientific-boundary-note">
               <Sparkles size={13} className="text-violet-400 shrink-0" />
               <span>
-                *Illustrative research preview based on EntangleX SIH-26139 benchmark dataset.
-                Evaluated via local statevector simulator. Not an active quantum hardware job.
+                *Illustrative research preview based on EntangleX benchmark protocols.
+                Values shown are synthetic sample projections for interface demonstration, not live model executions.
               </span>
             </div>
           </div>

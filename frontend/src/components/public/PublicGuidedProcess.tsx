@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {ArrowRight, CheckCircle2, ChevronRight, Database, Dna, FileCheck, Layers} from 'lucide-react';
+import {CheckCircle2, ChevronRight, Database, Dna, FileCheck, Layers} from 'lucide-react';
 
 interface ProcessStage {
   id: string;
@@ -28,9 +28,9 @@ const STAGES: ProcessStage[] = [
       'Deterministic train/validation/test split isolation',
     ],
     metrics: [
-      {label: 'Schema Validation', value: '100% Verified'},
-      {label: 'Provenance Check', value: 'SHA-256 Signed'},
-      {label: 'Partition Policy', value: 'Stratified 5-Fold'},
+      {label: 'Validation Standard', value: 'Schema Audit Protocol'},
+      {label: 'Provenance Policy', value: 'SHA-256 Digest Rule'},
+      {label: 'Partition Policy', value: 'Stratified 5-Fold Split'},
     ],
   },
   {
@@ -48,9 +48,9 @@ const STAGES: ProcessStage[] = [
       'Compact 4-to-8 qubit feature vector reduction',
     ],
     metrics: [
-      {label: 'Biomarker Inputs', value: '16 Selected'},
-      {label: 'Feature Rank Method', value: 'Mutual Info'},
-      {label: 'Phase Mapping', value: 'RY Rotation'},
+      {label: 'Biomarker Capacity', value: 'Configurable (4-16)'},
+      {label: 'Ranking Criterion', value: 'Mutual Information'},
+      {label: 'Phase Mapping', value: 'RY Angle Rotation'},
     ],
   },
   {
@@ -68,9 +68,9 @@ const STAGES: ProcessStage[] = [
       'Hardware simulator profiling without conflating simulator with hardware',
     ],
     metrics: [
-      {label: 'Ansatz Depth', value: '2-4 Layers'},
-      {label: 'Entangling Gates', value: 'CNOT Ring'},
-      {label: 'Model Families', value: 'VQC + Baselines'},
+      {label: 'Ansatz Architecture', value: '2-4 Variational Layers'},
+      {label: 'Entangling Pattern', value: 'Ring CNOT Topology'},
+      {label: 'Benchmark Scope', value: 'VQC + Classical Baselines'},
     ],
   },
   {
@@ -88,9 +88,9 @@ const STAGES: ProcessStage[] = [
       'Automated export of reproducible research evidence packages',
     ],
     metrics: [
-      {label: 'Evaluation Protocol', value: 'Identical Split'},
-      {label: 'Noise Profiling', value: 'Depolarizing Sweep'},
-      {label: 'Evidence Report', value: 'PDF & JSON'},
+      {label: 'Holdout Partitioning', value: 'Strict Identical Splits'},
+      {label: 'Noise Stress Profiling', value: 'Depolarizing Sweeps'},
+      {label: 'Evidence Export', value: 'Reproducible PDF & JSON'},
     ],
   },
 ];
