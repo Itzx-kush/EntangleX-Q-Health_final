@@ -19,7 +19,7 @@ import {ResearchPredictionLab,type CrossModelPrediction} from '../components/Res
 import {RobustnessEvidenceLab} from '../components/RobustnessEvidenceLab';
 import {QuantumEvidenceLab} from '../components/QuantumEvidenceLab';
 import {QuantumCircuitExplorer,QuantumContextPanel,QuantumGateInspector,QuantumPipeline,QuantumResourcePanel,QuantumStatePanel,gateSequence} from '../components/quantum';
-import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest} from '../types/quantumVisualization';
+import type {QuantumVisualizationContract,QuantumVisualizationPreviewRequest,QuantumVisualizationSimulationRequest} from '../types/quantumVisualization';
 import type {Circuit} from '../types/qhealth';
 import {useVerifiedDemo} from '../hooks/useVerifiedDemo';
 import {useResearchRecorder} from '../research/useResearchHistory';
@@ -293,6 +293,36 @@ export function Quantum(){
   onMutate:()=>{const requestId=++visualizationRequestRef.current;setContract(null);setCircuit(undefined);setCircuitSource(null);return {requestId}},
   onSuccess:(result,_request,context)=>{if(context?.requestId!==visualizationRequestRef.current)return;setCircuit(result);setContract(null);setCircuitSource('fitted')},
  });
+ const [encodedVector,setEncodedVector]=useState<number[]>([0.5,0.5]);
+ const [lastSimulatedFingerprint,setLastSimulatedFingerprint]=useState<string|null>(null);
+ const simulation=useMutation({
+  mutationFn:(request:QuantumVisualizationSimulationRequest)=>qh.quantumVisualizationSimulate(request),
+  onMutate:()=>{const requestId=++visualizationRequestRef.current;return {requestId}},
+  onSuccess:(result,_request,context)=>{
+   if(context?.requestId!==visualizationRequestRef.current)return;
+   setContract(result);
+   setCircuit(undefined);
+   setCircuitSource('preview');
+   setLastSimulatedFingerprint(JSON.stringify({
+    kind,
+    qubits:draft.quantum.qubits,
+    backend:draft.quantum.backend,
+    reps:draft.quantum.feature_map_reps,
+    vector:_request.encoded_vector,
+   }));
+  },
+ });
+ useEffect(()=>{
+  const q=draft.quantum.qubits;
+  setEncodedVector(prev=>{
+   if(prev.length===q)return prev;
+   const next=Array(q).fill(0.5);
+   for(let i=0;i<Math.min(prev.length,q);i++){
+    next[i]=prev[i];
+   }
+   return next;
+  });
+ },[draft.quantum.qubits]);
  const advisor=useMutation({mutationFn:()=>{if(kind==='hybrid_pennylane_torch')throw new Error('The resource advisor supports VQC, QSVC, and QNN only.');return qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null})}});
  useEffect(()=>{
   const nextDatasetId=demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id;
@@ -351,6 +381,30 @@ export function Quantum(){
   if(kind==='hybrid_pennylane_torch')preview.mutate({...context,model_type:kind,hybrid:draft.hybrid});
   else preview.mutate({...context,model_type:kind,quantum:draft.quantum});
  };
+ const handleSimulate=()=>{
+  if(kind==='hybrid_pennylane_torch')return;
+  const context={dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null,seed:draft.seed,...(draft.max_samples?{sample_count:draft.max_samples}:{})};
+  const q=draft.quantum.qubits;
+  const vec=encodedVector.length===q?encodedVector:Array(q).fill(0.5);
+  simulation.mutate({
+   ...context,
+   model_type:kind,
+   quantum:{...draft.quantum,noise_probability:0},
+   encoded_vector:vec,
+   simulation_stage:'encoding',
+  });
+ };
+ const isSimulationStale = Boolean(
+  contract?.state.status === 'AVAILABLE' &&
+  lastSimulatedFingerprint &&
+  lastSimulatedFingerprint !== JSON.stringify({
+   kind,
+   qubits: draft.quantum.qubits,
+   backend: draft.quantum.backend,
+   reps: draft.quantum.feature_map_reps,
+   vector: encodedVector,
+  })
+ );
  const isConfigModified = Boolean(
   contract && (
    kind === 'hybrid_pennylane_torch'
@@ -374,7 +428,7 @@ export function Quantum(){
    {label:'Logical qubits',value:contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits),detail:'Backend-reported logical width',tone:'blue'},
    {label:'Circuit structure',value:contract?.circuit.gate_sequence.length??circuit?.gates.length??'Not loaded',detail:contract?'Ordered backend operations':circuit?'Persisted fitted operations':'No circuit loaded',tone:contract||circuit?'green':'slate'},
   ]}/>
-  <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message}/>
+  <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message||(simulation.error as Error)?.message}/>
 
   <QuantumContextPanel
     contract={contract}
@@ -405,6 +459,7 @@ export function Quantum(){
     <div className="ql-action-row">
      <Button disabled={(kind!=='hybrid_pennylane_torch'&&cap.data?.available===false)||preview.isPending} onClick={requestPreview}><Play size={14}/>{preview.isPending?'Building backend contract…':'Generate structural preview'}</Button>
      {modelId&&<Button variant="outline" disabled={fitted.isPending} onClick={()=>fitted.mutate()}>{fitted.isPending?'Loading fitted circuit…':'Retrieve fitted circuit evidence'}</Button>}
+     <Button variant="outline" disabled={kind==='hybrid_pennylane_torch'||draft.quantum.qubits>6||simulation.isPending} onClick={handleSimulate}><Play size={14}/>{simulation.isPending?'Simulating quantum state…':'Simulate quantum state'}</Button>
     </div>
     {circuitSource==='fitted'&&<Notice tone="blue">Fitted circuit structure is persisted model evidence. State, probability, phase, and Bloch output are not included unless the backend explicitly supplies them.</Notice>}
    </Card>
@@ -450,6 +505,15 @@ export function Quantum(){
       contract={contract}
       selectedQubit={selectedQubit}
       onQubitSelect={setSelectedQubit}
+      modelType={kind}
+      qubitCount={kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits}
+      encodedVector={encodedVector}
+      onEncodedVectorChange={setEncodedVector}
+      onSimulate={handleSimulate}
+      isSimulating={simulation.isPending}
+      simulationError={simulation.error?(simulation.error as Error).message:null}
+      isStale={isSimulationStale}
+      backendId={kind==='hybrid_pennylane_torch'?draft.hybrid.backend:draft.quantum.backend}
       unavailableReason={circuitSource==='fitted'?'The fitted circuit endpoint returned persisted circuit structure only. No statevector, probabilities, phases, reduced Bloch vectors, or measurements were returned.':'No simulation was run. Generate a preview for structure, or use an explicitly supported backend simulation with a valid encoded representation.'}
      />
    </div>

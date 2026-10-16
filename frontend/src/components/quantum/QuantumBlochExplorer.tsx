@@ -102,7 +102,7 @@ export function QuantumBlochExplorer({qubits,selectedQubit,onSelectQubit}:Props)
       <svg
         viewBox="0 0 100 100"
         role="img"
-        aria-label={'Bloch representation for qubit '+active.qubit_index+': x '+active.x.toFixed(3)+', y '+active.y.toFixed(3)+', z '+active.z.toFixed(3)}
+        aria-label={'Bloch projection for qubit '+active.qubit_index+': x '+active.x.toFixed(3)+', y '+active.y.toFixed(3)+', z '+active.z.toFixed(3)}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}

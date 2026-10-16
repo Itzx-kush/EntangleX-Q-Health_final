@@ -64,3 +64,60 @@
 .ql-params-table-wrap{overflow-x:auto;border:1px solid var(--wb-line);border-radius:8px}
 @media(max-width:900px){.ql-inspector-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.ql-inspector-grid{grid-template-columns:1fr}}
+
+/* Quantum State Simulation & State Panel Styling */
+.ql-simulation-workbench{display:grid;gap:12px}
+.ql-stale-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--wb-amber);border-left:3px solid var(--wb-amber);border-radius:8px;background:color-mix(in srgb,var(--wb-amber) 8%,var(--tremor-card));color:var(--tremor-text);font-size:10px;line-height:1.4}
+.ql-stale-banner svg{color:var(--wb-amber);flex-shrink:0}
+.ql-sim-error-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--wb-red);border-left:3px solid var(--wb-red);border-radius:8px;background:color-mix(in srgb,var(--wb-red) 8%,var(--tremor-card));color:var(--tremor-text);font-size:10px;line-height:1.4}
+.ql-sim-error-banner svg{color:var(--wb-red);flex-shrink:0}
+.ql-sim-unsupported-note{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px dashed var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);color:var(--tremor-muted);font-size:10px;line-height:1.45}
+.ql-sim-unsupported-note svg{flex-shrink:0;color:var(--wb-blue)}
+.ql-sim-controls-grid{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}
+.ql-vector-section{display:grid;gap:8px}
+.ql-vector-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ql-vector-presets{display:flex;gap:5px;flex-wrap:wrap}
+.ql-preset-btn{padding:3px 8px;border:1px solid var(--wb-line);border-radius:5px;background:var(--tremor-bg-soft);color:var(--tremor-muted);font-size:8px;font-weight:600;cursor:pointer;transition:all .14s ease}
+.ql-preset-btn:hover{background:color-mix(in srgb,var(--wb-purple) 8%,var(--tremor-card));color:var(--wb-purple);border-color:var(--wb-purple)}
+.ql-vector-inputs{display:flex;gap:7px;flex-wrap:wrap}
+.ql-vector-field{display:grid;gap:3px;min-width:65px;flex:1}
+.ql-vector-field span{font-size:8px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted);text-transform:uppercase}
+.ql-vector-field input{width:100%;padding:5px 7px;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-card);font:600 10px var(--qh-font-mono,ui-monospace);color:var(--tremor-text)}
+.ql-vector-field input:focus-visible{outline:2px solid var(--wb-blue);border-color:var(--wb-blue)}
+.ql-sim-action-box{display:grid;gap:6px;min-width:180px}
+.ql-sim-backend-pill{display:grid;gap:2px;padding:6px 9px;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-bg-soft)}
+.ql-sim-backend-pill small{font-size:7px;color:var(--tremor-muted);letter-spacing:.08em;font-weight:700}
+.ql-sim-backend-pill strong{font-size:9px;color:var(--tremor-text)}
+.ql-sim-submit-btn{height:36px;width:100%;justify-content:center;gap:6px;font-size:11px}
+.ql-state-view-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--wb-line)}
+.ql-meta-pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ql-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-bg-soft);font-size:9px}
+.ql-pill small{color:var(--tremor-muted);font-size:7px;font-weight:700;letter-spacing:.06em}
+.ql-sort-controls{display:flex;align-items:center;gap:5px}
+.ql-sort-label{font-size:8px;color:var(--tremor-muted);font-weight:700;text-transform:uppercase}
+.ql-sort-btn{padding:4px 8px;border:1px solid var(--wb-line);border-radius:5px;background:var(--tremor-card);color:var(--tremor-muted);font-size:8px;font-weight:600;cursor:pointer;transition:all .14s ease}
+.ql-sort-btn:hover,.ql-sort-btn.is-active{background:color-mix(in srgb,var(--wb-blue) 8%,var(--tremor-card));color:var(--wb-blue);border-color:var(--wb-blue)}
+.ql-prob-decimal{font:8px var(--qh-font-mono,ui-monospace);color:var(--tremor-muted);text-align:right}
+.ql-selected-inspector{margin-top:10px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--wb-purple) 25%,var(--wb-line));border-radius:8px;background:color-mix(in srgb,var(--wb-purple) 4%,var(--tremor-card));display:grid;gap:8px}
+.ql-inspector-subhead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ql-inspector-subhead span{font-size:10px;font-weight:700}
+.ql-inspector-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.ql-inspector-details>div{display:grid;gap:2px}
+.ql-inspector-details small{font-size:7px;color:var(--tremor-muted);text-transform:uppercase;letter-spacing:.06em}
+.ql-inspector-details strong{font-size:10px}
+.ql-math-callout-sm{padding:6px 10px;border-radius:6px;background:var(--tremor-bg-soft);border-left:2px solid var(--wb-purple)}
+.ql-phase-readout{display:grid;justify-items:end;gap:1px}
+.ql-phase-deg{font-size:7px;color:var(--tremor-muted)}
+.ql-measurement-notice{padding:14px;border:1px dashed var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft)}
+.ql-measurement-empty-box{display:flex;align-items:flex-start;gap:12px;color:var(--tremor-text)}
+.ql-measurement-empty-box svg{color:var(--wb-blue);flex-shrink:0;margin-top:2px}
+.ql-measurement-empty-box strong{font-size:11px}
+.ql-measurement-empty-box p{margin-top:4px;font-size:9px;color:var(--tremor-muted);line-height:1.55}
+.ql-measurement-counts-col{display:grid;justify-items:end;gap:1px}
+.ql-measurement-counts-col small{font-size:7px;color:var(--tremor-muted)}
+.ql-bloch-view-container{display:grid;gap:10px}
+.ql-reduced-explanation-banner{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border:1px solid var(--wb-line);border-left:3px solid var(--wb-blue);border-radius:8px;background:var(--tremor-bg-soft);color:var(--tremor-text)}
+.ql-reduced-explanation-banner svg{color:var(--wb-blue);flex-shrink:0;margin-top:2px}
+.ql-reduced-explanation-banner strong{font-size:10px}
+.ql-reduced-explanation-banner p{margin-top:2px;font-size:9px;color:var(--tremor-muted);line-height:1.5}
+@media(max-width:700px){.ql-sim-controls-grid{grid-template-columns:1fr}}
