@@ -152,13 +152,13 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       expect(classicalTab).toHaveAttribute('aria-selected', 'true');
       expect(hybridTab).toHaveAttribute('aria-selected', 'false');
       expect(screen.getByText(/GradientBoostingClassifier/i)).toBeInTheDocument();
-      expect(screen.getByText(/XGBoost \/ Random Forest/i)).toBeInTheDocument();
+      expect(screen.getByText(/Gradient Boosting \/ Random Forest/i)).toBeInTheDocument();
 
       // Switch to Quantum Kernel
       fireEvent.click(kernelTab);
       expect(kernelTab).toHaveAttribute('aria-selected', 'true');
-      expect(screen.getByText(/FidelityQuantumKernel/i)).toBeInTheDocument();
-      expect(screen.getByText('2^4 = 16 Dimension')).toBeInTheDocument();
+      expect(screen.getByText(/kernel_circuit/i)).toBeInTheDocument();
+      expect(screen.getByText('2⁴ = 16 Dimension')).toBeInTheDocument();
     });
 
     it('supports interactive qubit selection and code copying', () => {
@@ -200,6 +200,8 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       expect(screen.getByText(/RY Angle Rotation/i)).toBeInTheDocument();
       expect(screen.getByText(/Ring CNOT Topology/i)).toBeInTheDocument();
       expect(screen.getByText(/Depolarizing Sweeps/i)).toBeInTheDocument();
+      expect(screen.getByText(/16 Benchmark Attributes/i)).toBeInTheDocument();
+      expect(screen.getByText(/Stratified 5-Fold CV/i)).toBeInTheDocument();
     });
 
     it('updates active stage when clicking stepper items', () => {
@@ -243,17 +245,18 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       render(<PublicResearchDemonstration />);
 
       // Tab 1: Hybrid VQC
-      expect(screen.getByText(/Circuit Depth/i)).toBeInTheDocument();
-      expect(screen.getByText(/8 gates\/wire/i)).toBeInTheDocument();
-      expect(screen.getByText(/Parameter-Shift Rule/i)).toBeInTheDocument();
+      expect(screen.getByText(/Qubit Register/i)).toBeInTheDocument();
+      expect(screen.getByText(/4 Qubits/i)).toBeInTheDocument();
+      expect(screen.getByText(/Variational Depth/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 Parameterized Layers/i)).toBeInTheDocument();
       expect(screen.getByText(/Illustrative Statevector Projection \(Synthetic Sample\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Synthetic 1024-shot sample/i)).toBeInTheDocument();
 
       // Switch to Classical Baseline
       const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
       fireEvent.click(classicalTab);
-      expect(screen.getByText(/Stratified 5-Fold Protocol/i)).toBeInTheDocument();
-      expect(screen.getByText(/Identical Holdout Partitions/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Stratified 5-Fold CV/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/early-stage-diabetes/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Illustrative Feature Attribution \(Conceptual Weights\)/i)).toBeInTheDocument();
 
       // Switch to Quantum Kernel
@@ -269,7 +272,94 @@ describe('Public Experience Fidelity & Accessibility Tests', () => {
       expect(screen.queryByText(/100% Verified/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/16 Selected/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Schema Audit Protocol/i)).toBeInTheDocument();
-      expect(screen.getByText(/Configurable \(4-16\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/16 Benchmark Attributes/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Master Prompt 11: Code Accuracy, Dataset Consistency & Protocol Verification', () => {
+    it('accurately labels Gradient Boosting and does not mislabel it as XGBoost', () => {
+      render(<PublicResearchDemonstration />);
+
+      const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
+      fireEvent.click(classicalTab);
+
+      // Verify scikit-learn class and variable names
+      expect(screen.getByText(/GradientBoostingClassifier/i)).toBeInTheDocument();
+      expect(screen.getByText(/gb_model = GradientBoostingClassifier/i)).toBeInTheDocument();
+      expect(screen.getByText(/Gradient Boosting \/ Random Forest/i)).toBeInTheDocument();
+
+      // XGBoost must NOT appear in the classical baseline code, comment, or label
+      expect(screen.queryByText(/xgb_baseline/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/XGBoost_Baseline/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/XGBoost \/ Random Forest/i)).not.toBeInTheDocument();
+    });
+
+    it('consistently references early-stage-diabetes dataset and its clinical symptoms', () => {
+      render(<PublicResearchDemonstration />);
+
+      const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
+      fireEvent.click(classicalTab);
+
+      // Verify dataset slug and context
+      expect(screen.getAllByText(/early-stage-diabetes/i).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText(/Early Stage Diabetes Risk Prediction/i)).toBeInTheDocument();
+
+      // Verify genuine early-stage diabetes symptoms
+      expect(screen.getByText('Polyuria')).toBeInTheDocument();
+      expect(screen.getByText('Polydipsia')).toBeInTheDocument();
+      expect(screen.getByText('Age / BMI')).toBeInTheDocument();
+      expect(screen.getByText('Alopecia')).toBeInTheDocument();
+
+      // Breast cancer dataset must not be attributed to the diabetes benchmark
+      expect(screen.queryByText(/breast_cancer_wisconsin_diagnostic/i)).not.toBeInTheDocument();
+    });
+
+    it('does not import fake entanglex pip modules in code snippets', () => {
+      render(<PublicResearchDemonstration />);
+
+      // Tab 1: Hybrid VQC
+      expect(screen.queryByText(/from entanglex\.models import/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/qml\.qnn\.TorchLayer/i)).toBeInTheDocument();
+
+      // Tab 2: Classical Baseline
+      const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
+      fireEvent.click(classicalTab);
+      expect(screen.queryByText(/from entanglex\.evaluation import/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/from sklearn\.model_selection import StratifiedKFold/i)).toBeInTheDocument();
+
+      // Tab 3: Quantum Kernel
+      const kernelTab = screen.getByRole('tab', {name: /03 Quantum Kernel/i});
+      fireEvent.click(kernelTab);
+      expect(screen.queryByText(/from entanglex\.kernels import/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/compute_fidelity_kernel/i)).toBeInTheDocument();
+    });
+
+    it('reconciles cross-validation and holdout terminology and circuit depth properties', () => {
+      render(<PublicResearchDemonstration />);
+
+      // In Tab 1: No arbitrary "8 gates/wire" or conflated "8 layers"
+      expect(screen.queryByText(/8 gates\/wire/i)).not.toBeInTheDocument();
+      expect(screen.getByText('4 Qubits')).toBeInTheDocument();
+      expect(screen.getByText('2 Parameterized Layers')).toBeInTheDocument();
+      expect(screen.getByText('Ring Topology (CNOT)')).toBeInTheDocument();
+
+      // In Tab 2: Stratified 5-Fold CV without conflating with holdout partitions
+      const classicalTab = screen.getByRole('tab', {name: /02 Classical Baseline/i});
+      fireEvent.click(classicalTab);
+      expect(screen.getByText('Stratified 5-Fold CV')).toBeInTheDocument();
+      expect(screen.getByText('Shared Split Folds')).toBeInTheDocument();
+      expect(screen.queryByText(/Identical Holdout Partitions/i)).not.toBeInTheDocument();
+    });
+
+    it('accurately states authenticated workspace capabilities in disclosure', () => {
+      render(<PublicResearchDemonstration />);
+
+      // Verify exact wording reflecting real workspace functionality
+      expect(
+        screen.getByText(
+          /Precomputed benchmark evidence, dataset catalogs, and reproducible experiment records can be inspected in the authenticated workspace\./i
+        )
+      ).toBeInTheDocument();
     });
   });
 });

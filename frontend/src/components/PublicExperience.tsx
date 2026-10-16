@@ -143,7 +143,7 @@ export function PublicExperience({onRequestAccess, exiting = false}: PublicExper
                     <span>Logistic Regression</span>
                     <span>Support Vector Machine</span>
                     <span>Random Forest (100 Trees)</span>
-                    <span>XGBoost Gradient Boosting</span>
+                    <span>Gradient Boosting</span>
                   </div>
                 </article>
               </GlareHover>

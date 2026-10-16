@@ -30,7 +30,7 @@ const STAGES: ProcessStage[] = [
     metrics: [
       {label: 'Validation Standard', value: 'Schema Audit Protocol'},
       {label: 'Provenance Policy', value: 'SHA-256 Digest Rule'},
-      {label: 'Partition Policy', value: 'Stratified 5-Fold Split'},
+      {label: 'Partition Policy', value: 'Stratified 5-Fold Protocol'},
     ],
   },
   {
@@ -48,7 +48,7 @@ const STAGES: ProcessStage[] = [
       'Compact 4-to-8 qubit feature vector reduction',
     ],
     metrics: [
-      {label: 'Biomarker Capacity', value: 'Configurable (4-16)'},
+      {label: 'Biomarker Scope', value: '16 Benchmark Attributes'},
       {label: 'Ranking Criterion', value: 'Mutual Information'},
       {label: 'Phase Mapping', value: 'RY Angle Rotation'},
     ],
@@ -64,7 +64,7 @@ const STAGES: ProcessStage[] = [
     items: [
       'Parameterized unitary ansatz with ring-topology CNOT gates',
       'Classical gradient backpropagation via parameter-shift rules',
-      'Concurrent training of Random Forest, SVM, and XGBoost baselines',
+      'Concurrent training of Random Forest, SVM, and Gradient Boosting baselines',
       'Hardware simulator profiling without conflating simulator with hardware',
     ],
     metrics: [
@@ -80,7 +80,7 @@ const STAGES: ProcessStage[] = [
     subtitle: 'Shared evidence boundaries and noise robustness testing',
     icon: FileCheck,
     description:
-      'Models are compared strictly across identical test folds using AUROC, Brier score, and simulated quantum noise models to guarantee truthful scientific claims.',
+      'Models are compared strictly across identical cross-validation folds using ROC-AUC, PR-AUC, and simulated quantum noise models to guarantee truthful scientific claims.',
     items: [
       'Multi-metric evaluation: ROC-AUC, PR-AUC, F1-score, and Brier calibration',
       'Simulated depolarizing noise and shot-noise resilience sweeps',
@@ -88,7 +88,7 @@ const STAGES: ProcessStage[] = [
       'Automated export of reproducible research evidence packages',
     ],
     metrics: [
-      {label: 'Holdout Partitioning', value: 'Strict Identical Splits'},
+      {label: 'Evaluation Protocol', value: 'Stratified 5-Fold CV'},
       {label: 'Noise Stress Profiling', value: 'Depolarizing Sweeps'},
       {label: 'Evidence Export', value: 'Reproducible PDF & JSON'},
     ],

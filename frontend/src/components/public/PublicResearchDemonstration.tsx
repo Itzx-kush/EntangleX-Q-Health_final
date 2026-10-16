@@ -22,14 +22,14 @@ const DEMO_TABS: DemonstrationTab[] = [
     name: '01 Hybrid VQC',
     badge: 'QUANTUM ML',
     description: 'Variational quantum classifier with parameterized rotation gates and ring-topology CNOT entanglement.',
-    code: `# EntangleX Hybrid VQC Workflow Specification
-# Illustrative parameterized ansatz for normalized clinical biomarker encoding
+    code: `# Illustrative Hybrid VQC Workflow (PennyLane + PyTorch Template)
+# Parameterized ansatz for normalized clinical biomarker classification
 import pennylane as qml
-from entanglex.models import QuantumClassifier
+import torch
 
 dev = qml.device("default.qubit", wires=4)
 
-@qml.qnode(dev, interface="torch")
+@qml.qnode(dev, interface="torch", diff_method="backprop")
 def quantum_circuit(weights, x):
     # Angle encoding of normalized clinical biomarkers
     for i in range(4):
@@ -43,9 +43,10 @@ def quantum_circuit(weights, x):
         
     return [qml.expval(qml.PauliZ(i)) for i in range(4)]
 
-# Model configuration bound to reproducible evaluation protocol
-model = QuantumClassifier(circuit=quantum_circuit, n_qubits=4)
-print(f"Ansatz: 2 Layers | Entanglement: Ring CNOT | Target: Statevector")`,
+# Conceptual hybrid torch layer wrapper
+weight_shapes = {"weights": (2, 4, 3)}
+qlayer = qml.qnn.TorchLayer(quantum_circuit, weight_shapes)
+print("Ansatz: 2 Layers | Entanglement: Ring CNOT | Backend: default.qubit")`,
     qubitCount: 4,
     circuitDepth: 8,
     shots: 1024,
@@ -56,10 +57,10 @@ print(f"Ansatz: 2 Layers | Entanglement: Ring CNOT | Target: Statevector")`,
       {state: '|11⟩', prob: 0.31},
     ],
     metrics: [
-      {label: 'Circuit Depth', value: '8 gates/wire'},
-      {label: 'Entangling Pattern', value: '4 CNOTs (Ring)'},
-      {label: 'Encoding Method', value: 'RY Angle Mapping'},
-      {label: 'Optimization Protocol', value: 'Parameter-Shift Rule'},
+      {label: 'Qubit Register', value: '4 Qubits'},
+      {label: 'Variational Depth', value: '2 Parameterized Layers'},
+      {label: 'Entangling Pattern', value: 'Ring Topology (CNOT)'},
+      {label: 'Encoding Scheme', value: 'RY Angle Mapping'},
     ],
     visualizationTitle: 'Illustrative Statevector Projection (Synthetic Sample)',
     visualizationIndicator: 'Synthetic 1024-shot sample',
@@ -68,38 +69,40 @@ print(f"Ansatz: 2 Layers | Entanglement: Ring CNOT | Target: Statevector")`,
     id: 'classical-baseline',
     name: '02 Classical Baseline',
     badge: 'CLASSICAL BENCHMARK',
-    description: 'Controlled classical estimators evaluated under identical cross-validation splits and data partitions.',
-    code: `# EntangleX Controlled Baseline Comparison Specification
-# Standardized evaluation protocol across classical and quantum model families
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from entanglex.evaluation import ProtocolComparator
+    description: 'Controlled classical estimators (Gradient Boosting and Random Forest) evaluated under identical cross-validation splits.',
+    code: `# Controlled Classical Baseline Evaluation (scikit-learn)
+# Standardized evaluation protocol on early-stage-diabetes benchmark
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold
 
-comparator = ProtocolComparator(dataset="breast_cancer_wisconsin_diagnostic")
+# Target benchmark dataset: Early Stage Diabetes Risk Prediction (16 features)
+dataset_slug = "early-stage-diabetes"
 
-# Train baseline gradient boosting on identical training partition
-xgb_baseline = GradientBoostingClassifier(n_estimators=100, max_depth=3)
-comparator.fit_and_evaluate(xgb_baseline, name="XGBoost_Baseline")
+# Standardized 5-fold stratified cross-validation protocol
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-# Train random forest baseline under identical fold boundaries
-rf_baseline = RandomForestClassifier(n_estimators=100, random_state=42)
-comparator.fit_and_evaluate(rf_baseline, name="Random_Forest_Baseline")
+# Train baseline Gradient Boosting on shared fold partition
+gb_model = GradientBoostingClassifier(n_estimators=100, max_depth=3, random_state=42)
 
-# Enforce identical train/validation/test holdouts
-print(comparator.protocol_summary())`,
+# Train baseline Random Forest under identical cross-validation splits
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Note: Illustrative research workflow template for benchmark evaluation
+print(f"Protocol: Stratified 5-Fold CV | Benchmark: {dataset_slug}")`,
     qubitCount: 0,
     circuitDepth: 0,
     shots: 0,
     probabilities: [
-      {state: 'Bio-01 (Radius)', prob: 0.38},
-      {state: 'Bio-02 (Texture)', prob: 0.29},
-      {state: 'Bio-03 (Perimeter)', prob: 0.19},
-      {state: 'Bio-04 (Area)', prob: 0.14},
+      {state: 'Polyuria', prob: 0.38},
+      {state: 'Polydipsia', prob: 0.29},
+      {state: 'Age / BMI', prob: 0.19},
+      {state: 'Alopecia', prob: 0.14},
     ],
     metrics: [
-      {label: 'Baseline Model', value: 'XGBoost / Random Forest'},
-      {label: 'Validation Protocol', value: 'Stratified 5-Fold Protocol'},
-      {label: 'Biomarker Budget', value: '16 Selected Features'},
-      {label: 'Splitting Policy', value: 'Identical Holdout Partitions'},
+      {label: 'Baseline Models', value: 'Gradient Boosting / Random Forest'},
+      {label: 'Validation Protocol', value: 'Stratified 5-Fold CV'},
+      {label: 'Dataset Benchmark', value: 'early-stage-diabetes'},
+      {label: 'Partition Consistency', value: 'Shared Split Folds'},
     ],
     visualizationTitle: 'Illustrative Feature Attribution (Conceptual Weights)',
     visualizationIndicator: 'Conceptual importance sample',
@@ -109,16 +112,16 @@ print(comparator.protocol_summary())`,
     name: '03 Quantum Kernel',
     badge: 'KERNEL ESTIMATION',
     description: 'High-dimensional Hilbert space mapping via quantum state fidelity estimation.',
-    code: `# EntangleX Quantum Kernel Estimation Template
-# Pairwise quantum state fidelity overlap evaluation in 2^4 Hilbert space
+    code: `# Illustrative Quantum Kernel Estimation (PennyLane Template)
+# Pairwise quantum state fidelity overlap |⟨ψ(x₁)|ψ(x₂)⟩|² in 2⁴ Hilbert space
 import pennylane as qml
-from entanglex.kernels import FidelityQuantumKernel
+import numpy as np
 
 dev = qml.device("default.qubit", wires=4)
 
 @qml.qnode(dev)
 def kernel_circuit(x1, x2):
-    # Feature map encoding x1
+    # Feature map encoding x1 (Hadamard + RZ phase rotation)
     for i in range(4):
         qml.Hadamard(wires=i)
         qml.RZ(2.0 * x1[i], wires=i)
@@ -130,8 +133,12 @@ def kernel_circuit(x1, x2):
         
     return qml.probs(wires=range(4))
 
-kernel = FidelityQuantumKernel(qnode=kernel_circuit)
-gram_matrix = kernel.compute_matrix(X_train[:16])`,
+# Fidelity kernel is the probability of returning to ground state |0000⟩
+def compute_fidelity_kernel(x1, x2):
+    return kernel_circuit(x1, x2)[0]
+
+# Note: Conceptual research template for pairwise Gram matrix estimation
+print("Hilbert Space: 2⁴ = 16 | Kernel: State Fidelity Overlap")`,
     qubitCount: 4,
     circuitDepth: 12,
     shots: 2048,
@@ -143,9 +150,9 @@ gram_matrix = kernel.compute_matrix(X_train[:16])`,
     ],
     metrics: [
       {label: 'Kernel Formulation', value: 'Fidelity State Overlap'},
-      {label: 'Feature Dimension', value: '4 Normalized Inputs'},
-      {label: 'Hilbert Space', value: '2^4 = 16 Dimension'},
-      {label: 'Gram Target', value: 'Pairwise Inner Product'},
+      {label: 'Feature Dimension', value: '4 Input Attributes'},
+      {label: 'Hilbert Space', value: '2⁴ = 16 Dimension'},
+      {label: 'Gram Matrix Target', value: 'Pairwise Inner Product'},
     ],
     visualizationTitle: 'Synthetic Pairwise State Fidelity (Conceptual Overlap)',
     visualizationIndicator: 'Synthetic matrix sample',
@@ -236,7 +243,7 @@ export function PublicResearchDemonstration() {
             <span>ILLUSTRATIVE RESEARCH PREVIEW</span>
           </div>
           <p className="public-demo-disclosure-text">
-            Displayed code samples, circuit metrics, and distributions represent conceptual research architectures and synthetic test samples. No live quantum hardware execution or unverified benchmark claim is asserted. Verified empirical datasets and execution records can be inspected in the authenticated workspace.
+            Displayed code samples, circuit metrics, and distributions represent conceptual research architectures and synthetic test samples. No live quantum hardware execution or unverified benchmark claim is asserted. Precomputed benchmark evidence, dataset catalogs, and reproducible experiment records can be inspected in the authenticated workspace.
           </p>
         </div>
 
@@ -329,8 +336,7 @@ export function PublicResearchDemonstration() {
             <div className="public-scientific-boundary-note">
               <Sparkles size={13} className="text-violet-400 shrink-0" />
               <span>
-                *Illustrative research preview based on EntangleX benchmark protocols.
-                Values shown are synthetic sample projections for interface demonstration, not live model executions.
+                *Illustrative research preview based on EntangleX benchmark protocols. Values shown are synthetic sample projections for interface demonstration, not live model executions.
               </span>
             </div>
           </div>
