@@ -230,3 +230,206 @@
   .ql-filter-chips{overflow-x:auto;padding-bottom:4px}
   .ql-cap-matrix{grid-template-columns:1fr}
 }
+
+/* Quantum Job Management, Progress & Execution History Styles */
+.ql-job-manager-container{display:grid;gap:14px;padding:clamp(14px,2vw,20px);border:1px solid var(--wb-line);border-radius:11px;background:var(--tremor-card);box-shadow:0 1px 3px rgba(15,23,42,.03)}
+.ql-job-manager-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ql-job-header-left{display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1}
+.ql-job-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:color-mix(in srgb,var(--wb-blue) 12%,var(--tremor-card));border:1px solid color-mix(in srgb,var(--wb-blue) 25%,var(--wb-line));color:var(--wb-blue);flex-shrink:0}
+.ql-job-heading{margin:2px 0 0;font-size:clamp(15px,1.5vw,18px);font-weight:750;letter-spacing:-.02em;color:var(--tremor-text)}
+.ql-job-description{margin:4px 0 0;font-size:11px;color:var(--tremor-muted);line-height:1.5}
+.ql-job-header-actions{display:flex;align-items:center;gap:8px}
+.ql-job-refresh-btn{min-height:36px;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+
+.ql-job-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.ql-job-stat-card{padding:10px 12px;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);display:grid;gap:3px}
+.ql-job-stat-card small{font-size:8px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--tremor-muted)}
+.ql-job-stat-card strong{font:750 16px var(--qh-font-mono,ui-monospace);color:var(--tremor-text)}
+.ql-job-stat-card span{font-size:9px;color:var(--tremor-muted)}
+.ql-tone-purple{color:var(--wb-purple)!important}
+.ql-tone-green{color:var(--wb-green)!important}
+.ql-tone-red{color:var(--wb-red)!important}
+
+.ql-job-alert-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:8px;font-size:11px}
+.ql-job-alert-banner.is-error{border:1px solid var(--wb-red);border-left:3px solid var(--wb-red);background:color-mix(in srgb,var(--wb-red) 6%,var(--tremor-card));color:var(--tremor-text)}
+.ql-job-alert-copy strong{display:block;font-size:11px}
+.ql-job-alert-copy p{margin:1px 0 0;font-size:10px;color:var(--tremor-muted)}
+.ql-job-alert-close{border:0;background:transparent;color:var(--tremor-muted);cursor:pointer;padding:4px}
+.ql-job-alert-close:hover{color:var(--tremor-text)}
+
+.ql-job-toolbar{display:grid;gap:10px}
+.ql-job-search-box{position:relative;display:flex;align-items:center}
+.ql-job-search-icon{position:absolute;left:11px;color:var(--tremor-muted);pointer-events:none}
+.ql-job-search-input{width:100%;height:38px;padding:0 34px;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);font-size:12px;color:var(--tremor-text);outline:none;transition:border-color .15s ease}
+.ql-job-search-input:focus{border-color:var(--wb-blue);background:var(--tremor-card);box-shadow:0 0 0 2px color-mix(in srgb,var(--wb-blue) 20%,transparent)}
+.ql-job-search-clear{position:absolute;right:10px;display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;color:var(--tremor-muted);font-size:16px;cursor:pointer}
+
+.ql-job-filter-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ql-job-chip{padding:5px 12px;border:1px solid var(--wb-line);border-radius:20px;background:var(--tremor-bg-soft);color:var(--tremor-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s ease}
+.ql-job-chip:hover{border-color:color-mix(in srgb,var(--wb-blue) 40%,var(--wb-line));color:var(--tremor-text)}
+.ql-job-chip.is-active{background:color-mix(in srgb,var(--wb-blue) 12%,var(--tremor-card));color:var(--wb-blue);border-color:var(--wb-blue)}
+.ql-job-sort-toggle{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;margin-left:auto;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-bg-soft);color:var(--tremor-muted);font-size:11px;font-weight:600;cursor:pointer}
+.ql-job-sort-toggle:hover{color:var(--tremor-text);border-color:var(--wb-line)}
+
+.ql-job-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(320px,.9fr);gap:14px;align-items:start}
+.ql-job-list-pane{min-width:0;display:grid;gap:12px}
+
+.ql-job-skeleton{display:grid;gap:10px;padding:24px;border:1px dashed var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);text-align:center}
+.ql-skeleton-row{height:44px;border-radius:6px;background:color-mix(in srgb,var(--wb-line) 40%,transparent);animation:ql-shimmer 1.5s infinite alternate}
+.ql-job-error{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--wb-red);border-radius:8px;background:color-mix(in srgb,var(--wb-red) 6%,var(--tremor-card))}
+.ql-job-empty{display:grid;place-items:center;text-align:center;gap:8px;padding:32px 16px;border:1px dashed var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft)}
+.ql-job-empty h3{margin:0;font-size:13px;font-weight:700;color:var(--tremor-text)}
+.ql-job-empty p{margin:0;font-size:11px;color:var(--tremor-muted);max-width:440px}
+
+.ql-job-table-wrap{width:100%;max-width:100%;overflow-x:auto;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-card)}
+.ql-job-table{width:100%;min-width:620px;border-collapse:collapse;font-size:11px}
+.ql-job-table th{padding:10px 12px;text-align:left;font-size:9px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--tremor-muted);border-bottom:1px solid var(--wb-line);background:var(--tremor-bg-soft)}
+.ql-job-table td{padding:10px 12px;border-bottom:1px solid var(--wb-line);vertical-align:middle}
+.ql-job-row{cursor:pointer;transition:background .14s ease}
+.ql-job-row:hover{background:color-mix(in srgb,var(--wb-blue) 4%,var(--tremor-card))}
+.ql-job-row.is-selected{background:color-mix(in srgb,var(--wb-blue) 8%,var(--tremor-card))}
+.ql-job-row:last-child td{border-bottom:0}
+
+.ql-job-cell-id{min-width:110px}
+.ql-id-group{display:flex;align-items:center;gap:5px}
+.ql-id-group code{font:700 11px var(--qh-font-mono,ui-monospace);color:var(--tremor-text)}
+.ql-copy-id-btn{display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;color:var(--tremor-muted);border-radius:4px;cursor:pointer}
+.ql-copy-id-btn:hover{color:var(--wb-blue);background:var(--tremor-bg-soft)}
+.ql-copied-pill{font-size:9px;font-weight:700;color:var(--wb-green);padding:1px 4px;border-radius:3px;background:color-mix(in srgb,var(--wb-green) 12%,transparent)}
+.ql-job-time{display:block;font-size:9px;color:var(--tremor-muted);margin-top:2px}
+
+.ql-job-cell-exp{min-width:160px}
+.ql-exp-title{display:block;font-size:12px;font-weight:700;color:var(--tremor-text);overflow-wrap:anywhere}
+.ql-job-models-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ql-model-tag{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:4px}
+.ql-model-tag.is-quantum{background:color-mix(in srgb,var(--wb-purple) 12%,transparent);color:var(--wb-purple);border:1px solid color-mix(in srgb,var(--wb-purple) 25%,transparent)}
+.ql-model-tag.is-hybrid{background:color-mix(in srgb,var(--wb-blue) 12%,transparent);color:var(--wb-blue);border:1px solid color-mix(in srgb,var(--wb-blue) 25%,transparent)}
+.ql-model-tag.is-classical{background:var(--tremor-bg-soft);color:var(--tremor-muted);border:1px solid var(--wb-line)}
+
+.ql-job-cell-status{min-width:110px}
+.ql-job-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;padding:3px 7px;border-radius:12px}
+.ql-job-badge.is-succeeded{background:color-mix(in srgb,var(--wb-green) 12%,transparent);color:var(--wb-green);border:1px solid color-mix(in srgb,var(--wb-green) 25%,transparent)}
+.ql-job-badge.is-partial{background:color-mix(in srgb,var(--wb-green) 10%,transparent);color:var(--wb-green);border:1px solid color-mix(in srgb,var(--wb-green) 20%,transparent)}
+.ql-job-badge.is-running{background:color-mix(in srgb,var(--wb-purple) 12%,transparent);color:var(--wb-purple);border:1px solid color-mix(in srgb,var(--wb-purple) 25%,transparent)}
+.ql-job-badge.is-checkpointing{background:color-mix(in srgb,var(--wb-blue) 12%,transparent);color:var(--wb-blue);border:1px solid color-mix(in srgb,var(--wb-blue) 25%,transparent)}
+.ql-job-badge.is-queued{background:var(--tremor-bg-soft);color:var(--tremor-muted);border:1px solid var(--wb-line)}
+.ql-job-badge.is-paused{background:color-mix(in srgb,var(--wb-amber) 12%,transparent);color:var(--wb-amber);border:1px solid color-mix(in srgb,var(--wb-amber) 25%,transparent)}
+.ql-job-badge.is-cancelled{background:var(--tremor-bg-soft);color:var(--tremor-muted);border:1px solid var(--wb-line)}
+.ql-job-badge.is-failed{background:color-mix(in srgb,var(--wb-red) 12%,transparent);color:var(--wb-red);border:1px solid color-mix(in srgb,var(--wb-red) 25%,transparent)}
+.ql-job-badge.is-recoverable{background:color-mix(in srgb,var(--wb-amber) 10%,transparent);color:var(--wb-amber);border:1px solid color-mix(in srgb,var(--wb-amber) 20%,transparent)}
+.ql-job-badge.is-unknown{background:var(--tremor-bg-soft);color:var(--tremor-muted)}
+.ql-job-state-preview{display:block;font-size:9px;color:var(--tremor-muted);margin-top:2px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.ql-job-cell-progress{min-width:130px}
+.ql-progress-box{display:grid;gap:3px}
+.ql-progress-text{display:flex;justify-content:space-between;font-size:9px}
+.ql-progress-text span{color:var(--tremor-muted);max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ql-progress-text strong{font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-text)}
+.ql-progress-track{width:100%;height:6px;border-radius:4px;background:var(--tremor-bg-soft);overflow:hidden}
+.ql-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--wb-blue),var(--wb-purple));transition:width .2s ease}
+.ql-progress-fill.is-indeterminate{width:40%!important;animation:ql-indeterminate 1.5s infinite ease-in-out}
+@keyframes ql-indeterminate{0%{margin-left:0}50%{margin-left:60%}100%{margin-left:0}}
+.ql-units-note{font-size:8px;color:var(--tremor-muted)}
+
+.ql-job-cell-duration{font-size:10px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted);min-width:70px}
+.ql-job-cell-actions{min-width:150px}
+.ql-action-btn-group{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ql-btn-sm{padding:3px 7px;font-size:10px;font-weight:600;min-height:26px;display:inline-flex;align-items:center;gap:3px}
+.ql-btn-cancel{color:var(--wb-red);border-color:color-mix(in srgb,var(--wb-red) 30%,var(--wb-line))}
+.ql-btn-cancel:hover{background:color-mix(in srgb,var(--wb-red) 8%,transparent);border-color:var(--wb-red)}
+.ql-btn-inspect-active{border-color:var(--wb-blue);color:var(--wb-blue);background:color-mix(in srgb,var(--wb-blue) 8%,transparent)}
+
+/* Selected Job Detail Panel (Right Pane) */
+.ql-job-detail-panel{border:1px solid var(--wb-line);border-radius:9px;background:var(--tremor-card);padding:14px;display:grid;gap:12px;position:sticky;top:84px}
+.ql-detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;border-bottom:1px solid var(--wb-line);padding-bottom:10px}
+.ql-detail-title-group{display:grid;gap:2px;min-width:0}
+.ql-detail-heading{margin:0;font-size:14px;font-weight:750;letter-spacing:-.01em;color:var(--tremor-text);overflow-wrap:anywhere}
+.ql-detail-id-box{display:flex;align-items:center;gap:5px;margin-top:2px}
+.ql-detail-id-box code{font:650 10px var(--qh-font-mono,ui-monospace);color:var(--tremor-muted);overflow-wrap:anywhere}
+.ql-detail-close-btn{border:0;background:transparent;color:var(--tremor-muted);cursor:pointer;padding:4px;border-radius:4px}
+.ql-detail-close-btn:hover{color:var(--tremor-text);background:var(--tremor-bg-soft)}
+
+.ql-detail-status-card{padding:10px 12px;border:1px solid var(--wb-line);border-radius:8px;background:var(--tremor-bg-soft);display:grid;gap:8px}
+.ql-detail-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ql-status-with-pulse{display:flex;align-items:center;gap:6px}
+.ql-live-tag{display:inline-flex;align-items:center;gap:4px;font-size:8px;font-weight:800;color:var(--wb-purple);letter-spacing:.06em}
+.ql-live-dot{width:6px;height:6px;border-radius:50%;background:var(--wb-purple);animation:ql-pulse 1.2s infinite}
+.ql-detail-phase{font-size:10px;font-weight:600;color:var(--tremor-text)}
+.ql-detail-progress-section{display:grid;gap:4px}
+.ql-detail-progress-metrics{display:flex;justify-content:space-between;font-size:10px;color:var(--tremor-muted)}
+.ql-detail-progress-metrics strong{color:var(--tremor-text);font-family:var(--qh-font-mono,ui-monospace)}
+.ql-detail-state-msg{margin:0;font-size:10px;color:var(--tremor-muted);line-height:1.45}
+
+.ql-detail-specs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ql-spec-box{padding:6px 8px;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-bg-soft);display:grid;gap:1px}
+.ql-spec-box small{font-size:7px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--tremor-muted)}
+.ql-spec-box strong{font-size:10px;color:var(--tremor-text)}
+.ql-spec-box code{font-size:9px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted)}
+
+.ql-section-subhead{margin:4px 0;font-size:11px;font-weight:750;letter-spacing:-.01em;color:var(--tremor-text)}
+.ql-detail-models-section{display:grid;gap:6px}
+.ql-models-table-wrap{border:1px solid var(--wb-line);border-radius:6px;overflow-x:auto}
+.ql-models-table{width:100%;border-collapse:collapse;font-size:10px}
+.ql-models-table th{padding:6px 8px;text-align:left;font-size:8px;font-weight:750;text-transform:uppercase;color:var(--tremor-muted);background:var(--tremor-bg-soft);border-bottom:1px solid var(--wb-line)}
+.ql-models-table td{padding:6px 8px;border-bottom:1px solid var(--wb-line)}
+.ql-models-table tr:last-child td{border-bottom:0}
+.ql-model-id-label{display:block;font-size:8px;font-family:var(--qh-font-mono,ui-monospace);color:var(--tremor-muted)}
+.ql-model-status{font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:3px}
+.ql-model-status.is-ready,.ql-model-status.is-completed{color:var(--wb-green);background:color-mix(in srgb,var(--wb-green) 12%,transparent)}
+.ql-model-status.is-failed{color:var(--wb-red);background:color-mix(in srgb,var(--wb-red) 12%,transparent)}
+.ql-model-status.is-running{color:var(--wb-purple);background:color-mix(in srgb,var(--wb-purple) 12%,transparent)}
+.ql-model-status.is-queued{color:var(--tremor-muted);background:var(--tremor-bg-soft)}
+
+.ql-detail-errors-box{padding:10px;border:1px solid var(--wb-red);border-radius:7px;background:color-mix(in srgb,var(--wb-red) 5%,var(--tremor-card));display:grid;gap:6px}
+.ql-errors-header{display:flex;align-items:center;gap:6px;color:var(--wb-red);font-size:11px}
+.ql-errors-list{margin:0;padding-left:14px;display:grid;gap:4px;font-size:10px}
+.ql-error-item code{font-weight:700;color:var(--wb-red);margin-right:4px}
+
+.ql-checkpoints-section{display:grid;gap:6px}
+.ql-checkpoints-list{display:grid;gap:5px;max-height:160px;overflow-y:auto}
+.ql-checkpoint-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--wb-line);border-radius:6px;background:var(--tremor-bg-soft)}
+.ql-cp-icon{color:var(--wb-blue);flex-shrink:0}
+.ql-cp-copy{display:flex;justify-content:space-between;align-items:center;width:100%;gap:6px}
+.ql-cp-title-row{display:flex;align-items:center;gap:6px}
+.ql-cp-title-row strong{font-size:10px;color:var(--tremor-text)}
+.ql-cp-badge{font-size:8px;font-weight:700;color:var(--tremor-muted);padding:1px 4px;border-radius:3px;background:var(--tremor-card);border:1px solid var(--wb-line)}
+.ql-cp-time{font-size:8px;color:var(--tremor-muted)}
+
+.ql-history-section{display:grid;gap:6px}
+.ql-history-timeline{display:grid;gap:8px;padding-left:6px;border-left:2px solid var(--wb-line);margin-left:4px;max-height:200px;overflow-y:auto}
+.ql-timeline-item{position:relative;padding-left:10px;display:grid;gap:2px}
+.ql-timeline-dot{position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--wb-purple);border:2px solid var(--tremor-card)}
+.ql-timeline-title{display:flex;justify-content:space-between;font-size:10px}
+.ql-timeline-title strong{font-size:9px;color:var(--tremor-text)}
+.ql-timeline-title small{font-size:8px;color:var(--tremor-muted)}
+.ql-transition-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--tremor-muted)}
+.ql-transition-pill strong{color:var(--tremor-text)}
+.ql-transition-pill .ql-arrow{color:var(--wb-purple)}
+
+.ql-detail-actions-bar{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px;border-top:1px solid var(--wb-line)}
+
+/* Confirmation Modal */
+.ql-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(2px);display:grid;place-items:center;z-index:999;padding:16px}
+.ql-modal-box{width:min(100%,420px);padding:20px;border-radius:11px;background:var(--tremor-card);border:1px solid var(--wb-line);box-shadow:0 10px 25px rgba(0,0,0,.2);display:grid;gap:14px}
+.ql-modal-header{display:flex;align-items:center;gap:10px}
+.ql-modal-icon{color:var(--wb-amber);flex-shrink:0}
+.ql-modal-header h3{margin:0;font-size:14px;font-weight:750;color:var(--tremor-text)}
+.ql-modal-desc{margin:0;font-size:11px;color:var(--tremor-muted);line-height:1.5}
+.ql-modal-actions{display:flex;justify-content:flex-end;gap:8px}
+.ql-btn-danger{background:var(--wb-red)!important;border-color:var(--wb-red)!important;color:#fff!important}
+
+@keyframes ql-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+@media(max-width:1100px){
+  .ql-job-layout{grid-template-columns:1fr}
+  .ql-job-detail-panel{position:static}
+  .ql-job-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+  .ql-job-manager-header{flex-direction:column;align-items:stretch}
+  .ql-job-header-actions{justify-content:flex-end}
+  .ql-job-stats-grid{grid-template-columns:1fr}
+  .ql-job-filter-chips{overflow-x:auto;padding-bottom:4px}
+  .ql-job-sort-toggle{margin-left:0}
+  .ql-detail-specs-grid{grid-template-columns:1fr}
+}
