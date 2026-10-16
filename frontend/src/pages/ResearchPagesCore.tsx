@@ -17,6 +17,7 @@ import {DistributionStrip,PipelineFlow,StatusStrip,WorkbenchRail} from '../compo
 import {VerifiedPipeline,VerifiedQuality} from '../components/VerifiedDemoViews';
 import {DatasetQualityScorecardView} from './DatasetQualityScorecard';
 import {useFlagshipData,useVerifiedDemo} from '../hooks/useVerifiedDemo';
+import {QuantumHero,CoreCapabilitiesGrid,HybridWorkflowStrip} from '../components/QuantumHero';
 
 export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Robustness','/robustness'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
 export function StageNav({current}:{current:string}){return <AnimatedSection className="flex flex-wrap gap-2 border-y py-3"><span className="stage-chip border-primary/20 text-primary"><ShinyText>RESEARCH PATHWAY</ShinyText></span>{stages.map((s,i)=><Link key={s[1]} to={s[1]} aria-current={current===s[1]?'page':undefined} className={'stage-chip ' + (current===s[1]?'bg-primary/10 text-primary border-primary/20 is-current':'border-border text-muted-foreground')} style={{animationDelay:`${i*35}ms`}}>{s[0]} <ArrowRight size={10}/></Link>)}</AnimatedSection>}
@@ -44,57 +45,84 @@ export function Overview(){
  const readinessTone=flagship.library.isLoading?'blue':flagship.available?'green':'red';
  const modelCount=flagship.models.length||flagship.item?.demo_readiness.model_ids.length||0;
  return <div className="tremor-dashboard">
-  <section className="flagship-hero">
-   <div className="flagship-hero-copy">
-    <div className="flex flex-wrap gap-2">
-     <Badge tone="purple">SIH26139 FLAGSHIP</Badge>
-     <Badge tone={readinessTone}>{readinessLabel}</Badge>
-    </div>
-    <p className="eyebrow mt-5">SIH 2026 · JUDGE-FIRST DEMONSTRATION</p>
-    <h1>{flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}</h1>
-    <p>Primary SIH26139 demonstration: start with the verified Early Stage Diabetes experience, trace the hybrid quantum-classical pipeline, review the controlled model comparison, then inspect prediction and SHAP evidence.</p>
-    <div className="flagship-stats">
-     <div><span>DATASET</span><strong>{flagship.item?.name||'Early Stage Diabetes'}</strong></div>
-     <div><span>MODELS</span><strong>{modelCount||'—'}</strong></div>
-     <div><span>EVIDENCE</span><strong>{flagship.available?'Verified package':'Readiness check'}</strong></div>
-     <div><span>EXECUTION</span><strong>{flagship.available?'Precomputed':'Unavailable'}</strong></div>
-    </div>
-    <div className="flex flex-wrap gap-2 mt-6">
-     <Link className="btn btn-primary" to="/demo">Launch Verified Demo <ArrowRight size={14}/></Link>
-     <Link className="btn btn-outline" to="/datasets">Explore Research Platform</Link>
-    </div>
-   </div>
-   <div className="flagship-hero-visual" aria-label="SIH flagship model and evidence overview">
-    <ShieldCheck size={28}/>
-    <strong>EARLY STAGE DIABETES · FLAGSHIP</strong>
-    <div><span>HYBRID</span><span>{modelCount?`${modelCount} MODELS`:'MODEL SET'}</span><span>SHAP</span></div>
-    <p>Controlled comparison · research evidence · local quantum simulation</p>
-   </div>
-  </section>
-  {!flagship.available&&!flagship.library.isLoading&&<Notice tone="amber">The verified flagship package is currently unavailable. No scientific placeholders are shown; the broader research platform remains available through Data Lab.</Notice>}
-  {flagship.available&&<section className="mt-5 rounded-2xl border border-[#D8E2EF] bg-[#F7FAFD] p-4 md:p-5" aria-label="SIH judge-first journey">
+  <QuantumHero
+   backendStatus={health.isError ? 'offline' : health.data ? 'online' : 'checking'}
+   quantumAvailable={health.data?.quantum.available}
+   runtimeVerified={health.data?.quantum.runtime_verified}
+   datasetCount={summary.data?.counts.datasets ?? registered.length ?? '—'}
+   experimentCount={summary.data?.counts.experiments ?? '—'}
+   readyModelCount={summary.data?.counts.ready_models ?? implementedCount ?? '—'}
+   activeJobCount={summary.data?.counts.active_jobs ?? 0}
+   flagshipAvailable={flagship.available}
+   flagshipModelCount={modelCount || 4}
+  />
+
+  {/* SIH26139 Flagship Judge Journey (Preserved & Elevated) */}
+  <section className="rounded-2xl border border-[#D8E2EF] dark:border-slate-800 bg-[#F7FAFD] dark:bg-slate-900/40 p-4 md:p-5 mb-6" aria-label="SIH flagship demonstration and judge journey">
    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-    <div><div className="eyebrow">JUDGE-FIRST JOURNEY</div><h2 className="section-title mt-1">See the flagship story in five steps</h2><p className="mt-1 text-sm muted">The primary route is promoted without restricting access to the full EntangleX Q-Health research platform.</p></div>
-    <Link className="btn btn-outline shrink-0" to="/datasets">Explore other datasets &amp; custom CSV</Link>
+    <div>
+     <div className="flex flex-wrap items-center gap-2 mb-1.5">
+      <Badge tone="purple">SIH26139 FLAGSHIP</Badge>
+      <Badge tone={readinessTone}>{readinessLabel}</Badge>
+      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">JUDGE-FIRST VERIFIED SHOWCASE</span>
+     </div>
+     <h2 className="text-lg font-bold text-[#102A5C] dark:text-[#F4F7FB]">
+      {flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}
+     </h2>
+     <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-2xl">
+      Verified benchmark pathway: trace the hybrid quantum-classical pipeline, review the controlled model comparison, and inspect local prediction and SHAP evidence.
+     </p>
+    </div>
+    <div className="flex flex-wrap gap-2 shrink-0">
+     <Link className="btn btn-primary text-xs" to="/demo">Launch Verified Demo <ArrowRight size={13}/></Link>
+     <Link className="btn btn-outline text-xs" to="/datasets">Explore Data Lab</Link>
+    </div>
    </div>
-   <div className="mt-4 grid gap-2 md:grid-cols-5">
+
+   <div className="flagship-stats mt-4">
+    <div><span>DATASET</span><strong>{flagship.item?.name||'Early Stage Diabetes'}</strong></div>
+    <div><span>MODELS</span><strong>{modelCount||'—'}</strong></div>
+    <div><span>EVIDENCE</span><strong>{flagship.available?'Verified package':'Readiness check'}</strong></div>
+    <div><span>EXECUTION</span><strong>{flagship.available?'Precomputed':'Unavailable'}</strong></div>
+   </div>
+
+   {!flagship.available&&!flagship.library.isLoading&&<div className="mt-3"><Notice tone="amber">The verified flagship package is currently undergoing preflight check; all broader research tools remain fully active in Data Lab.</Notice></div>}
+
+   {flagship.available&&<div className="mt-4 grid gap-2 md:grid-cols-5">
     {[
      {n:'01',label:'Verified Demo',detail:'Early Stage Diabetes',to:'/demo'},
      {n:'02',label:'Hybrid Model',detail:'PennyLane + PyTorch',to:'/quantum'},
      {n:'03',label:'Controlled Comparison',detail:`${modelCount||'Existing'} models · classical · quantum · hybrid`,to:'/comparison'},
      {n:'04',label:'Prediction',detail:'Research risk output',to:'/prediction'},
      {n:'05',label:'Explainability',detail:'SHAP feature contributions',to:'/explainability'},
-    ].map(step=><Link key={step.to} to={step.to} className="group rounded-xl border border-[#D8E2EF] bg-white px-3 py-3 transition hover:border-[#1769E0]/35 hover:bg-[#1769E0]/[0.025] focus:outline-none focus:ring-2 focus:ring-[#1769E0]/25">
-      <span className="text-[9px] font-semibold tracking-[0.14em] text-[#1769E0]">{step.n}</span>
-      <strong className="mt-1 block text-xs text-[#102A5C]">{step.label}</strong>
+    ].map(step=><Link key={step.to} to={step.to} className="group rounded-xl border border-[#D8E2EF] dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3 transition hover:border-[#1769E0]/35 hover:bg-[#1769E0]/[0.025] focus:outline-none focus:ring-2 focus:ring-[#1769E0]/25">
+      <span className="text-[9px] font-semibold tracking-[0.14em] text-[#1769E0] dark:text-[#8FC8FF]">{step.n}</span>
+      <strong className="mt-1 block text-xs text-[#102A5C] dark:text-[#F4F7FB]">{step.label}</strong>
       <span className="mt-1 block text-[10px] leading-relaxed muted">{step.detail}</span>
-      <ArrowRight size={12} className="mt-2 text-[#56657D] transition group-hover:translate-x-0.5" aria-hidden="true"/>
+      <ArrowRight size={12} className="mt-2 text-[#56657D] dark:text-[#94A3B8] transition group-hover:translate-x-0.5" aria-hidden="true"/>
     </Link>)}
+   </div>}
+  </section>
+
+  {/* Six Verified Platform Capabilities */}
+  <CoreCapabilitiesGrid/>
+
+  {/* End-to-End Hybrid Methodology */}
+  <HybridWorkflowStrip/>
+
+  {/* Platform Telemetry Dashboard */}
+  <section className="tremor-dashboard-top mt-8">
+   <div>
+    <div className="eyebrow">PLATFORM TELEMETRY &amp; WORKSPACE MONITOR</div>
+    <h2 className="tremor-dashboard-title">Live Research Workspace State</h2>
+    <p className="tremor-dashboard-subtitle">
+     Real-time telemetry from the live FastAPI backend, registered biomedical cohorts, active simulator jobs, and recorded experiment registry.
+    </p>
    </div>
-  </section>}
-  <section className="tremor-dashboard-top">
-   <div><div className="eyebrow">ENTANGLEX Q-HEALTH · FULL RESEARCH PLATFORM</div><h1 className="tremor-dashboard-title">Explore the broader research workspace</h1><p className="tremor-dashboard-subtitle">After the flagship path, continue into datasets, custom CSV upload, model runs, experiments, controlled comparisons, robustness and explainability. Existing research capabilities remain fully accessible.</p></div>
-   <div className="tremor-dashboard-actions"><Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link><Link className="btn btn-outline" to="/experiments">Experiment registry</Link></div>
+   <div className="tremor-dashboard-actions">
+    <Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link>
+    <Link className="btn btn-outline" to="/experiments">Experiment registry</Link>
+   </div>
   </section>
 
   <div className="tremor-grid-4">
