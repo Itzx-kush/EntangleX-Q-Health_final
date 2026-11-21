@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState,type KeyboardEvent} from 'react';
+import {useEffect,useMemo,useRef,useState,type KeyboardEvent} from 'react';
 import {ArrowLeft,ArrowRight,Info,Maximize2,Pause,Play,RotateCcw,ZoomIn,ZoomOut} from 'lucide-react';
 import {Button,Badge} from '../ui';
 import type {Circuit} from '../../types/qhealth';
@@ -24,8 +24,8 @@ export function gateSequence(circuit:CircuitSource):QuantumVisualizationGate[]{
     gate_type:'not reported',
     qubits:gate.qubits,
     parameters:gate.parameters,
-    control_qubits:[],
-    target_qubits:[],
+    control_qubits:['cx','cnot','cz','cy','ch','cp','crx','cry','crz'].includes(gate.name.toLowerCase())&&gate.qubits.length===2?[gate.qubits[0]]:[],
+    target_qubits:['cx','cnot','cz','cy','ch','cp','crx','cry','crz'].includes(gate.name.toLowerCase())&&gate.qubits.length===2?[gate.qubits[1]]:[],
   }));
 }
 
@@ -50,6 +50,7 @@ export function QuantumCircuitExplorer({
   const gates=useMemo(()=>gateSequence(circuit),[circuit]);
   const qubitCount=circuit.qubits??0;
   const [selectedIndex,setSelectedIndex]=useState(0);
+  const viewport=useRef<HTMLDivElement>(null);
   const [zoom,setZoom]=useState(1);
   const [playing,setPlaying]=useState(false);
 
@@ -130,7 +131,7 @@ export function QuantumCircuitExplorer({
         <Button variant="outline" aria-label="Zoom out circuit" onClick={()=>zoomBy(-.1)} disabled={zoom<=.75}><ZoomOut size={14}/></Button>
         <span className="ql-zoom-readout" aria-live="polite">{Math.round(zoom*100)}%</span>
         <Button variant="outline" aria-label="Zoom in circuit" onClick={()=>zoomBy(.1)} disabled={zoom>=1.6}><ZoomIn size={14}/></Button>
-        <Button variant="outline" aria-label="Fit circuit view" onClick={()=>setZoom(1)}><Maximize2 size={14}/><span className="ql-control-label">Fit</span></Button>
+        <Button variant="outline" aria-label="Fit circuit view" onClick={()=>{if(viewport.current)setZoom(Math.min(1.6,viewport.current.clientWidth/width))}}><Maximize2 size={14}/><span className="ql-control-label">Fit</span></Button>
         <Button variant="outline" aria-label="Reset circuit view" onClick={resetView}><RotateCcw size={14}/><span className="ql-control-label">Reset</span></Button>
       </div>
       <span className="ql-pan-note">Wide circuits remain horizontally scrollable; zoom preserves gate readability.</span>
@@ -144,15 +145,19 @@ export function QuantumCircuitExplorer({
     </div>}
 
     <div
-      className="ql-circuit-viewport"
+      ref={viewport} className="ql-circuit-viewport"
       role="region"
       aria-label="Scrollable multi-qubit circuit"
       tabIndex={0}
       onKeyDown={(event)=>{
-        if(event.key==='ArrowRight'){event.preventDefault();step(1);}
-        else if(event.key==='ArrowLeft'){event.preventDefault();step(-1);}
-        else if(event.key==='Home'){event.preventDefault();selectPosition(0);}
-        else if(event.key==='End'){event.preventDefault();selectPosition(gates.length-1);}
+        const target = event.key==='ArrowRight'?selectedPosition+1:event.key==='ArrowLeft'?selectedPosition-1:event.key==='Home'?0:event.key==='End'?gates.length-1:null;
+        if(target===null)return;
+        event.preventDefault();
+        const next=Math.max(0,Math.min(gates.length-1,target));
+        selectPosition(next);
+        const gate=event.currentTarget.querySelector<SVGElement>('[data-operation="'+next+'"]');
+        gate?.focus({preventScroll:true});
+        gate?.scrollIntoView?.({block:'nearest',inline:'nearest'});
       }}
     >
       <div className="ql-circuit-stage" style={{width:scaledWidth,height:scaledHeight}}>
@@ -161,7 +166,7 @@ export function QuantumCircuitExplorer({
           width={scaledWidth}
           height={scaledHeight}
           viewBox={'0 0 '+width+' '+height}
-          role="img"
+          role="group"
           aria-label={'Backend-derived circuit with '+qubitCount+' qubit wires and '+gates.length+' ordered operations'}
         >
           <defs>
@@ -183,8 +188,8 @@ export function QuantumCircuitExplorer({
             const active=position===selectedPosition;
             const qubitActive=selectedQubit!==null&&validQubits.includes(selectedQubit);
             const featureActive=gateMatchesFeature(gate,selectedMapping);
-            const controls=detailed?gate.control_qubits.filter(qubit=>validQubits.includes(qubit)):[];
-            const targets=detailed?gate.target_qubits.filter(qubit=>validQubits.includes(qubit)):[];
+            const controls=gate.control_qubits.filter(qubit=>validQubits.includes(qubit));
+            const targets=gate.target_qubits.filter(qubit=>validQubits.includes(qubit));
             const multi=validQubits.length>1;
             const upper=yFor(Math.min(...validQubits));
             const lower=yFor(Math.max(...validQubits));
@@ -192,7 +197,7 @@ export function QuantumCircuitExplorer({
             return <g
               key={gate.gate_index+'-'+gate.name+'-'+position}
               className={'ql-gate-mark'+(active?' is-selected':'')+(qubitActive?' is-qubit-highlight':'')+(featureActive?' is-feature-highlight':'')}
-              role="button"
+              data-operation={position} role="button"
               tabIndex={active?0:-1}
               aria-label={'Operation '+(gate.gate_index+1)+': '+gate.name+', qubits '+(validQubits.join(', ')||'not reported')+(gate.parameters.length?', parameters '+gate.parameters.join(', '):'')}
               aria-pressed={active}
@@ -203,12 +208,12 @@ export function QuantumCircuitExplorer({
               {controls.length>0&&targets.length>0?<>
                 {controls.map(qubit=><circle key={'control-'+qubit} cx={x} cy={yFor(qubit)} r="5" className="ql-gate-control"/>)}
                 {targets.map((qubit,targetIndex)=><g key={'target-'+qubit}>
-                  <rect x={x-20} y={yFor(qubit)-13} width="40" height="26" rx="5" className="ql-gate-box"/>
-                  <text x={x} y={yFor(qubit)+3} textAnchor="middle" className="ql-gate-name">{targetIndex===0?displayGateName(gate.name):'×'}</text>
+                  {/^(cx|cnot)$/i.test(gate.name)?<g className="gate-target"><circle cx={x} cy={yFor(qubit)} r="12"/><path d={`M${x-8} ${yFor(qubit)}h16 M${x} ${yFor(qubit)-8}v16`}/></g>:<><rect x={x-20} y={yFor(qubit)-13} width="40" height="26" rx="5" className="ql-gate-box"/>
+                  <text x={x} y={yFor(qubit)+3} textAnchor="middle" className="ql-gate-name">{targetIndex===0?displayGateName(gate.name):'×'}</text></>}
                 </g>)}
               </>:<g>
                 <rect x={x-22} y={boxY-14} width="44" height="28" rx="6" className="ql-gate-box"/>
-                <text x={x} y={boxY+3} textAnchor="middle" className="ql-gate-name">{displayGateName(gate.name)}</text>
+                {/^(measure|measurement)$/i.test(gate.name)?<g className="gate-meter" transform={'translate('+x+' '+boxY+')'}><path d="M-11,5 A11,11 0 0,1 11,5 M0,4 L7,-6"/></g>:<text x={x} y={boxY+3} textAnchor="middle" className="ql-gate-name">{displayGateName(gate.name)}</text>}
               </g>}
               <title>{'#'+(gate.gate_index+1)+' · '+gate.name+(gate.parameters.length?' · '+gate.parameters.join(', '):'')}</title>
             </g>;
@@ -231,7 +236,7 @@ export function QuantumCircuitExplorer({
         <Button variant="outline" aria-label={playing?'Pause structural playback':'Play structural playback'} onClick={()=>setPlaying(value=>!value)}>{playing?<Pause size={15}/>:<Play size={15}/>}</Button>
         <Button variant="outline" aria-label="Next operation" disabled={selectedPosition>=gates.length-1} onClick={()=>step(1)}><ArrowRight size={15}/></Button>
       </div>
-      <div className="ql-operation-timeline" role="list" aria-label="Backend operation timeline">
+      <div className="ql-operation-timeline" role="group" aria-label="Backend operation timeline">
         {gates.map((gate,position)=><button key={'timeline-'+gate.gate_index+'-'+position} type="button" className={'ql-operation-node '+(position===selectedPosition?'is-active':'')} onClick={()=>selectPosition(position)} aria-label={'Select operation '+(position+1)+' '+gate.name}>
           <span>{String(position+1).padStart(2,'0')}</span><strong>{displayGateName(gate.name)}</strong>
         </button>)}
@@ -256,7 +261,7 @@ export function QuantumCircuitExplorer({
       <summary>Backend gate counts</summary>
       <div>{Object.entries(circuit.gate_counts).map(([name,count])=><span key={name}><strong>{name}</strong><small>{count}</small></span>)}</div>
     </details>}
-    {detailed&&circuit.limitation&&<p className="ql-circuit-limitation">{circuit.limitation}</p>}
+    {showInlineInspector&&detailed&&circuit.limitation&&<p className="ql-circuit-limitation">{circuit.limitation}</p>}
     {'text' in circuit&&<details className="ql-circuit-counts"><summary>Raw circuit text</summary><pre>{circuit.text}</pre></details>}
     {'circuit_text' in circuit&&circuit.circuit_text&&<details className="ql-circuit-counts"><summary>Raw circuit text</summary><pre>{circuit.circuit_text}</pre></details>}
   </section>;

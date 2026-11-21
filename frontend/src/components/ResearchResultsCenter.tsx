@@ -1,3 +1,6 @@
+import {moveTab} from './ChoiceTabs';
+import {families, modelFamily, type Family} from '../lib/modelFamily';
+import {Fingerprint} from './Fingerprint';
 import {useState} from 'react';
 import type {ReactNode} from 'react';
 import {Link} from 'react-router-dom';
@@ -21,13 +24,7 @@ type ResultsCenterProps={
 };
 
 type RankedModel={model:ModelRecord;value:number;rank:number;tied:boolean};
-type Family='Classical'|'Quantum'|'Hybrid';
-
-function family(model:ModelRecord):Family{
-  if(model.model_type==='hybrid_pennylane_torch')return 'Hybrid';
-  if(['vqc','qsvc','qnn'].includes(model.model_type))return 'Quantum';
-  return 'Classical';
-}
+const family=(model:ModelRecord)=>modelFamily(model.model_type);
 function tone(value:Family):'blue'|'purple'|'amber'{return value==='Classical'?'blue':value==='Quantum'?'purple':'amber'}
 function finite(value:unknown):value is number{return typeof value==='number'&&Number.isFinite(value)}
 function valueText(value:unknown,fallback='Not recorded'){
@@ -61,7 +58,7 @@ function field(record:Record<string,unknown>|undefined,...keys:string[]){
   for(const key of keys){const value=record?.[key];if(value!==undefined&&value!==null&&value!=='')return value}
   return undefined;
 }
-function SummaryItem({label,value,detail}:{label:string;value:ReactNode;detail?:string}){
+function SummaryItem({label,value,detail}:{label:string;value:ReactNode;detail?:ReactNode}){
   return <div className="rounded-lg border p-3"><div className="metric-label">{label}</div><div className="mt-1 text-sm font-semibold">{value}</div>{detail&&<div className="mt-1 text-[10px] muted">{detail}</div>}</div>;
 }
 
@@ -75,7 +72,6 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
   const quantum=config.quantum||({} as typeof config.quantum);
   const split=comparison?.split as Record<string,unknown>|undefined;
   const summary=experiment.summary||{};
-  const families:Family[]=['Classical','Quantum','Hybrid'];
   const familyCounts=Object.fromEntries(families.map(value=>[value,models.filter(model=>family(model)===value).length])) as Record<Family,number>;
   const bestClassical=bestForFamily(ranked,'Classical');
   const bestQuantum=bestForFamily(ranked,'Quantum');
@@ -99,10 +95,40 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
   if(quantumExecutions.length)findings.push(`Persisted quantum execution evidence reports: ${quantumExecutions.join(', ')}.`);
 
   return <div className="space-y-5">
+    <Card title="Visual research analysis" description="Explore held-out scores, validation stability and runtime for the selected model family.">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Research analysis views" onKeyDown={moveTab}>
+            {[
+              ['performance','Performance'],
+              ['matrix','Metric matrix'],
+              ['stability','CV stability'],
+              ['runtime','Runtime'],
+            ].map(([value,label])=><button key={value} type="button" role="tab" id={"analysis-tab-"+value} aria-controls="analysis-panel" tabIndex={analysisView===value?0:-1} aria-selected={analysisView===value} className={'btn btn-sm '+(analysisView===value?'btn-primary':'btn-outline')} onClick={()=>setAnalysisView(value as typeof analysisView)}>{label}</button>)}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="field min-w-[190px]"><span>Model family</span><select className="select" aria-label="Model family" value={analysisFamily} onChange={event=>setAnalysisFamily(event.target.value as Family|'All')}><option value="All">All families</option><option value="Classical">Classical</option><option value="Quantum">Quantum</option><option value="Hybrid">Hybrid</option></select></label>
+            {(analysisView==='performance'||analysisView==='stability')&&<label className="field min-w-[190px]"><span>Metric</span><select className="select" aria-label="Metric" value={analysisMetric} onChange={event=>setAnalysisMetric(event.target.value as MetricName)}>{comparisonMetrics.map(name=><option key={name} value={name}>{metricLabel(name)}</option>)}</select></label>}
+            {analysisView==='runtime'&&<label className="field min-w-[210px]"><span>Runtime measurement</span><select className="select" aria-label="Runtime measurement" value={runtimeKind} onChange={event=>setRuntimeKind(event.target.value as RuntimeKind)}><option value="final_training_seconds">Final training</option><option value="cv_total_seconds">CV total</option><option value="test_inference_seconds">Held-out inference</option><option value="test_inference_seconds_per_sample">Inference / sample</option></select></label>}
+          </div>
+        </div>
+        <div id="analysis-panel" role="tabpanel" aria-labelledby={'analysis-tab-'+analysisView}>{analysisView==='performance'&&<div>
+          <ModelMetricBars models={analysisModels} metricName={analysisMetric}/>
+        </div>}
+        {analysisView==='matrix'&&<MetricMatrix models={analysisModels}/>}
+        {analysisView==='stability'&&<CvStabilityChart models={analysisModels} metricName={analysisMetric}/>}
+        {analysisView==='runtime'&&<RuntimeComparisonChart models={analysisModels} runtimeKind={runtimeKind}/>}</div>
+      </div>
+    </Card>
+
+    <Card title="Validation, holdout, and runtime" description="Model comparison matrix with held-out performance, cross-validation stability, and runtime evidence kept visibly distinct.">
+      <div tabIndex={0} className="table-wrap overflow-x-auto"><table className="data-table min-w-[1450px]"><thead><tr><th>Family</th><th>Model</th><th>Status</th>{comparisonMetrics.map(name=><th key={name}>{metricLabel(name)} · test</th>)}<th>{metricLabel(analysisMetric)} · CV mean</th><th>CV SD</th><th>Valid folds</th><th>Final training</th><th>CV runtime</th><th>Test inference</th></tr></thead><tbody>{analysisModels.map(model=>{const validation=model.metrics.validation?.summary?.[analysisMetric];return <tr key={model.id}><td><Badge tone={tone(family(model))}>{family(model)}</Badge></td><td><strong>{modelLabels[model.model_type]}</strong></td><td><StatusBadge value={model.status}/></td>{comparisonMetrics.map(name=><td className="numeric" key={name}>{metric(model.metrics.test?.[name])}</td>)}<td className="numeric">{metric(validation?.mean)}</td><td className="numeric">{metric(validation?.std)}</td><td className="numeric">{validation?.valid_folds??'Not recorded'}</td><td className="numeric">{seconds(model.metrics.timing?.final_training_seconds)}</td><td className="numeric">{seconds(model.metrics.timing?.cv_total_seconds)}</td><td className="numeric">{seconds(model.metrics.timing?.test_inference_seconds)}</td></tr>})}</tbody></table></div>
+    </Card>
+
     <Card title="Experiment summary" description="The tested dataset, persisted setup, and evaluated artifact set at a glance.">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryItem label="EXPERIMENT" value={experiment.name||`Experiment ${shortId(experiment.id)}`} detail={experiment.id}/>
-        <SummaryItem label="DATASET" value={dataset?.name||shortId(experiment.dataset_id)} detail={dataset?.sha256?`SHA-256 ${dataset.sha256}`:'Dataset hash not recorded in this view'}/>
+        <SummaryItem label="DATASET" value={dataset?.name||shortId(experiment.dataset_id)} detail={dataset?.sha256?<Fingerprint value={dataset.sha256}/>:'Dataset hash not recorded in this view'}/>
         <SummaryItem label="SAMPLES / FEATURES" value={`${valueText(samples)} / ${valueText(features)}`} detail="Persisted dataset evidence"/>
         <SummaryItem label="STATUS" value={<StatusBadge value={experiment.status}/>} detail={mode==='verified'?'Verified precomputed evidence':'Live persisted experiment'}/>
         <SummaryItem label="MODELS" value={models.length} detail={`${familyCounts.Classical} classical · ${familyCounts.Quantum} quantum · ${familyCounts.Hybrid} hybrid`}/>
@@ -128,37 +154,6 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
       </div>:<Notice tone="amber">No supported held-out primary metric is persisted for these model records, so no best model or ranking is claimed.</Notice>}
     </Card>
 
-    <Card title="Visual research analysis" description="Interpretation layers over the same persisted model records; the table below remains the authoritative numerical view.">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Research analysis views">
-            {[
-              ['performance','Performance'],
-              ['matrix','Metric matrix'],
-              ['stability','CV stability'],
-              ['runtime','Runtime'],
-            ].map(([value,label])=><button key={value} type="button" role="tab" aria-selected={analysisView===value} className={'btn btn-sm '+(analysisView===value?'btn-primary':'btn-outline')} onClick={()=>setAnalysisView(value as typeof analysisView)}>{label}</button>)}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <label className="field min-w-[190px]"><span>Model family</span><select className="select" value={analysisFamily} onChange={event=>setAnalysisFamily(event.target.value as Family|'All')}><option value="All">All families</option><option value="Classical">Classical</option><option value="Quantum">Quantum</option><option value="Hybrid">Hybrid</option></select></label>
-            {analysisView!=='matrix'&&<label className="field min-w-[190px]"><span>Metric</span><select className="select" value={analysisMetric} onChange={event=>setAnalysisMetric(event.target.value as MetricName)}>{comparisonMetrics.map(name=><option key={name} value={name}>{metricLabel(name)}</option>)}</select></label>}
-            {analysisView==='runtime'&&<label className="field min-w-[210px]"><span>Runtime measurement</span><select className="select" value={runtimeKind} onChange={event=>setRuntimeKind(event.target.value as RuntimeKind)}><option value="final_training_seconds">Final training</option><option value="cv_total_seconds">CV total</option><option value="test_inference_seconds">Held-out inference</option><option value="test_inference_seconds_per_sample">Inference / sample</option></select></label>}
-          </div>
-        </div>
-        {analysisView==='performance'&&<div>
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] muted"><span>Held-out {metricLabel(analysisMetric)} · exact persisted test values</span><span>•</span><span>Blue = classical</span><span>•</span><span>Violet = quantum</span><span>•</span><span>Cyan = hybrid</span></div>
-          <ModelMetricBars models={analysisModels} metricName={analysisMetric}/>
-        </div>}
-        {analysisView==='matrix'&&<MetricMatrix models={analysisModels}/>}
-        {analysisView==='stability'&&<CvStabilityChart models={analysisModels} metricName={analysisMetric}/>}
-        {analysisView==='runtime'&&<RuntimeComparisonChart models={analysisModels} runtimeKind={runtimeKind}/>}
-      </div>
-    </Card>
-
-    <Card title="Validation, holdout, and runtime" description="Model comparison matrix with held-out performance, cross-validation stability, and runtime evidence kept visibly distinct.">
-      <div className="table-wrap overflow-x-auto"><table className="data-table min-w-[1450px]"><thead><tr><th>Family</th><th>Model</th><th>Status</th>{comparisonMetrics.map(name=><th key={name}>{metricLabel(name)} · test</th>)}<th>{criterion?`${metricLabel(criterion)} · CV mean`:'Primary CV mean'}</th><th>CV SD</th><th>Valid folds</th><th>Final training</th><th>CV runtime</th><th>Test inference</th></tr></thead><tbody>{models.map(model=>{const validation=criterion?model.metrics.validation?.summary?.[criterion]:undefined;return <tr key={model.id}><td><Badge tone={tone(family(model))}>{family(model)}</Badge></td><td><strong>{modelLabels[model.model_type]}</strong></td><td><StatusBadge value={model.status}/></td>{comparisonMetrics.map(name=><td className="numeric" key={name}>{metric(model.metrics.test?.[name])}</td>)}<td className="numeric">{metric(validation?.mean)}</td><td className="numeric">{metric(validation?.std)}</td><td className="numeric">{validation?.valid_folds??'Not recorded'}</td><td className="numeric">{seconds(model.metrics.timing?.final_training_seconds)}</td><td className="numeric">{seconds(model.metrics.timing?.cv_total_seconds)}</td><td className="numeric">{seconds(model.metrics.timing?.test_inference_seconds)}</td></tr>})}</tbody></table></div>
-    </Card>
-
     <div className="tremor-grid-main">
       <Card title="Model ranking" description={criterion?`RANKING CRITERION: Held-out ${metricLabel(criterion)}`:'No common ranking criterion available'}>
         {ranked.length?<ol className="space-y-2">{ranked.map(item=><li className="flex items-center gap-3 rounded-lg border p-3" key={item.model.id}><span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-sm font-bold">{item.rank}</span><div className="min-w-0 flex-1"><strong>{modelLabels[item.model.model_type]}</strong><div className="text-[10px] muted">{family(item.model)} · {item.tied?'tied value':'persisted held-out evidence'}</div></div><span className="mono text-sm font-semibold">{metric(item.value)}</span></li>)}</ol>:<p className="text-sm muted">Ranking is unavailable because no supported held-out metric was recorded.</p>}
@@ -178,7 +173,7 @@ export function ResearchResultsCenter({experiment,dataset,models,comparison,mode
 
     <Card title="Experiment conditions" description="A readable snapshot of persisted configuration; no condition is described as matched unless the backend records it.">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryItem label="DATASET" value={dataset?.name||shortId(experiment.dataset_id)} detail={dataset?.sha256||'Hash not recorded'}/>
+        <SummaryItem label="DATASET" value={dataset?.name||shortId(experiment.dataset_id)} detail={dataset?.sha256?<Fingerprint value={dataset.sha256}/>:'Hash not recorded'}/>
         <SummaryItem label="REPRESENTATION" value={config.features?.length?`${config.features.length} selected features`:'Feature count not recorded'} detail={`Selection: ${valueText(pipeline.selection)}`}/>
         <SummaryItem label="PREPROCESSING" value={`${valueText(pipeline.imputer)} imputation · ${valueText(pipeline.scaler)} scaling`} detail={`Outliers: ${valueText(pipeline.outlier_strategy)}`}/>
         <SummaryItem label="PCA / DIMENSIONALITY" value={pca===null?'Disabled':pca===undefined?'Not recorded':`${pca} components`} detail={pipeline.pca_whiten===undefined?'Whitening not recorded':pipeline.pca_whiten?'Whitening enabled':'Whitening disabled'}/>

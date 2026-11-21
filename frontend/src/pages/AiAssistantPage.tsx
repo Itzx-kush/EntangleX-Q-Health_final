@@ -78,8 +78,8 @@ export function AiAssistantPage(){
     {error&&<div className="flex gap-4 justify-center mb-4"><div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg px-4 py-3 text-sm flex items-center gap-2 max-w-md w-full"><AlertCircle size={18} className="shrink-0"/><p>{error}</p></div></div>}
 
     <div className="bg-card border border-border rounded-xl shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all p-2 flex items-end gap-2">
-      <textarea ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask about EntangleX Q-Health..." className="flex-1 max-h-48 min-h-[44px] bg-transparent resize-none border-0 focus:ring-0 p-2 text-foreground text-sm md:text-base scrollbar-thin outline-none" disabled={loading} rows={1} maxLength={2000}/>
-      <Button onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-10 w-10 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={18}/></Button>
+      <textarea aria-label="Message" ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask about EntangleX Q-Health..." className="flex-1 max-h-48 min-h-[44px] bg-transparent resize-none border-0 focus:ring-0 p-2 text-foreground text-sm md:text-base scrollbar-thin outline-none" disabled={loading} rows={1} maxLength={2000}/>
+      <Button aria-label="Send message" onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-10 w-10 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={18}/></Button>
     </div>
     <p className="text-xs text-muted-foreground text-center mt-2">The AI Assistant may produce inaccurate information. Always verify scientific facts.</p>
   </div>;

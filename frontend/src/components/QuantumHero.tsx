@@ -1,3 +1,4 @@
+import {moveTab} from './ChoiceTabs';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -31,14 +32,14 @@ export interface QuantumHeroProps {
 
 export function QuantumHero({
   backendStatus,
-  quantumAvailable = true,
-  runtimeVerified = true,
+  quantumAvailable = false,
+  runtimeVerified = false,
   datasetCount = '—',
   experimentCount = '—',
   readyModelCount = '—',
   activeJobCount = '—',
-  flagshipAvailable = true,
-  flagshipModelCount = 4,
+  flagshipAvailable = false,
+  flagshipModelCount = '—',
 }: QuantumHeroProps) {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'circuit' | 'boundary'>('pipeline');
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -138,11 +139,11 @@ export function QuantumHero({
                 HYBRID WORKFLOW ARCHITECTURE
               </strong>
             </div>
-            <div className="quantum-visual-tabs" role="tablist" aria-label="Visual Modes">
+            <div className="quantum-visual-tabs" role="tablist" onKeyDown={moveTab} aria-label="Visual Modes">
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === 'pipeline'}
+                id="overview-guide-pipeline" aria-controls="overview-guide-panel" tabIndex={activeTab === 'pipeline'?0:-1} aria-selected={activeTab === 'pipeline'}
                 className={`quantum-visual-tab ${activeTab === 'pipeline' ? 'is-active' : ''}`}
                 onClick={() => setActiveTab('pipeline')}
               >
@@ -151,7 +152,7 @@ export function QuantumHero({
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === 'circuit'}
+                id="overview-guide-circuit" aria-controls="overview-guide-panel" tabIndex={activeTab === 'circuit'?0:-1} aria-selected={activeTab === 'circuit'}
                 className={`quantum-visual-tab ${activeTab === 'circuit' ? 'is-active' : ''}`}
                 onClick={() => setActiveTab('circuit')}
               >
@@ -160,7 +161,7 @@ export function QuantumHero({
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === 'boundary'}
+                id="overview-guide-boundary" aria-controls="overview-guide-panel" tabIndex={activeTab === 'boundary'?0:-1} aria-selected={activeTab === 'boundary'}
                 className={`quantum-visual-tab ${activeTab === 'boundary' ? 'is-active' : ''}`}
                 onClick={() => setActiveTab('boundary')}
               >
@@ -169,7 +170,7 @@ export function QuantumHero({
             </div>
           </div>
 
-          <div className="quantum-visual-body">
+          <div className="quantum-visual-body" id="overview-guide-panel" role="tabpanel" aria-labelledby={'overview-guide-'+activeTab}>
             {activeTab === 'pipeline' && (
               <div className="relative">
                 <svg
@@ -376,7 +377,7 @@ export function QuantumHero({
                 <div className="p-3 rounded-lg border border-[#D8E2EF] dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
                     <span className="font-sans font-bold text-slate-700 dark:text-slate-300">LOGICAL CIRCUIT TOPOLOGY</span>
-                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">4 QUBITS · DEPTH 8</span>
+                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">ILLUSTRATIVE · 4 QUBITS · DEPTH 8</span>
                   </div>
                   <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
                     <div>q[0] ──[H]──[Rz(x₀)]──[Ry(θ₀)]──●──────────────[M] ⟨Z₀⟩</div>

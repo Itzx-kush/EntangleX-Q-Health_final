@@ -1,3 +1,4 @@
+import {ThemeToggle} from './ThemeToggle';
 import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {NavLink,useLocation,useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -8,11 +9,14 @@ import {
 } from 'lucide-react';
 import {qh,setSessionToken} from '../lib/api';
 import {Badge,Button} from './ui';
-import {SearchBar} from './SearchBar';
+import {useRecordSearch} from './RecordSearch';
+import {Brand} from './Brand';
+import {connectionState} from '../lib/connection';
+import {useDialogFocus} from '../hooks/useDialogFocus';
+import {defaultAppearance, updateAppearance, useAppearance, type Appearance as UiSettings} from '../lib/appearance';
 import {StatusBadge} from './Shared';
-import {AmbientBackground} from './reactbits';
 import type {Health,Job,SystemStatus} from '../types/qhealth';
-import {VerifiedContextBar} from './VerifiedDemoViews';
+import {VerifiedContextBar} from './VerifiedContextBar';
 import {AccountMenu} from '../auth/AccountMenu';
 import {useAuth} from '../auth/AuthProvider';
 import {GuestMigrationBanner} from '../auth/GuestMigrationBanner';
@@ -21,17 +25,6 @@ import {useAi} from '../contexts/AiContext';
 type NavEntry={label:string;path:string;icon:typeof Activity};
 type NavGroup={label:string;items:NavEntry[]};
 type SummaryData={counts:{datasets:number;experiments:number;ready_models:number;active_jobs:number}};
-type ThemeMode='research'|'dark'|'system';
-type SidebarVariant='sidebar'|'floating'|'inset';
-type LayoutMode='default'|'icon'|'offcanvas';
-type UiSettings={
-  theme:ThemeMode;
-  sidebar:SidebarVariant;
-  layout:LayoutMode;
-  density:'comfortable'|'compact';
-  motion:'full'|'reduced';
-};
-
 const navGroups:NavGroup[]=[
   {label:'Research',items:[
     {label:'Overview',path:'/',icon:LayoutDashboard},
@@ -70,7 +63,8 @@ const pageNames:Record<string,string>=Object.fromEntries(
 );
 pageNames['/account']='My account';
 pageNames['/my-research']='My Research';
-pageNames['/settings']='Settings center';
+pageNames['/settings']='Settings';
+pageNames['/my-research/reports']='Saved reports';
 
 const navByPath=(path:string)=>navGroups.flatMap(group=>group.items).find(item=>item.path===path)!;
 const mobilePrimaryNav:NavEntry[]=[navByPath('/'),navByPath('/datasets'),navByPath('/quantum'),navByPath('/experiments')];
@@ -78,23 +72,9 @@ const mobilePrimaryNav:NavEntry[]=[navByPath('/'),navByPath('/datasets'),navByPa
 export const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent || '');
 export const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
 
-function readSettings():UiSettings{
-  const storedTheme=localStorage.getItem('qhealth-theme')||localStorage.getItem('qhealth-tictac-theme')||'research';
-  const storedSidebar=localStorage.getItem('qhealth-sidebar-variant')||'inset';
-  const storedLayout=localStorage.getItem('qhealth-layout')||'default';
-  const storedDensity=localStorage.getItem('qhealth-density')||'comfortable';
-  const storedMotion=localStorage.getItem('qhealth-motion')||'full';
-  return {
-    theme:(['research','dark','system'].includes(storedTheme)?storedTheme:'research') as ThemeMode,
-    sidebar:(['sidebar','floating','inset'].includes(storedSidebar)?storedSidebar:'inset') as SidebarVariant,
-    layout:(['default','icon','offcanvas'].includes(storedLayout)?storedLayout:'default') as LayoutMode,
-    density:(['comfortable','compact'].includes(storedDensity)?storedDensity:'comfortable') as 'comfortable'|'compact',
-    motion:(['full','reduced'].includes(storedMotion)?storedMotion:'full') as 'full'|'reduced',
-  };
-}
-
 function SettingsPopover({token,setToken,onApply,onClose}:{token:string;setToken:(v:string)=>void;onApply:()=>void;onClose:()=>void}){
-  return <div className="shell-popover settings-panel" role="dialog" aria-label="Connection settings">
+  const focus = useDialogFocus<HTMLDivElement>();
+  return <div ref={focus} className="shell-popover settings-panel" role="dialog" aria-label="Connection settings">
     <div className="flex items-start justify-between gap-3"><div><p className="eyebrow">Connection</p><h2 className="section-title mt-1">Session settings</h2></div><button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close settings"><X size={15}/></button></div>
     <label className="field mt-4"><span>Optional local API token</span><input className="input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Bearer token"/><small>Kept in memory only. Never stored in local storage.</small></label>
     <Button className="mt-3 w-full" onClick={onApply}>Apply connection token</Button>
@@ -134,7 +114,9 @@ function CommandPalette({onClose}:{onClose:()=>void}){
     {label:'Show context inspector',hint:'Workspace',keywords:['live status','jobs'],run:()=>applyLocal('qhealth-inspector','visible')},
     {label:'Hide context inspector',hint:'Workspace',keywords:['live status','jobs'],run:()=>applyLocal('qhealth-inspector','hidden')},
   ],[isAuthenticated,navigate]);
-  const filtered=useMemo(()=>commands.filter(command=>fuzzyMatch(query,`${command.label} ${command.hint} ${(command.keywords||[]).join(' ')}`)),[commands,query]);
+  const records = useRecordSearch(query);
+  const filtered = [...commands.filter(command => fuzzyMatch(query, [command.label, command.hint, ...command.keywords].join(' '))),
+    ...records.map(record => ({...record, run: () => navigate(record.path)}))];
   useEffect(()=>setActiveIndex(0),[query]);
   useEffect(()=>{
     previousFocusRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
@@ -160,18 +142,19 @@ function CommandPalette({onClose}:{onClose:()=>void}){
   };window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[activeIndex,filtered,onClose]);
   return <div className="command-overlay" role="presentation" onMouseDown={onClose}>
     <div ref={dialogRef} className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={e=>e.stopPropagation()}>
-      <div className="command-search"><Search size={17}/><input ref={inputRef} autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions and research areas…" aria-label="Search commands" aria-controls="command-results" aria-activedescendant={filtered[activeIndex]?`command-option-${activeIndex}`:undefined}/><kbd>ESC</kbd></div>
-      <div id="command-results" className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><div className="command-entry" role="presentation" key={command.label}>{(index===0||filtered[index-1]?.hint!==command.hint)&&<p className="command-group-label">{command.hint}</p>}<button id={`command-option-${index}`} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button></div>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
+      <div className="command-search"><Search size={17}/><input ref={inputRef} autoFocus value={query} onChange={e=>setQuery(e.target.value)} role="combobox" aria-expanded="true" placeholder="Search pages, actions and records…" aria-label="Search commands" aria-controls="command-results" aria-activedescendant={filtered[activeIndex]?`command-option-${activeIndex}`:undefined}/><kbd>ESC</kbd></div>
+      <div id="command-results" className="command-list" role="listbox" aria-label="Available commands">{filtered.map((command,index)=><div className="command-entry" role="presentation" key={command.hint + command.label + ('id' in command ? command.id : '')}>{(index===0||filtered[index-1]?.hint!==command.hint)&&<p className="command-group-label">{command.hint}</p>}<button id={`command-option-${index}`} role="option" aria-selected={activeIndex===index} className={activeIndex===index?'is-highlighted':''} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>{command.run();onClose()}}><span className="command-icon"><Command size={14}/></span><span className="min-w-0 flex-1"><strong className="block">{command.label}</strong><small className="muted">{command.hint}</small></span><ChevronRight size={14} className="ml-auto muted"/></button></div>)}{!filtered.length&&<p className="p-6 text-center text-sm muted">No command matches this search.</p>}</div>
       <div className="command-footer"><span><kbd>↑↓</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>
     </div>
   </div>;
 }
 
 function ConfigDrawer({prefs,onChange,onReset,onClose}:{prefs:UiSettings;onChange:(patch:Partial<UiSettings>)=>void;onReset:()=>void;onClose:()=>void}){
+  const focus = useDialogFocus<HTMLElement>();
   const choice=(label:string,active:boolean,patch:Partial<UiSettings>)=>
     <button type="button" className={'config-choice '+(active?'is-selected':'')} onClick={()=>onChange(patch)} aria-pressed={active}>{label}</button>;
   return <div className="config-overlay" role="presentation" onMouseDown={onClose}>
-    <aside className="config-drawer" role="dialog" aria-modal="true" aria-label="Theme and layout settings" onMouseDown={e=>e.stopPropagation()}>
+    <aside ref={focus} className="config-drawer" role="dialog" aria-modal="true" aria-label="Theme and layout settings" onMouseDown={e=>e.stopPropagation()}>
       <div className="config-drawer-head">
         <div><p className="eyebrow">Workspace</p><h2>Theme &amp; layout</h2><p className="muted">Customize the research shell without changing the research workflow.</p></div>
         <button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close theme and layout"><X size={15}/></button>
@@ -207,15 +190,15 @@ function ConfigDrawer({prefs,onChange,onReset,onClose}:{prefs:UiSettings;onChang
   </div>;
 }
 
-function ContextInspector({summary,health,status,jobs,visible,onClose}:{summary:SummaryData|undefined;health:Health|undefined;status:SystemStatus|undefined;jobs:Job[]|undefined;visible:boolean;onClose:()=>void}){
+function ContextInspector({summary,health,status,jobs,connection,retry,visible,onClose}:{connection:ReturnType<typeof connectionState>;retry:()=>void;summary:SummaryData|undefined;health:Health|undefined;status:SystemStatus|undefined;jobs:Job[]|undefined;visible:boolean;onClose:()=>void}){
   if(!visible)return null;
   const active=(jobs||[]).filter(job=>['queued','running','cancel_requested'].includes(job.status));
   return <aside className="context-inspector" aria-label="Research context inspector">
     <div className="inspector-head"><div><p className="eyebrow">Live context</p><h2>Workspace state</h2></div><button className="btn btn-ghost px-2" onClick={onClose} aria-label="Close context inspector"><X size={15}/></button></div>
-    <div className="inspector-card"><div className="inspector-label"><Activity size={13}/> System status</div><div className="inspector-status"><span className={'status-dot '+(health?'is-live':'is-offline')}/><strong>{health?'Backend connected':'Backend unavailable'}</strong></div><p className="inspector-copy">{health?.mode||'Start the FastAPI service to load live research state.'}</p></div>
+    <div className="inspector-card"><div className="inspector-label"><Activity size={13}/> System status</div><div className="inspector-status"><span className={'status-dot '+('is-'+connection.tone)}/><strong>{connection.label}</strong></div><p className="inspector-copy">{connection.detail}</p>{connection.tone!=='live'&&<Button variant="outline" onClick={retry}>Retry connection</Button>}</div>
     <div className="inspector-card"><div className="inspector-label"><Database size={13}/> Registry</div><dl className="inspector-facts"><div><dt>Datasets</dt><dd>{summary?.counts.datasets??'—'}</dd></div><div><dt>Experiments</dt><dd>{summary?.counts.experiments??'—'}</dd></div><div><dt>Ready models</dt><dd>{summary?.counts.ready_models??'—'}</dd></div><div><dt>Storage</dt><dd>{status?.storage_available?'Ready':'Not reported'}</dd></div></dl></div>
-    <div className="inspector-card"><div className="inspector-label"><Zap size={13}/> Quantum boundary</div><div className="inspector-status"><Badge tone={health?.quantum.available?'purple':'amber'}>{health?.quantum.available?'Available':'Not available'}</Badge></div><p className="inspector-copy">{health?.quantum.execution||'Capability is reported by the backend, not assumed by the UI.'}</p></div>
-    <div className="inspector-card"><div className="inspector-label"><PlayCircle size={13}/> Active jobs <span className="ml-auto">{active.length}</span></div>{active.length?<ul className="inspector-jobs">{active.slice(0,4).map(job=><li key={job.id}><StatusBadge value={job.status}/><span>{job.state}</span></li>)}</ul>:<p className="inspector-copy">No queued or running jobs.</p>}</div>
+    <div className="inspector-card"><div className="inspector-label"><Zap size={13}/> Quantum boundary</div><div className="inspector-status"><Badge tone={health?.quantum?.available?'purple':'amber'}>{health?.quantum?.available?'Available':health?'Unavailable':'Not reported'}</Badge></div><p className="inspector-copy">{health?.quantum?.execution||'Capability is reported by the backend, not assumed by the UI.'}</p></div>
+    <div className="inspector-card"><div className="inspector-label"><PlayCircle size={13}/> Active jobs <span className="ml-auto">{jobs ? active.length : '—'}</span></div>{active.length?<ul className="inspector-jobs">{active.slice(0,4).map(job=><li key={job.id}><StatusBadge value={job.status}/><span>{job.state}</span></li>)}</ul>:<p className="inspector-copy">{jobs?'No queued or running jobs.':'Job activity has not been reported.'}</p>}</div>
     <p className="inspector-note"><ShieldCheck size={13}/> Metrics, status and quantum availability are shown only when returned by the live backend.</p>
   </aside>;
 }
@@ -235,11 +218,12 @@ function MobileBottomNavigation({onMore}:{onMore:()=>void}){
 
 function MobileMoreSheet({onClose}:{onClose:()=>void}){
   const {isAuthenticated}=useAuth();
+  const focus = useDialogFocus<HTMLElement>();
   return <div className="mobile-more-overlay" role="presentation" onMouseDown={onClose}>
-    <aside className="mobile-more-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" onMouseDown={e=>e.stopPropagation()}>
+    <aside ref={focus} className="mobile-more-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" onMouseDown={e=>e.stopPropagation()}>
       <div className="mobile-more-head">
         <div><p className="eyebrow">EntangleX Q-Health</p><h2 id="mobile-more-title">Research navigation</h2><p className="muted">Open any existing workspace route.</p></div>
-        <button autoFocus className="btn btn-ghost px-2" type="button" onClick={onClose} aria-label="Close more navigation"><X size={17}/></button>
+        <button className="btn btn-ghost px-2" type="button" onClick={onClose} aria-label="Close more navigation"><X size={17}/></button>
       </div>
       <nav className="mobile-more-groups">
         {navGroups.map(group=><div className="mobile-more-group" key={group.label}>
@@ -265,45 +249,21 @@ export function ResearchShell({children}:{children:ReactNode}){
   const {setPopupOpen}=useAi();
   const [mobile,setMobile]=useState(false); const [mobileMore,setMobileMore]=useState(false); const [palette,setPalette]=useState(false); const [settings,setSettings]=useState(false); const [config,setConfig]=useState(false);
   const [isMobileViewport,setIsMobileViewport]=useState(false);
-  const [showInspector,setShowInspector]=useState(()=>localStorage.getItem('qhealth-inspector')!=='hidden');
-  const [token,setToken]=useState(''); const [uiSettings,setUiSettings]=useState<UiSettings>(readSettings);
+  const uiSettings=useAppearance();
+  const showInspector=uiSettings.inspector;
+  const setShowInspector=(inspector:boolean)=>updateAppearance({inspector});
+  const [token,setToken]=useState('');
+  const sidebarFocus=useDialogFocus<HTMLElement>(mobile);
   const summary=useQuery({queryKey:['summary'],queryFn:qh.summary,refetchInterval:10000});
   const health=useQuery({queryKey:['health'],queryFn:qh.health,refetchInterval:15000});
   const jobs=useQuery({queryKey:['jobs'],queryFn:qh.jobs,refetchInterval:10000});
   const status=useQuery({queryKey:['system-status'],queryFn:qh.systemStatus,refetchInterval:15000});
-  const runtimeConnected=Boolean(health.data)&&!health.isError&&(status.data?.database_available!==false)&&!status.isError;
-  const title=pageNames[pathname]|| (pathname.startsWith('/experiments/')?'Experiment detail':'Research workspace');
+  const connection=connectionState(health,status);
+  const retryConnection=()=>{void health.refetch();void status.refetch();void jobs.refetch();void summary.refetch()};
+  const title=pageNames[pathname]|| (pathname.startsWith('/experiments/')?'Experiment detail':pathname.startsWith('/my-research/reports/')?'Saved report':'Research workspace');
   const isActiveGroup=useMemo(()=>navGroups.find(group=>group.items.some(item=>item.path===pathname))?.label,[pathname]);
 
-  useEffect(()=>{
-    const prefersDark=window.matchMedia?.('(prefers-color-scheme: dark)').matches??false;
-    const resolved=uiSettings.theme==='system'
-      ? (prefersDark?'dark':'research')
-      : uiSettings.theme;
-    document.documentElement.classList.toggle('dark',resolved==='dark');
-    document.documentElement.dataset.theme=uiSettings.theme;
-    document.documentElement.dataset.density=uiSettings.density;
-    document.documentElement.dataset.motion=uiSettings.motion;
-    document.documentElement.dataset.sidebar=uiSettings.sidebar;
-    document.documentElement.dataset.layout=uiSettings.layout;
-    localStorage.setItem('qhealth-theme',uiSettings.theme);
-    localStorage.setItem('qhealth-sidebar-variant',uiSettings.sidebar);
-    localStorage.setItem('qhealth-layout',uiSettings.layout);
-    localStorage.setItem('qhealth-density',uiSettings.density);
-    localStorage.setItem('qhealth-motion',uiSettings.motion);
-  },[uiSettings]);
-
-  useEffect(()=>{
-    if(uiSettings.theme!=='system')return;
-    const media=window.matchMedia?.('(prefers-color-scheme: dark)');
-    if(!media)return;
-    const apply=()=>document.documentElement.classList.toggle('dark',media.matches);
-    apply();
-    media.addEventListener?.('change',apply);
-    return()=>media.removeEventListener?.('change',apply);
-  },[uiSettings.theme]);
   useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setSettings(false);setConfig(false);setMobileMore(false);setMobile(false)}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[]);
-  useEffect(()=>{const handler=()=>{setUiSettings(readSettings());setShowInspector(localStorage.getItem('qhealth-inspector')!=='hidden')};window.addEventListener('qhealth-settings-changed',handler);return()=>window.removeEventListener('qhealth-settings-changed',handler)},[]);
   useEffect(()=>{
     if(!window.matchMedia)return;
     const media=window.matchMedia('(max-width: 767px)');
@@ -320,29 +280,27 @@ export function ResearchShell({children}:{children:ReactNode}){
       return()=>{document.body.style.overflow=prev;};
     }
   },[mobile,mobileMore,palette,config]);
-  const updatePrefs=(patch:Partial<UiSettings>)=>setUiSettings(prev=>({...prev,...patch}));
-  const resetPrefs=()=>setUiSettings({theme:'research',sidebar:'inset',layout:'default',density:'comfortable',motion:'full'});
+  const updatePrefs=updateAppearance;
+  const resetPrefs=()=>updateAppearance(defaultAppearance);
   const isLayer3Analysis = ['/datasets','/quality','/preprocessing','/features','/pca'].includes(pathname);
 
   return <div className={'research-shell '+(uiSettings.layout==='icon'?'is-collapsed ':'')+(uiSettings.layout==='offcanvas'?'is-offcanvas':'')}>
-    <AmbientBackground/>
-    <aside
+    <a className="qx-skip" href="#workspace-content">Skip to research content</a>
+    <aside ref={sidebarFocus}
       className={'research-sidebar variant-'+uiSettings.sidebar+' '+(uiSettings.layout==='icon'?'is-collapsed ':'')+(mobile?'is-mobile-open ':'')+(uiSettings.layout==='offcanvas'?'is-offcanvas':'')}
       aria-label="Primary navigation"
       role={mobile ? "dialog" : undefined}
       aria-modal={mobile ? true : undefined}
     >
-      <div className="sidebar-brand"><NavLink to="/" className="brand-mark" aria-label="EntangleX Q-Health Overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><div className="brand-copy"><img className="brand-logo brand-logo-light" src="/entanglex-logo-dark.svg" alt="EntangleX"/><img className="brand-logo brand-logo-dark" src="/entanglex-logo-dark.svg" alt="EntangleX"/><span>Q-HEALTH</span></div><button className="sidebar-close btn btn-ghost" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={16} aria-hidden="true"/></button></div>
-      <div className="sidebar-context"><span className="context-kicker">Research workspace</span><strong>SIH 2026 · PS 26139</strong><span>Hybrid biomedical ML</span></div>
-      <nav className="sidebar-nav" aria-label="Research workspace navigation">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} aria-label={label} title={label} className={({isActive})=>'sidebar-link '+(isActive?'active is-active':'')}><Icon size={16} aria-hidden="true"/><span>{label}</span>{path==='/quantum'&&<span className="sidebar-pulse" title="Simulated Quantum Engine" aria-hidden="true"/>}</NavLink>)}</div>)}</nav>
-      <div className="sidebar-bottom"><p className="sidebar-label workspace-label">Workspace</p>{isAuthenticated&&<NavLink to="/my-research" aria-label="My Research" title="My Research" className={({isActive})=>'sidebar-link '+(isActive?'active is-active':'')}><History size={16} aria-hidden="true"/><span>My Research</span></NavLink>}{isAuthenticated&&<NavLink to="/account" aria-label="My account" title="My account" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><UserRound size={16} aria-hidden="true"/><span>My account</span></NavLink>}<button className="sidebar-link" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={16} aria-hidden="true"/><span>Command palette</span><kbd>{shortcutLabel}</kbd></button><NavLink to="/settings" aria-label="Settings" title="Settings" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Settings2 size={16} aria-hidden="true"/><span>Settings</span></NavLink><button className="sidebar-link" onClick={()=>setConfig(true)} aria-label="Open theme and layout settings"><SlidersHorizontal size={16} aria-hidden="true"/><span>Theme &amp; Layout</span></button><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
+      <div className="sidebar-brand"><NavLink to="/" aria-label="EntangleX Q-Health Overview"><Brand/></NavLink><button className="sidebar-close btn btn-ghost" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={16}/></button></div>
+      <nav className="sidebar-nav" aria-label="Research workspace navigation">{navGroups.map(group=><div className={'sidebar-group '+(isActiveGroup===group.label?'is-current':'')} key={group.label}><p className="sidebar-label">{group.label}</p>{group.items.map(({label,path,icon:Icon})=><NavLink key={path} end={path==='/'||path==='/experiments'} to={path} aria-label={label} title={label} className={({isActive})=>'sidebar-link '+(isActive?'active is-active':'')}><Icon size={16} aria-hidden="true"/><span>{label}</span></NavLink>)}</div>)}</nav>
+      <div className="sidebar-bottom"><p className="sidebar-label workspace-label">Workspace</p>{isAuthenticated&&<NavLink to="/my-research" aria-label="My Research" title="My Research" className={({isActive})=>'sidebar-link '+(isActive?'active is-active':'')}><History size={16} aria-hidden="true"/><span>My Research</span></NavLink>}{isAuthenticated&&<NavLink to="/account" aria-label="My account" title="My account" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><UserRound size={16} aria-hidden="true"/><span>My account</span></NavLink>}<NavLink to="/settings" aria-label="Settings" title="Settings" className={({isActive})=>'sidebar-link '+(isActive?'active':'')}><Settings2 size={16} aria-hidden="true"/><span>Settings</span></NavLink><button className="collapse-button" onClick={()=>updatePrefs({layout:uiSettings.layout==='icon'?'default':'icon'})} aria-label={uiSettings.layout==='icon'?'Expand sidebar':'Collapse sidebar'}>{uiSettings.layout==='icon'?<ChevronRight size={15}/>:<><ChevronLeft size={15}/><span>Collapse sidebar</span></>}</button></div>
     </aside>
-    {mobile&&<button className="navigation-scrim" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
+    {mobile&&<button className="navigation-scrim" tabIndex={-1} aria-hidden="true" onClick={()=>setMobile(false)}/>}
       <div className="research-workspace">
-      <header className="research-topbar"><div className="topbar-left"><NavLink to="/" className="mobile-brand-mark" aria-label="EntangleX Q-Health Overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><button className="mobile-menu btn btn-ghost" onClick={()=>{if(isMobileViewport)setMobileMore(true);else setMobile(v=>!v)}} aria-label={mobile||mobileMore?"Close navigation":"Open navigation"} aria-expanded={mobile||mobileMore}><Menu size={18} aria-hidden="true"/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> {isAuthenticated?'Personal workspace':'Guest research'}</p><h1>{title}</h1></div></div><div className="topbar-actions"><SearchBar compact/><button className="command-trigger" onClick={()=>setPalette(true)} aria-label="Open command palette"><Command size={15} aria-hidden="true"/><span>Search commands</span><kbd>{shortcutLabel}</kbd></button><button className="icon-button" onClick={()=>setPopupOpen(true)} aria-label="Open EntangleX AI Assistant" title="Open EntangleX AI Assistant"><Bot size={16} aria-hidden="true"/></button><span className={'connection-indicator '+(runtimeConnected?'is-live':'') }><span className="status-dot"/><span>{runtimeConnected?'Connected':'Backend/DB unavailable'}</span></span><button className="icon-button" onClick={()=>setSettings(true)} aria-label="Connection settings" title="Connection settings"><KeyRound size={16} aria-hidden="true"/></button><button className="icon-button" onClick={()=>setShowInspector(v=>{const next=!v;localStorage.setItem('qhealth-inspector',next?'visible':'hidden');return next})} aria-label={showInspector?'Hide context inspector':'Show context inspector'}><PanelRight size={16} aria-hidden="true"/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme settings"><Settings2 size={16} aria-hidden="true"/></button><AccountMenu/>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setSettings(false)}} onClose={()=>setSettings(false)}/>}</div></header>
-      <div className="research-context-bar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={13}/><strong>{title}</strong></div><div className="context-actions"><span className="context-chip"><span className="status-dot is-live"/> {isAuthenticated?'Personal workspace':'Guest research mode'}</span><NavLink className="context-demo-link" to="/demo"><PlayCircle size={13}/> Presentation mode</NavLink></div></div>
-      <div className={'research-body '+(isLayer3Analysis?'layer3-analytic-workspace ':'')+(!showInspector?'inspector-closed':'')}><main className="research-main"><VerifiedContextBar/><GuestMigrationBanner/>{children}<div className="bottom-status"><span><span className={'status-dot '+(runtimeConnected?'is-live':'is-offline')}/>{runtimeConnected?'Backend + DB connected':'Backend or DB unavailable'}</span><span>Quantum: {health.data?.quantum.available?'available':'not reported'}</span><span>Jobs: {status.data?.jobs.active??summary.data?.counts.active_jobs??'—'} active</span><span className="ml-auto">Research prototype · no clinical diagnosis</span></div></main><ContextInspector summary={summary.data} health={health.data} status={status.data} jobs={jobs.data} visible={showInspector} onClose={()=>setShowInspector(false)}/></div>
-      <footer className="research-footer"><span>EntangleX Q-Health · Hybrid quantum–classical research platform</span><span>Measured outputs only · <NavLink to="/settings">Settings</NavLink></span></footer>
+      <header className="research-topbar"><div className="topbar-left"><NavLink to="/" className="mobile-brand-mark" aria-label="EntangleX Q-Health Overview"><img src="/entanglex-mark.svg" alt="" aria-hidden="true"/></NavLink><button className="mobile-menu btn btn-ghost" onClick={()=>{if(isMobileViewport)setMobileMore(true);else setMobile(v=>!v)}} aria-label={mobile||mobileMore?"Close navigation":"Open navigation"} aria-expanded={mobile||mobileMore}><Menu size={18} aria-hidden="true"/></button><div><p className="topbar-kicker">{isActiveGroup||'Research'} <span>/</span> {isAuthenticated?'Personal workspace':'Guest research'}</p><strong className="workspace-location">{title}</strong></div></div><div className="topbar-actions"><button className="command-trigger" onClick={()=>setPalette(true)} aria-keyshortcuts="Control+k Meta+k" title="Search workspace"><Command size={15} aria-hidden="true"/><span>Search workspace</span><kbd>{shortcutLabel}</kbd><b className="sr-only">Open command palette</b></button><button className="icon-button" onClick={()=>setPopupOpen(true)} aria-label="Open EntangleX AI Assistant" title="Open EntangleX AI Assistant"><Bot size={16} aria-hidden="true"/></button><button className={'connection-indicator is-'+connection.tone} title={connection.detail} onClick={()=>setShowInspector(!showInspector)} aria-label={connection.label+' · '+(showInspector?'Hide context inspector':'Show context inspector')} aria-expanded={showInspector}><span className="status-dot"/><span>{connection.label}</span></button><button className="icon-button" onClick={()=>setSettings(true)} aria-label="Connection settings" title="Connection settings"><KeyRound size={16} aria-hidden="true"/></button><button className="icon-button" onClick={()=>setConfig(true)} aria-label="Open theme and layout settings"><Settings2 size={16} aria-hidden="true"/></button><ThemeToggle/><AccountMenu/>{settings&&<SettingsPopover token={token} setToken={setToken} onApply={()=>{setSessionToken(token);setToken('');setSettings(false);retryConnection()}} onClose={()=>setSettings(false)}/>}</div></header>
+      <div className={'research-body '+(isLayer3Analysis?'layer3-analytic-workspace ':'')+(!showInspector?'inspector-closed':'')}><main id="workspace-content" tabIndex={-1} className="research-main"><VerifiedContextBar/><GuestMigrationBanner/>{children}</main><ContextInspector summary={summary.data} health={health.data} status={status.data} jobs={jobs.data} connection={connection} retry={retryConnection} visible={showInspector} onClose={()=>setShowInspector(false)}/></div>
+      <footer className="research-footer"><span>EntangleX Q-Health · Hybrid quantum–classical research platform</span><span>Research use only · <NavLink to="/settings">Settings</NavLink></span></footer>
     </div>
     {isMobileViewport&&<MobileBottomNavigation onMore={()=>setMobileMore(true)}/>}
     {palette&&<CommandPalette onClose={()=>setPalette(false)}/>}

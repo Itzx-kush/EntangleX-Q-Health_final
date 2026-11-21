@@ -1,3 +1,5 @@
+import {modelFamily as family, type Family} from '../lib/modelFamily';
+import {Fingerprint} from './Fingerprint';
 import {ArrowRight,Database,FlaskConical,ShieldCheck} from 'lucide-react';
 import {Badge,Card} from './ui';
 import {Link} from 'react-router-dom';
@@ -14,7 +16,6 @@ type Props={
   alignment?:AlignmentContract;
 };
 
-type Family='Classical'|'Quantum'|'Hybrid';
 
 const orderedKinds:ModelKind[]=[
   'logistic_regression',
@@ -25,12 +26,6 @@ const orderedKinds:ModelKind[]=[
   'qnn',
   'hybrid_pennylane_torch',
 ];
-
-function family(kind:ModelKind):Family{
-  if(kind==='hybrid_pennylane_torch')return 'Hybrid';
-  if(kind==='vqc'||kind==='qsvc'||kind==='qnn')return 'Quantum';
-  return 'Classical';
-}
 
 function tone(value:Family):'blue'|'purple'|'amber'{
   return value==='Classical'?'blue':value==='Quantum'?'purple':'amber';
@@ -127,7 +122,7 @@ export function ControlledSevenModelComparison({
         <MetricCard
           label="DATASET"
           value={dataset.name}
-          detail={dataset.sha256 ? `SHA-256 ${dataset.sha256}` : 'Dataset hash not recorded'}
+          detail={dataset.sha256 ? <Fingerprint value={dataset.sha256}/> : 'Dataset hash not recorded'}
           icon={<Database size={15}/>}
         />
         <MetricCard
@@ -171,7 +166,7 @@ export function ControlledSevenModelComparison({
       title="Seven-model comparison matrix"
       description="Exact persisted held-out metrics plus evidence availability. Missing measurements remain visibly unavailable."
     >
-      <div className="table-wrap overflow-x-auto">
+      <div tabIndex={0} className="table-wrap overflow-x-auto">
         <table className="data-table min-w-[1500px]">
           <thead>
             <tr>

@@ -147,7 +147,7 @@ describe('ResearchShell component', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
 
     // Search input should be present
-    const searchInput = screen.getByPlaceholderText(/Search actions and research areas…/i);
+    const searchInput = screen.getByPlaceholderText(/Search pages, actions and records…/i);
     expect(searchInput).toBeInTheDocument();
 
     // Press Escape to close

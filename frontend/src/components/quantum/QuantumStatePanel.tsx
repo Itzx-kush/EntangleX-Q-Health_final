@@ -105,11 +105,10 @@ function ProbabilityView({
 
     {totalStates>rows.length&&<p className="ql-bounded-note">Showing the top 32 basis states by {sortMode==='probability'?'normalized probability':'index'}. {totalStates} states were returned by the backend.</p>}
 
-    <div className="ql-probability-list" role="list" aria-label="Backend probability distribution">
+    <div className="ql-probability-list" role="group" aria-label="Backend probability distribution">
       {rows.map(item=><button
         type="button"
         className={'ql-probability-row '+(selectedBasisState===item.state?'is-selected':'')}
-        role="listitem"
         key={item.state}
         onClick={()=>onSelectBasis(item.state)}
         aria-pressed={selectedBasisState===item.state}
@@ -165,7 +164,7 @@ function AmplitudeView({
     .sort((a,b)=>sortMode==='magnitude'?b.magnitude-a.magnitude:a.index-b.index)
     .slice(0,32);
 
-  return <div className="ql-state-view-stack" role="list" aria-label="Simulator statevector amplitudes">
+  return <div className="ql-state-view-stack" role="group" aria-label="Simulator statevector amplitudes">
     <div className="ql-state-view-header">
       <div className="ql-math-callout-sm">
         <span className="ql-math-formula">α = a + bi = |α|e^(iφ) · P = |α|² = a² + b²</span>
@@ -183,7 +182,6 @@ function AmplitudeView({
       {rows.map(item=><button
         type="button"
         className={'ql-amplitude-row '+(selectedBasisState===item.label?'is-selected':'')}
-        role="listitem"
         key={item.label}
         onClick={()=>onSelectBasis(item.label)}
         aria-pressed={selectedBasisState===item.label}
@@ -227,7 +225,7 @@ function PhaseView({
     })
     .slice(0,32);
 
-  return <div className="ql-state-view-stack" role="list" aria-label="Statevector phase in radians">
+  return <div className="ql-state-view-stack" role="group" aria-label="Statevector phase in radians">
     <div className="ql-state-view-header">
       <div className="ql-meta-pills">
         <span className="ql-pill"><small>RANGE</small><strong>−π to +π (−180° to +180°)</strong></span>
@@ -251,7 +249,6 @@ function PhaseView({
         return <button
           type="button"
           className={'ql-phase-row '+(selectedBasisState===item.label?'is-selected':'')}
-          role="listitem"
           key={item.label}
           onClick={()=>onSelectBasis(item.label)}
           aria-pressed={selectedBasisState===item.label}
@@ -305,7 +302,7 @@ function MeasurementView({
   const maximum=Math.max(1,...rows.map(([,count])=>count));
   const totalReturned=Object.values(counts).reduce((sum,count)=>sum+count,0);
 
-  return <div className="ql-measurement-list" role="list" aria-label="Backend simulator measurement counts">
+  return <div className="ql-measurement-list" role="group" aria-label="Backend simulator measurement counts">
     {Object.keys(counts).length>rows.length&&<p className="ql-bounded-note">Showing the top 32 measured basis states by count.</p>}
     <p>Returned shot counts{shotCount!==null&&shotCount!==undefined?' · '+shotCount+' shots':''}. Counts are simulator outputs, not hardware measurements.</p>
     {rows.map(([basis,count])=>{
@@ -313,7 +310,6 @@ function MeasurementView({
       return <button
         type="button"
         className={'ql-measurement-row '+(selectedBasisState===basis?'is-selected':'')}
-        role="listitem"
         key={basis}
         onClick={()=>onSelectBasis(basis)}
         aria-pressed={selectedBasisState===basis}

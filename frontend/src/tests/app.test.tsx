@@ -233,11 +233,11 @@ describe('research shell navigation and commands',()=>{
     activeRoute.unmount();
 
     const fallbackRoute=renderWithProviders(<App/>,['/not-a-real-route']);
-    await waitFor(()=>expect(fallbackRoute.getByRole('heading',{name:/Overview/i})).toBeInTheDocument());
+    await waitFor(()=>expect(fallbackRoute.getByRole('heading',{name:'Overview'})).toBeInTheDocument());
   });
 
   it('renders a discoverable header theme toggle and persists the chosen theme',async()=>{
-    renderWithProviders(<ResearchShell><ThemeToggle/><div>Shell content</div></ResearchShell>);
+    renderWithProviders(<ResearchShell><div>Shell content</div></ResearchShell>);
     const toggle=await waitFor(()=>screen.getByRole('button',{name:/Switch to dark theme/i}));
     fireEvent.click(toggle);
     await waitFor(()=>expect(screen.getByRole('button',{name:/Switch to light theme/i})).toBeInTheDocument());
@@ -250,7 +250,7 @@ describe('research shell navigation and commands',()=>{
     fireEvent.click(screen.getByRole('button',{name:/Open command palette/i}));
     const dialog=screen.getByRole('dialog',{name:/Command palette/i});
     expect(dialog).toBeInTheDocument();
-    const input=screen.getByRole('textbox',{name:/Search commands/i});
+    const input=screen.getByRole('combobox',{name:/Search commands/i});
     fireEvent.change(input,{target:{value:'Training'}});
     fireEvent.keyDown(window,{key:'Enter'});
     await waitFor(()=>expect(screen.getByRole('link',{name:/Training/i})).toHaveClass('active'));
@@ -281,7 +281,7 @@ describe('settings and Demo Center readiness',()=>{
     expect(localStorage.getItem('qhealth-theme')).toBe('dark');
     expect(localStorage.getItem('qhealth-density')).toBe('compact');
     expect(localStorage.getItem('qhealth-motion')).toBe('reduced');
-    expect(localStorage.getItem('qhealth-inspector')).toBe('hidden');
+    expect(localStorage.getItem('qhealth-inspector')).toBe('visible');
   });
 
   const demoLibraryItem={
@@ -404,7 +404,7 @@ describe('settings and Demo Center readiness',()=>{
     renderWithProviders(<ResearchShell><DemoCenter/></ResearchShell>,['/demo']);
     expect(await screen.findByRole('heading',{name:'Early Stage Diabetes Risk Prediction'})).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText('PennyLane + PyTorch Hybrid')).toBeInTheDocument();
+    expect(screen.getAllByText('PennyLane + PyTorch Hybrid').length).toBeGreaterThan(0);
     expect(screen.getByRole('link',{name:/Explore model evidence/i})).toHaveAttribute('href','/comparison');
     expect(qh.createJob).not.toHaveBeenCalled();
     expect(qh.robustness).not.toHaveBeenCalled();

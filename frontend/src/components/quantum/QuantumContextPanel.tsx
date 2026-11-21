@@ -90,8 +90,8 @@ export function QuantumContextPanel({contract,datasetName,modelType,capabilityMe
         <span><small>Feature map</small><strong>{contract.circuit.feature_map||'Not reported'}</strong></span>
         <span><small>Variational ansatz</small><strong>{contract.circuit.ansatz||'Not reported / not applicable'}</strong></span>
         <span><small>Measurement path</small><strong>{contract.circuit.measurement_path||'Not reported'}</strong></span>
-        <span><small>Output semantics</small><strong>{contract.circuit.output_semantics||'Not reported'}</strong></span>
         <span><small>Model limitation</small><strong>{contract.circuit.limitation||'No additional limitation reported'}</strong></span>
+        <span><small>Output semantics</small><strong>{contract.circuit.output_semantics||'Not reported'}</strong></span>
       </div>}
     </Card>}
   </div>;

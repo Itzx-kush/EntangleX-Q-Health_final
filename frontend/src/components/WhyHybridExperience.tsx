@@ -168,7 +168,7 @@ export function WhyHybridExperience({datasetName,hybridDetailPath}:WhyHybridExpe
 
       <div className="mt-5">
         <div className="text-[10px] font-semibold tracking-[0.14em] text-[#56657D]">WHY THIS ARCHITECTURE? · LAYER-BY-LAYER</div>
-        <div className="table-wrap mt-3 overflow-x-auto">
+        <div tabIndex={0} className="table-wrap mt-3 overflow-x-auto">
           <table className="data-table min-w-[760px]">
             <thead><tr><th>Layer</th><th>Purpose</th><th>Why it exists</th></tr></thead>
             <tbody>

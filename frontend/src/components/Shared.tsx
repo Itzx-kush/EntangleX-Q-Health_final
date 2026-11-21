@@ -4,12 +4,11 @@ import {ArrowRight,Atom,Database,LoaderCircle,RefreshCw} from 'lucide-react';
 import {Card,Badge,Select} from './ui';
 import {modelLabels,metric,shortId} from '../utils/format';
 import type {Dataset,ModelRecord,Metrics,MetricName} from '../types/qhealth';
-import {AnimatedSection,BlurText,GradientText,Reveal,ShinyText} from './reactbits';
 import {TremorAccordion,TremorCallout,TremorMetric} from './TremorUI';
 
-export function PageHeader({eyebrow,title,description,actions}:{eyebrow:string;title:string;description:string;actions?:ReactNode}){return <AnimatedSection className="page-hero"><div className="flex flex-wrap items-end justify-between gap-5"><div><div className="eyebrow"><ShinyText>{eyebrow}</ShinyText></div><h1 className="headline"><BlurText>{title}</BlurText></h1><p className="subhead"><GradientText>{description}</GradientText></p></div>{actions&&<div className="flex flex-wrap gap-2">{actions}</div>}</div></AnimatedSection>}
+export function PageHeader({eyebrow,title,description,actions}:{eyebrow:string;title:string;description:string;actions?:ReactNode}){return <header className="page-hero"><div className="page-hero-copy"><p className="eyebrow">{eyebrow.replace(/^\d+\s*\/\s*/, '')}</p><h1 className="headline">{title}</h1><p className="subhead">{description}</p></div>{actions&&<div className="page-hero-actions">{actions}</div>}</header>}
 export function StatusBadge({value}:{value:string}){const tone=['ready','succeeded','completed'].includes(value)?'green':['failed','cancelled','interrupted'].includes(value)?'red':value==='running'||value==='queued'?'amber':'blue';return <Badge tone={tone}>{value.replaceAll('_',' ')}</Badge>}
-export function MetricCard({label,value,detail,icon}:{label:string;value:ReactNode;detail?:string;icon?:ReactNode}){return <TremorMetric label={label} value={value} detail={detail} icon={icon}/>}
+export function MetricCard({label,value,detail,icon}:{label:string;value:ReactNode;detail?:ReactNode;icon?:ReactNode}){return <TremorMetric label={label} value={value} detail={detail} icon={icon}/>}
 function errorTitle(error:string){
   if(/\b404\b|not found|does not exist/i.test(error))return 'Research record not found';
   if(/\b401\b|\b403\b|permission|unauthori[sz]ed|forbidden/i.test(error))return 'Research access is unavailable';
@@ -29,11 +28,11 @@ export function EmptyState({title,children,action}:{title:string;children:ReactN
 }
 
 export function Loading(){
-  return <Reveal><div className="research-loading-state tremor-card" role="status" aria-live="polite" aria-busy="true">
+  return <div className="research-loading-state tremor-card" role="status" aria-live="polite" aria-busy="true">
     <div className="research-loading-header"><span className="research-skeleton research-skeleton-eyebrow"/><span className="research-loading-label"><LoaderCircle size={14} className="animate-spin"/>Loading research data…</span></div>
     <span className="research-skeleton research-skeleton-title"/><span className="research-skeleton research-skeleton-copy"/>
     <div className="research-loading-grid"><span className="research-skeleton research-skeleton-panel"/><span className="research-skeleton research-skeleton-panel"/><span className="research-skeleton research-skeleton-panel research-skeleton-panel-wide"/></div>
-  </div></Reveal>;
+  </div>;
 }
 export function Notice({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'amber'|'green'}){return <TremorCallout tone={tone}>{children}</TremorCallout>}
 export function JsonDisclosure({label,value}:{label:string;value:unknown}){return <TremorAccordion className="mt-4" label={label}><pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed muted">{JSON.stringify(value,null,2)}</pre></TremorAccordion>}

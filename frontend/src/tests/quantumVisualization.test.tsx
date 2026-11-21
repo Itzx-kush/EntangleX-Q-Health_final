@@ -182,6 +182,7 @@ describe('Quantum Lab visualization contract components',()=>{
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
   const datasetSelect=await screen.findByRole('combobox',{name:'Quantum dataset context'});
+  await screen.findByRole('option',{name:'Cohort A'});
   fireEvent.change(datasetSelect,{target:{value:'dataset-1'}});
   const generate=screen.getByRole('button',{name:'Generate structural preview'});
   fireEvent.click(generate);
@@ -209,6 +210,8 @@ describe('Quantum Lab visualization contract components',()=>{
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/quantum']}><DraftProvider><Quantum/></DraftProvider></MemoryRouter></QueryClientProvider>);
   const modelSelect=await screen.findByRole('combobox',{name:'Quantum persisted model'});
+  fireEvent.change(screen.getByRole('combobox',{name:'Quantum advisor model'}),{target:{value:'qsvc'}});
+  await waitFor(()=>expect(modelSelect.querySelector('option[value="model-1"]')).toBeTruthy());
   fireEvent.change(modelSelect,{target:{value:'model-1'}});
   const reportLink=await screen.findByRole('link',{name:'Experiment report'});
   expect(reportLink).toHaveAttribute('href','/experiments/experiment-1');

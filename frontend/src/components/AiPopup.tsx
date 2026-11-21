@@ -1,6 +1,7 @@
+import {useDialogFocus} from '../hooks/useDialogFocus';
 import {useEffect,useRef} from 'react';
 import {AlertCircle,Bot,Loader2,Maximize2,RefreshCcw,Send,User,X} from 'lucide-react';
-import {useLocation,useNavigate} from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import {Button} from './ui';
 import {EXAMPLE_PROMPTS} from '../pages/AiAssistantPage';
 import {useAi} from '../contexts/AiContext';
@@ -17,23 +18,26 @@ function assistantLines(text:string){
 export function AiPopup(){
   const {messages,input,loading,error,isPopupOpen,setInput,handleSend,setPopupOpen,clearChat}=useAi();
   const navigate=useNavigate();
-  const location=useLocation();
+
   const endRef=useRef<HTMLDivElement>(null);
   const textareaRef=useRef<HTMLTextAreaElement>(null);
-  const triggerRef=useRef<HTMLButtonElement>(null);
+  const panel=useDialogFocus<HTMLDivElement>(isPopupOpen);
 
-  useEffect(()=>{if(messages.length&&isPopupOpen)endRef.current?.scrollIntoView({behavior:'smooth'});},[messages,loading,isPopupOpen]);
+  useEffect(()=>{if(messages.length&&isPopupOpen)endRef.current?.scrollIntoView({behavior:'auto'});},[messages,loading,isPopupOpen]);
 
   useEffect(()=>{
     const onKeyDown=(event:KeyboardEvent)=>{
       if(event.ctrlKey&&event.key==='/'){event.preventDefault();setPopupOpen(!isPopupOpen);}
-      if(event.key==='Escape'&&isPopupOpen){setPopupOpen(false);triggerRef.current?.focus();}
+      if(event.key==='Escape'&&isPopupOpen){setPopupOpen(false);}
     };
     window.addEventListener('keydown',onKeyDown);
     return()=>window.removeEventListener('keydown',onKeyDown);
   },[isPopupOpen,setPopupOpen]);
 
-  useEffect(()=>{if(isPopupOpen){window.setTimeout(()=>textareaRef.current?.focus(),100);}},[isPopupOpen]);
+  useEffect(()=>{
+    if(!isPopupOpen)return;
+    textareaRef.current?.focus();
+  },[isPopupOpen]);
 
   const onKeyDown=(event:React.KeyboardEvent<HTMLTextAreaElement>)=>{
     if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();void handleSend(input);}
@@ -47,20 +51,18 @@ export function AiPopup(){
 
   const expand=()=>{setPopupOpen(false);navigate('/ai');};
   const clear=()=>{if(window.confirm('Clear current conversation?'))clearChat();};
-  const hideTrigger=location.pathname==='/ai';
+
 
   return <>
-    {!isPopupOpen&&!hideTrigger&&<button ref={triggerRef} onClick={()=>setPopupOpen(true)} style={{position:'fixed',right:24,bottom:24,zIndex:2147483647}} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 hover:shadow-xl hover:shadow-primary/40 transition-all animate-in zoom-in duration-300" aria-label="Open EntangleX AI Assistant (Ctrl + /)" title="Open EntangleX AI Assistant (Ctrl + /)"><Bot size={28}/></button>}
-
     {isPopupOpen&&<div style={{position:'fixed',inset:0,zIndex:2147483647}} className="flex items-end justify-end pointer-events-none sm:p-6 md:p-8">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm sm:hidden pointer-events-auto" onClick={()=>setPopupOpen(false)}/>
-      <div className="relative w-full sm:w-[400px] md:w-[440px] h-[90vh] sm:h-[650px] max-h-screen sm:max-h-[85vh] bg-background border-t sm:border border-border sm:rounded-2xl shadow-2xl flex flex-col pointer-events-auto animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 fade-in duration-300" role="dialog" aria-label="AI Assistant" aria-modal="true">
+      <div ref={panel} className="relative w-full sm:w-[400px] md:w-[440px] h-[90vh] sm:h-[650px] max-h-screen sm:max-h-[85vh] bg-background border-t sm:border border-border sm:rounded-2xl shadow-2xl flex flex-col pointer-events-auto animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 fade-in duration-300" role="dialog" aria-label="AI Assistant" aria-modal="true">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50 sm:rounded-t-2xl">
           <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary"><Bot size={18}/></div><div><h3 className="font-semibold text-sm leading-tight text-foreground">EntangleX AI</h3><p className="text-[11px] text-muted-foreground leading-tight">Research Assistant</p></div></div>
           <div className="flex items-center gap-1">
             {messages.length>0&&<button onClick={clear} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="New Conversation" aria-label="New Conversation"><RefreshCcw size={16}/></button>}
             <button onClick={expand} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="Expand to full page" aria-label="Expand to full page"><Maximize2 size={16}/></button>
-            <button onClick={()=>{setPopupOpen(false);triggerRef.current?.focus();}} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="Close" aria-label="Close"><X size={18}/></button>
+            <button onClick={()=>{setPopupOpen(false);}} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="Close" aria-label="Close"><X size={18}/></button>
           </div>
         </div>
 
@@ -87,8 +89,8 @@ export function AiPopup(){
 
         <div className="p-3 sm:p-4 bg-background border-t border-border">
           <div className="bg-card border border-border rounded-xl shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all p-1.5 flex items-end gap-2">
-            <textarea ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask a question..." className="flex-1 max-h-32 min-h-[36px] bg-transparent resize-none border-0 focus:ring-0 px-2 py-1.5 text-foreground text-[13px] sm:text-sm scrollbar-thin outline-none" disabled={loading} rows={1}/>
-            <Button onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={16}/></Button>
+            <textarea aria-label="Message" ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask a question..." className="flex-1 max-h-32 min-h-[36px] bg-transparent resize-none border-0 focus:ring-0 px-2 py-1.5 text-foreground text-[13px] sm:text-sm scrollbar-thin outline-none" disabled={loading} rows={1}/>
+            <Button aria-label="Send message" onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={16}/></Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground mt-2">AI may be inaccurate. Press Ctrl + / to open/close.</p>
         </div>

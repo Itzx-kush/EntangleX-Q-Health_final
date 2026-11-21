@@ -2,8 +2,6 @@ import {Link} from 'react-router-dom';
 import {useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
 import {ArrowRight,Atom,BarChart3,Brain,Database,FlaskConical,GitCompareArrows,Play,RefreshCw,ShieldCheck,Trash2,Upload} from 'lucide-react';
-import {MolecularBackground} from '../components/MolecularBackground';
-import {SearchBar} from '../components/SearchBar';
 import {Button,Card,Badge,Input,Select} from '../components/ui';
 import {ErrorBanner,EmptyState,Loading,MetricCard,Notice,PageHeader,StatusBadge,JsonDisclosure,ResearchPipeline} from '../components/Shared';
 import {ClassBalance,ValueBars} from '../components/Charts';
@@ -19,8 +17,7 @@ import {DatasetQualityScorecardView} from './DatasetQualityScorecard';
 import {useFlagshipData,useVerifiedDemo} from '../hooks/useVerifiedDemo';
 import {QuantumHero,CoreCapabilitiesGrid,HybridWorkflowStrip} from '../components/QuantumHero';
 
-export const stages=[['Data','/datasets'],['Quality','/quality'],['Preprocess','/preprocessing'],['Features','/features'],['PCA','/pca'],['Train','/training'],['Compare','/comparison'],['Robustness','/robustness'],['Explain','/explainability'],['Predict','/prediction'],['Experiments','/experiments']] as const;
-export function StageNav({current}:{current:string}){return <AnimatedSection className="flex flex-wrap gap-2 border-y py-3"><span className="stage-chip border-primary/20 text-primary"><ShinyText>RESEARCH PATHWAY</ShinyText></span>{stages.map((s,i)=><Link key={s[1]} to={s[1]} aria-current={current===s[1]?'page':undefined} className={'stage-chip ' + (current===s[1]?'bg-primary/10 text-primary border-primary/20 is-current':'border-border text-muted-foreground')} style={{animationDelay:`${i*35}ms`}}>{s[0]} <ArrowRight size={10}/></Link>)}</AnimatedSection>}
+import {StageNav} from '../components/StageNav';
 
 export function Overview(){
  const flagship=useFlagshipData();
@@ -35,28 +32,17 @@ export function Overview(){
  const registered=datasets.data??[];
  const statusCounts=Object.entries((experiments.data??[]).reduce<Record<string,number>>((acc,e)=>{acc[e.status]=(acc[e.status]??0)+1;return acc},{})).map(([name,value])=>({name:name.replaceAll('_',' '),value}));
  const healthBlocks=registered.slice(0,12).map(d=>({label:d.name,status:d.quality.blockers.length?'error':d.quality.warnings.length?'warning':'good',tooltip:d.name+' · '+(d.quality.blockers.length?'blocked':d.quality.warnings.length?'warning':'clear')} as const));
- const capabilityCount=system.data?.model_capabilities?.length??0;
- const implementedCount=system.data?.model_capabilities?.filter(m=>m.implementation_status==='AVAILABLE').length??0;
- const executableCount=system.data?.model_capabilities?.filter(m=>m.executable).length??0;
- const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.implementation_status==='AVAILABLE'?(m.executable?100:75):0}))??[];
+ const capabilityCount=system.data?.model_capabilities?.length;
+ const implementedCount=system.data?.model_capabilities?.filter(m=>m.implementation_status==='AVAILABLE').length;
+ const executableCount=system.data?.model_capabilities?.filter(m=>m.executable).length;
+ const modelReadiness=system.data?.model_capabilities?.slice(0,6).map(m=>({label:m.display_name,detail:m.category, value:m.executable?'Executable':m.implementation_status}))??[];
  const focus=draft.dataset_id?registered.find(dataset=>dataset.id===draft.dataset_id):undefined;
  const focusClass=focus?Object.entries(focus.provenance.class_distribution).map(([name,value])=>({name,value})):[];
  const readinessLabel=flagship.library.isLoading?'CHECKING READINESS':flagship.available?'VERIFIED DEMO · READY':'VERIFIED DEMO UNAVAILABLE';
  const readinessTone=flagship.library.isLoading?'blue':flagship.available?'green':'red';
  const modelCount=flagship.models.length||flagship.item?.demo_readiness.model_ids.length||0;
  return <div className="tremor-dashboard">
-  <QuantumHero
-   backendStatus={health.isError ? 'offline' : health.data ? 'online' : 'checking'}
-   quantumAvailable={health.data?.quantum.available}
-   runtimeVerified={health.data?.quantum.runtime_verified}
-   datasetCount={summary.data?.counts.datasets ?? registered.length ?? '—'}
-   experimentCount={summary.data?.counts.experiments ?? '—'}
-   readyModelCount={summary.data?.counts.ready_models ?? implementedCount ?? '—'}
-   activeJobCount={summary.data?.counts.active_jobs ?? 0}
-   flagshipAvailable={flagship.available}
-   flagshipModelCount={modelCount || 4}
-  />
-
+  <PageHeader eyebrow="Research workspace" title="Overview" description="Pick up an experiment, inspect your datasets or explore the verified benchmark." actions={<><Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link><Link className="btn btn-outline" to="/experiments">Experiment registry</Link></>}/>
   {/* SIH26139 Flagship Judge Journey (Preserved & Elevated) */}
   <section className="rounded-2xl border border-[#D8E2EF] dark:border-slate-800 bg-[#F7FAFD] dark:bg-slate-900/40 p-4 md:p-5 mb-6" aria-label="SIH flagship demonstration and judge journey">
    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -64,7 +50,7 @@ export function Overview(){
      <div className="flex flex-wrap items-center gap-2 mb-1.5">
       <Badge tone="purple">SIH26139 FLAGSHIP</Badge>
       <Badge tone={readinessTone}>{readinessLabel}</Badge>
-      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">JUDGE-FIRST VERIFIED SHOWCASE</span>
+
      </div>
      <h2 className="text-lg font-bold text-[#102A5C] dark:text-[#F4F7FB]">
       {flagship.item?.name||flagship.alignment.data?.showcase.display_name||'Early Stage Diabetes Risk Prediction'}
@@ -104,27 +90,6 @@ export function Overview(){
    </div>}
   </section>
 
-  {/* Six Verified Platform Capabilities */}
-  <CoreCapabilitiesGrid/>
-
-  {/* End-to-End Hybrid Methodology */}
-  <HybridWorkflowStrip/>
-
-  {/* Platform Telemetry Dashboard */}
-  <section className="tremor-dashboard-top mt-8">
-   <div>
-    <div className="eyebrow">PLATFORM TELEMETRY &amp; WORKSPACE MONITOR</div>
-    <h2 className="tremor-dashboard-title">Live Research Workspace State</h2>
-    <p className="tremor-dashboard-subtitle">
-     Real-time telemetry from the live FastAPI backend, registered biomedical cohorts, active simulator jobs, and recorded experiment registry.
-    </p>
-   </div>
-   <div className="tremor-dashboard-actions">
-    <Link className="btn btn-primary" to="/datasets">Open Data Lab <ArrowRight size={14}/></Link>
-    <Link className="btn btn-outline" to="/experiments">Experiment registry</Link>
-   </div>
-  </section>
-
   <div className="tremor-grid-4">
    <TremorMetric label="DATASETS" value={summary.data?.counts.datasets??'—'} detail="Registered biomedical inputs" icon={<Database size={15}/>}/>
    <TremorMetric label="EXPERIMENTS" value={summary.data?.counts.experiments??'—'} detail="Recorded research runs" icon={<FlaskConical size={15}/>}/>
@@ -148,8 +113,8 @@ export function Overview(){
    </Card>
    <Card title="Model capability surface" description="Backend-reported implementation and execution states.">
     <div className="space-y-3">
-     {modelReadiness.length?modelReadiness.map(item=><TremorProgressBar key={item.label} value={item.value} label={item.label} detail={item.detail}/>):<TremorProgressBar value={0} label="Waiting for capability metadata" detail="System status endpoint not yet available"/>}
-     <div className="grid grid-cols-3 gap-2 pt-2"><TremorMetric label="CAPABILITIES" value={capabilityCount}/><TremorMetric label="AVAILABLE" value={implementedCount}/><TremorMetric label="EXECUTABLE" value={executableCount}/></div>
+     {modelReadiness.length?modelReadiness.map(item=><div key={item.label} className="tremor-list-row"><strong>{item.label}</strong><span className="ml-auto">{item.value}</span></div>):<p className="muted">Waiting for capability metadata.</p>}
+     <div className="grid grid-cols-3 gap-2 pt-2"><TremorMetric label="CAPABILITIES" value={capabilityCount??'—'}/><TremorMetric label="AVAILABLE" value={implementedCount??'—'}/><TremorMetric label="EXECUTABLE" value={executableCount??'—'}/></div>
     </div>
    </Card>
   </div>
@@ -174,6 +139,19 @@ export function Overview(){
   </div>
 
   <StageNav current="/"/>
+  <details className="workbench-guide"><summary>Platform guide and research methodology</summary>  <QuantumHero
+   backendStatus={health.isError ? 'offline' : health.data ? 'online' : 'checking'}
+   quantumAvailable={health.data?.quantum.available}
+   runtimeVerified={health.data?.quantum.runtime_verified}
+   datasetCount={summary.data?.counts.datasets ?? datasets.data?.length ?? '—'}
+   experimentCount={summary.data?.counts.experiments ?? '—'}
+   readyModelCount={summary.data?.counts.ready_models ?? '—'}
+   activeJobCount={summary.data?.counts.active_jobs ?? '—'}
+   flagshipAvailable={flagship.available}
+   flagshipModelCount={modelCount || '—'}
+  />
+
+<CoreCapabilitiesGrid/><HybridWorkflowStrip/></details>
   <ResearchPipeline/>
  </div>
 }
@@ -269,7 +247,7 @@ export function Datasets(){
     <Button className="mt-4 w-full" disabled={builtIn.isPending} onClick={()=>builtIn.mutate(item.slug)}>{builtIn.isPending?'Registering…':'Use Dataset'}</Button>
    </article>)}</div>}
   </Card>
-  <div className="two-grid mt-5"><Card title="Registered datasets" description="Built-in and uploaded datasets remain separate immutable registry records."><div className="table-wrap"><table className="data-table"><thead><tr><th>Dataset</th><th>Samples</th><th>Features</th><th>Target</th><th/></tr></thead><tbody>{datasets.data?.map(dataset=><tr key={dataset.id} className={draft.dataset_id===dataset.id?'bg-primary/5':''}><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(dataset)}>{dataset.name}</button><small className="block muted">{shortId(dataset.id)} · {dataset.provenance.origin==='built_in'?'Built-in':'Uploaded'}</small></td><td>{dataset.provenance.row_count.toLocaleString()}</td><td>{dataset.provenance.feature_count}</td><td>{dataset.provenance.target}<small className="block muted">Positive: {dataset.provenance.positive_label}</small></td><td className="text-right"><Button variant="outline" onClick={()=>choose(dataset)}>{draft.dataset_id===dataset.id?'Selected':'Select'}</Button></td></tr>)}</tbody></table></div>{datasets.isLoading&&<Loading/>}{!datasets.isLoading&&!datasets.data?.length&&<EmptyState title="No datasets registered">Choose a built-in dataset or inspect a CSV below.</EmptyState>}</Card>
+  <div className="two-grid mt-5"><Card title="Registered datasets" description="Built-in and uploaded datasets remain separate immutable registry records."><div tabIndex={0} className="table-wrap"><table className="data-table"><thead><tr><th>Dataset</th><th>Samples</th><th>Features</th><th>Target</th><th/></tr></thead><tbody>{datasets.data?.map(dataset=><tr key={dataset.id} className={draft.dataset_id===dataset.id?'bg-primary/5':''}><td><button className="font-semibold text-primary hover:underline" onClick={()=>setSelected(dataset)}>{dataset.name}</button><small className="block muted">{shortId(dataset.id)} · {dataset.provenance.origin==='built_in'?'Built-in':'Uploaded'}</small></td><td>{dataset.provenance.row_count.toLocaleString()}</td><td>{dataset.provenance.feature_count}</td><td>{dataset.provenance.target}<small className="block muted">Positive: {dataset.provenance.positive_label}</small></td><td className="text-right"><Button variant="outline" onClick={()=>choose(dataset)}>{draft.dataset_id===dataset.id?'Selected':'Select'}</Button></td></tr>)}</tbody></table></div>{datasets.isLoading&&<Loading/>}{!datasets.isLoading&&!datasets.data?.length&&<EmptyState title="No datasets registered">Choose a built-in dataset or inspect a CSV below.</EmptyState>}</Card>
    <Card title={selected?selected.name:'Selected provenance'} description="The registered backend record is the single source of truth for every downstream stage.">{selected?<div className="space-y-3 text-sm"><div className="grid grid-cols-2 gap-3">{[['Rows',selected.provenance.row_count],['Features',selected.provenance.feature_count],['Target',selected.provenance.target],['Type',selected.provenance.target_type||'binary_classification']].map(x=><div className="rounded-xl border p-3" key={String(x[0])}><span className="metric-label">{x[0]}</span><strong className="mt-1 block break-all">{String(x[1])}</strong></div>)}</div><p className="muted">{selected.provenance.source}</p><p className="mono break-all text-[10px] muted">SHA-256: {selected.sha256}</p><JsonDisclosure label="Full provenance and target resolution" value={selected.provenance}/><Button variant="ghost" disabled={remove.isPending} onClick={()=>{if(window.confirm('Delete this dataset?'))remove.mutate(selected.id)}}><Trash2 size={13}/> Delete dataset</Button></div>:<EmptyState title="Choose a registry record">Open a registered dataset to inspect its provenance.</EmptyState>}</Card></div>
   <Card className="mt-5" title="Explore Your Own Data · Upload CSV" description="Run the full Q-Health processing pipeline on another dataset. Inspect a deidentified CSV first; the backend never silently registers a low-confidence target guess.">
    <Notice tone="blue">Supported input: deidentified CSV tabular data for binary classification with an explicit target and positive class. Medical imaging, genomics, continuous signals and direct EHR integrations are not implemented.</Notice>
@@ -323,7 +301,7 @@ function LiveQuality(){
         <WorkbenchRail items={[{label:'Quality state',value:quality?'Measured':'Not validated',detail:'Backend quality contract',tone:quality?'green':'slate'},{label:'Blockers',value:quality?.blockers?.length??'—',detail:'Must be reviewed',tone:quality?.blockers?.length?'red':'green'},{label:'Warnings',value:quality?.warnings?.length??'—',detail:'Non-blocking findings',tone:quality?.warnings?.length?'amber':'green'},{label:'Minority share',value:quality?`${(quality.minority_fraction*100).toFixed(1)}%`:'—',detail:'Measured class balance',tone:quality&&quality.minority_fraction<.2?'amber':'green'}]}/>
         {quality&&<StatusStrip items={[{label:'Validation',value:quality.blockers.length?'Blocked':quality.warnings.length?'Review':'Healthy',status:quality.blockers.length?'bad':quality.warnings.length?'warning':'good'},{label:'Missingness',value:Object.values(quality.missing_values).some(Number)?'Detected':'Clear',status:Object.values(quality.missing_values).some(Number)?'warning':'good'},{label:'Duplicates',value:String(quality.duplicate_rows),status:quality.duplicate_rows?'warning':'good'},{label:'Target proxies',value:String(quality.suspiciously_predictive_features.length),status:quality.suspiciously_predictive_features.length?'warning':'good'}]}/>}
         <div className="mt-5"><ActiveDataset>{d=><div className="quality-evidence-grid"><Card title={d.name} description={d.provenance.target + ' · ' + d.provenance.row_count.toLocaleString() + ' samples'}><div className="grid grid-cols-2 gap-3"><MetricCard label="SAMPLES" value={d.provenance.row_count.toLocaleString()} detail="Registered rows" icon={<Database size={15}/>}/><MetricCard label="FEATURES" value={d.provenance.feature_count} detail="Available dimensions" icon={<BarChart3 size={15}/>}/></div><div className="mt-4"><div className="metric-label">CLASS DISTRIBUTION</div><ClassBalance dataset={d}/></div></Card><Card title="Quality gates"><Notice tone={quality?.blockers?.length?'amber':'green'}>{quality?.blockers?.length?'Backend returned blockers that require review.':'No blocking issue returned by the current checks.'}</Notice><div className="mt-3 space-y-2">{(quality?.blockers||[]).map((x:string)=><div className="text-xs text-red-700" key={x}>{x}</div>)}{(quality?.warnings||[]).map((x:string)=><div className="text-xs text-amber-700" key={x}>{x}</div>)}</div></Card></div>}</ActiveDataset></div>
-        {quality&&<div className="mt-5 two-grid"><Card title="Integrity profile"><div className="space-y-2">{[['Minority fraction',quality.minority_fraction],['Duplicate rows',quality.duplicate_rows],['Duplicate feature rows',quality.duplicate_feature_rows],['Suspicious features',quality.suspiciously_predictive_features.length],['Identifier-like fields',quality.identifier_features.length]].map(x=><div className="flex justify-between border-b py-2 last:border-0" key={String(x[0])}><span className="text-xs muted">{x[0]}</span><strong className="text-xs">{String(x[1])}</strong></div>)}</div><JsonDisclosure label="Correlated pairs" value={quality.highly_correlated_pairs}/></Card><Card title="Missingness by feature" description={missingnessItems.length?'Top measured missing-cell counts; the complete table remains below.':'No measured missing cells were returned.'}>{missingnessItems.length?<div className="mb-5"><div className="metric-label mb-2">HIGHEST MEASURED MISSING COUNTS</div><ValueBars items={missingnessItems}/></div>:<div className="rounded-lg border p-4 text-sm muted">The backend reports no missing cells in the current quality record.</div>}<div className="table-wrap max-h-[360px] overflow-auto"><table className="data-table"><thead><tr><th>Feature</th><th>Missing</th><th>Infinite</th></tr></thead><tbody>{Object.keys(quality.missing_values).map(k=><tr key={k}><td>{k}</td><td>{quality.missing_values[k]}</td><td>{quality.infinite_values[k]??0}</td></tr>)}</tbody></table></div></Card></div>}
+        {quality&&<div className="mt-5 two-grid"><Card title="Integrity profile"><div className="space-y-2">{[['Minority fraction',quality.minority_fraction],['Duplicate rows',quality.duplicate_rows],['Duplicate feature rows',quality.duplicate_feature_rows],['Suspicious features',quality.suspiciously_predictive_features.length],['Identifier-like fields',quality.identifier_features.length]].map(x=><div className="flex justify-between border-b py-2 last:border-0" key={String(x[0])}><span className="text-xs muted">{x[0]}</span><strong className="text-xs">{String(x[1])}</strong></div>)}</div><JsonDisclosure label="Correlated pairs" value={quality.highly_correlated_pairs}/></Card><Card title="Missingness by feature" description={missingnessItems.length?'Top measured missing-cell counts; the complete table remains below.':'No measured missing cells were returned.'}>{missingnessItems.length?<div className="mb-5"><div className="metric-label mb-2">HIGHEST MEASURED MISSING COUNTS</div><ValueBars items={missingnessItems}/></div>:<div className="rounded-lg border p-4 text-sm muted">The backend reports no missing cells in the current quality record.</div>}<div tabIndex={0} className="table-wrap max-h-[360px] overflow-auto"><table className="data-table"><thead><tr><th>Feature</th><th>Missing</th><th>Infinite</th></tr></thead><tbody>{Object.keys(quality.missing_values).map(k=><tr key={k}><td>{k}</td><td>{quality.missing_values[k]}</td><td>{quality.infinite_values[k]??0}</td></tr>)}</tbody></table></div></Card></div>}
       </div>
     )}
   </div>;

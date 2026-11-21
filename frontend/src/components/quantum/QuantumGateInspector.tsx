@@ -1,3 +1,4 @@
+import {moveTab} from '../ChoiceTabs';
 import { useState, useId } from 'react';
 import { Atom, Cpu, Info, Sliders, SlidersHorizontal, Table, Sparkles, RefreshCw, Layers } from 'lucide-react';
 import { Badge, Button, Select } from '../ui';
@@ -183,12 +184,12 @@ export function QuantumGateInspector({
             <h3 className="text-sm font-bold tracking-tight m-0">Gate & Parameter Inspector</h3>
           </div>
         </div>
-        <div className="ql-inspector-tabs" role="tablist" aria-label="Inspector views">
+        <div className="ql-inspector-tabs" role="tablist" onKeyDown={moveTab} aria-label="Inspector views">
           <button
             type="button"
             role="tab"
             id={`${baseId}-tab-gate`}
-            aria-selected={activeTab === 'gate'}
+            aria-selected={activeTab === 'gate'} tabIndex={activeTab === 'gate' ? 0 : -1}
             aria-controls={`${baseId}-panel-gate`}
             className={`ql-tab-btn ${activeTab === 'gate' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('gate')}
@@ -200,7 +201,7 @@ export function QuantumGateInspector({
             type="button"
             role="tab"
             id={`${baseId}-tab-bindings`}
-            aria-selected={activeTab === 'bindings'}
+            aria-selected={activeTab === 'bindings'} tabIndex={activeTab === 'bindings' ? 0 : -1}
             aria-controls={`${baseId}-panel-bindings`}
             className={`ql-tab-btn ${activeTab === 'bindings' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('bindings')}
@@ -212,7 +213,7 @@ export function QuantumGateInspector({
             type="button"
             role="tab"
             id={`${baseId}-tab-config`}
-            aria-selected={activeTab === 'config'}
+            aria-selected={activeTab === 'config'} tabIndex={activeTab === 'config' ? 0 : -1}
             aria-controls={`${baseId}-panel-config`}
             className={`ql-tab-btn ${activeTab === 'config' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('config')}

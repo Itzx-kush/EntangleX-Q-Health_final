@@ -235,7 +235,7 @@ export function ResearchBasisExperience({datasetName,hybridDetailPath}:ResearchB
 
       <div className="mt-5">
         <div className="text-[10px] font-semibold tracking-[0.14em] text-[#56657D]">FROM RESEARCH TO IMPLEMENTATION</div>
-        <div className="table-wrap mt-3 overflow-x-auto">
+        <div tabIndex={0} className="table-wrap mt-3 overflow-x-auto">
           <table className="data-table min-w-[720px]">
             <thead><tr><th>Research basis</th><th>EntangleX implementation</th></tr></thead>
             <tbody>
