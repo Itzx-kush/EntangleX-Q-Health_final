@@ -89,8 +89,8 @@ export function AiPopup(){
 
         <div className="p-3 sm:p-4 bg-background border-t border-border">
           <div className="bg-card border border-border rounded-xl shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all p-1.5 flex items-end gap-2">
-            <textarea ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask a question..." className="flex-1 max-h-32 min-h-[36px] bg-transparent resize-none border-0 focus:ring-0 px-2 py-1.5 text-foreground text-[13px] sm:text-sm scrollbar-thin outline-none" disabled={loading} rows={1}/>
-            <Button onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={16}/></Button>
+            <textarea aria-label="Message" ref={textareaRef} value={input} onChange={onInput} onKeyDown={onKeyDown} placeholder="Ask a question..." className="flex-1 max-h-32 min-h-[36px] bg-transparent resize-none border-0 focus:ring-0 px-2 py-1.5 text-foreground text-[13px] sm:text-sm scrollbar-thin outline-none" disabled={loading} rows={1}/>
+            <Button aria-label="Send message" onClick={()=>void handleSend(input)} disabled={!input.trim()||loading} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center p-0 rounded-lg mb-0.5"><Send size={16}/></Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground mt-2">AI may be inaccurate. Press Ctrl + / to open/close.</p>
         </div>
