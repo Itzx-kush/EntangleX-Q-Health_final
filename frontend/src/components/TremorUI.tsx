@@ -1,7 +1,7 @@
 import type {CSSProperties,KeyboardEvent,ReactNode} from 'react';
 import {useId,useMemo,useState} from 'react';
 import {AlertTriangle,CheckCircle2,ChevronDown,Info} from 'lucide-react';
-import {Area,AreaChart,Bar,BarChart,Cell,CartesianGrid,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
+import {Area,AreaChart,Bar,BarChart,Cell,CartesianGrid,Pie,Sector,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 
 export function TremorBadge({children,tone='blue'}:{children:ReactNode;tone?:'blue'|'green'|'amber'|'red'|'purple'}){
   return <span className={'tremor-badge tone-'+tone}>{children}</span>;
@@ -34,8 +34,9 @@ export function TremorAccordion({label,children,className=''}:{label:ReactNode;c
 
 export function TremorMetric({label,value,detail,icon,trend}:{label:string;value:ReactNode;detail?:ReactNode;icon?:ReactNode;trend?:string}){
   return <article className="tremor-metric">
-    <div className="tremor-metric-top"><div><span className="tremor-metric-label">{label}</span>{detail&&<p className="tremor-metric-detail">{detail}</p>}</div>{icon&&<span className="tremor-metric-icon">{icon}</span>}</div>
+    <div className="tremor-metric-top"><div><span className="tremor-metric-label">{label}</span></div>{icon&&<span className="tremor-metric-icon">{icon}</span>}</div>
     <div className="tremor-metric-value-row"><strong className="tremor-metric-value">{value}</strong>{trend&&<span className="tremor-trend">{trend}</span>}</div>
+    {detail&&<div className="tremor-metric-detail">{detail}</div>}
   </article>;
 }
 
@@ -76,7 +77,7 @@ export function TremorDonut({data,nameKey,valueKey,height=220,centerLabel}:{data
   const [active,setActive]=useState<number|null>(null);
   return <div className="tremor-donut-layout">
     <div className="tremor-donut-chart" style={{height}} role="img" aria-label={`${valueKey} distribution by ${nameKey}`}><ResponsiveContainer width="100%" height="100%"><PieChart accessibilityLayer>
-      <Pie data={data} dataKey={valueKey} nameKey={nameKey} innerRadius="70%" outerRadius="92%" paddingAngle={2} startAngle={90} endAngle={-270} stroke="var(--tremor-card)" strokeWidth={2} isAnimationActive={false} activeIndex={active??undefined} activeShape={(props:any)=><path {...props} opacity=".92"/>} onMouseEnter={(_,i)=>setActive(i)} onMouseLeave={()=>setActive(null)}>
+      <Pie data={data} dataKey={valueKey} nameKey={nameKey} innerRadius="70%" outerRadius="92%" paddingAngle={2} startAngle={90} endAngle={-270} stroke="var(--tremor-card)" strokeWidth={2} isAnimationActive={false} activeIndex={active??undefined} activeShape={(props:any)=><Sector {...props} opacity=".92"/>} onMouseEnter={(_,i)=>setActive(i)} onMouseLeave={()=>setActive(null)}>
         {data.map((_,i)=><Cell key={i} fill={colors[i%colors.length]}/>)}
       </Pie>
       <Tooltip content={<TremorChartTooltip/>}/>

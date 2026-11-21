@@ -515,7 +515,7 @@ function DatasetQualityScorecardContent({
                 <span>Total Features: <strong>{renderableScorecard.schema_snapshot.total_features}</strong></span>
                 <span>Target: <strong>{renderableScorecard.schema_snapshot.target_column || '—'}</strong></span>
               </div>
-              <div className="table-wrap max-h-[380px] overflow-auto">
+              <div tabIndex={0} className="table-wrap max-h-[380px] overflow-auto">
                 <table className="data-table text-xs">
                   <thead>
                     <tr>

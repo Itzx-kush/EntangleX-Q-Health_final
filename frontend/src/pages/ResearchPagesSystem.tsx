@@ -136,43 +136,4 @@ export function LegacyDemoCenter(){
   </div>;
 }
 
-export function SettingsPage(){
-  const {user,isAuthenticated,signingOut,signOut}=useAuth();
-  const {beginUpgrade,hasMigratableState}=useGuestMigration();
-  type ThemePreference='research'|'dark'|'system';
-  type SidebarPreference='sidebar'|'floating'|'inset';
-  type LayoutPreference='default'|'icon'|'offcanvas';
-  const [theme,setTheme]=useState<ThemePreference>(()=>{
-    const value=localStorage.getItem('qhealth-theme');
-    return value==='dark'?'dark':value==='system'?'system':'research';
-  });
-  const [sidebar,setSidebar]=useState<SidebarPreference>(()=>{
-    const value=localStorage.getItem('qhealth-sidebar-variant');
-    return value==='sidebar'||value==='floating'?'sidebar'===value?'sidebar':'floating':'inset';
-  });
-  const [layout,setLayout]=useState<LayoutPreference>(()=>{
-    const value=localStorage.getItem('qhealth-layout');
-    return value==='icon'||value==='offcanvas'?'icon'===value?'icon':'offcanvas':'default';
-  });
-  const [density,setDensity]=useState<'comfortable'|'compact'>(()=>(localStorage.getItem('qhealth-density') as 'comfortable'|'compact')||'comfortable');
-  const [motion,setMotion]=useState<'full'|'reduced'>(()=>(localStorage.getItem('qhealth-motion') as 'full'|'reduced')||'full');
-  const [inspector,setInspector]=useState(localStorage.getItem('qhealth-inspector')!=='hidden');
-  useEffect(()=>{localStorage.setItem('qhealth-theme',theme);localStorage.setItem('qhealth-sidebar-variant',sidebar);localStorage.setItem('qhealth-layout',layout);localStorage.setItem('qhealth-density',density);localStorage.setItem('qhealth-motion',motion);localStorage.setItem('qhealth-inspector',inspector?'visible':'hidden');window.dispatchEvent(new Event('qhealth-settings-changed'))},[theme,sidebar,layout,density,motion,inspector]);
-  return <div className="layer3-final-workspace layer3-settings-workspace">
-    <PageHeader eyebrow="Workspace controls" title="Settings center" description="Manage account access, interface preferences, accessibility, and research safeguards."/>
-    <WorkbenchRail items={[{label:'Account',value:isAuthenticated?'Signed in':'Guest mode',detail:isAuthenticated?'Personal workspace':'Prototype access',tone:isAuthenticated?'green':'slate'},{label:'Theme',value:theme==='research'?'Research light':theme==='dark'?'Deep research':'System',detail:'Workspace appearance',tone:theme==='dark'?'purple':'blue'},{label:'Density',value:density,detail:'Layout spacing',tone:'blue'},{label:'Motion',value:motion,detail:'Accessibility preference',tone:motion==='reduced'?'green':'purple'}]}/>
-    <StatusStrip items={[{label:'Interface',value:'Applied immediately',status:'good'},{label:'Persistence',value:'Local browser only',status:'good'},{label:'Secrets',value:'Never stored',status:'good'},{label:'Research safeguards',value:'Always enabled',status:'good'}]}/>
-    <div className="settings-section-heading"><span className="eyebrow">Account</span><h2>Identity &amp; access</h2><p>Manage the current EntangleX workspace identity without changing research API behavior.</p></div>
-    <div className="settings-account-card">
-      {isAuthenticated?<><AccountAvatar user={user} size="medium"/><div><strong>{accountName(user)}</strong><span>{accountEmail(user)}</span><small>Authenticated personal workspace</small></div><div className="settings-account-actions"><Link className="btn btn-outline" to="/account">My account</Link><Link className="btn btn-outline" to="/my-research">My Research</Link><Button variant="ghost" disabled={signingOut} onClick={()=>void signOut()}><LogOut size={14}/>{signingOut?'Signing out…':'Sign out'}</Button></div></>
-      :<><span className="settings-guest-mark"><LogIn size={18}/></span><div><strong>Guest research workspace</strong><span>Current prototype access</span><small>{hasMigratableState?'Eligible session metadata can be saved after sign-in.':'No account identity is attached to this session.'}</small></div><Button variant="outline" onClick={beginUpgrade}><LogIn size={14}/>{hasMigratableState?'Sign in to save':'Go to sign in'}</Button></>}
-    </div>
-    <div className="settings-section-heading"><span className="eyebrow">Interface</span><h2>Appearance &amp; accessibility</h2><p>Preferences apply immediately and remain local to this browser.</p></div>
-    <div className="settings-grid">
-      <Card title="Appearance" description="Choose the research surface that best fits the room you are working in."><div className="settings-option-grid"><button type="button" className={'settings-option '+(theme==='research'?'is-selected':'')} onClick={()=>setTheme('research')} aria-pressed={theme==='research'}><Sun size={18}/><span><strong>Research light</strong><small>Bright surfaces · navy evidence UI</small></span></button><button type="button" className={'settings-option '+(theme==='dark'?'is-selected':'')} onClick={()=>setTheme('dark')} aria-pressed={theme==='dark'}><Moon size={18}/><span><strong>Deep research</strong><small>Low-glare dark workspace</small></span></button><button type="button" className={'settings-option '+(theme==='system'?'is-selected':'')} onClick={()=>setTheme('system')} aria-pressed={theme==='system'}><MonitorCog size={18}/><span><strong>System</strong><small>Follow the operating system preference</small></span></button></div></Card>
-      <Card title="Workspace layout" description="Keep the research shell comfortable on large screens and focused on smaller ones."><div className="settings-form"><label className="field"><span>Sidebar</span><Select aria-label="Sidebar" value={sidebar} onChange={e=>setSidebar(e.target.value as typeof sidebar)}><option value="sidebar">Standard</option><option value="floating">Floating</option><option value="inset">Inset</option></Select></label><label className="field"><span>Layout</span><Select aria-label="Layout" value={layout} onChange={e=>setLayout(e.target.value as typeof layout)}><option value="default">Default</option><option value="icon">Compact</option><option value="offcanvas">Off-canvas</option></Select></label><label className="field"><span>Density</span><Select aria-label="Density" value={density} onChange={e=>setDensity(e.target.value as typeof density)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></Select></label><label className="field"><span>Motion</span><Select aria-label="Motion" value={motion} onChange={e=>setMotion(e.target.value as typeof motion)}><option value="full">Full motion</option><option value="reduced">Reduced motion</option></Select></label><label className="settings-check"><input type="checkbox" checked={inspector} onChange={e=>setInspector(e.target.checked)}/><span><strong>Show context inspector</strong><small>Live backend, registry and job context on wide screens.</small></span></label></div></Card>
-      <Card title="Research safeguards" description="These defaults are product constraints, not decorative copy."><div className="space-y-3"><div className="safeguard-row"><CheckCircle2 size={16}/><span>Clinical disclaimer remains visible across the workspace.</span></div><div className="safeguard-row"><CheckCircle2 size={16}/><span>Quantum capability is reported, never inferred as advantage.</span></div><div className="safeguard-row"><CheckCircle2 size={16}/><span>API tokens stay in memory and are omitted from local storage.</span></div></div><Link className="btn btn-outline mt-4" to="/demo"><PlayCircle size={14}/>Open SIH Demo Center</Link></Card>
-      <Card title="Connection" description="Use the existing connection control to provide an optional local bearer token."><div className="flex items-start gap-3 text-sm muted"><Activity size={17} className="mt-0.5 text-primary"/><p>The live connection indicator and status inspector are driven by existing health, summary, and job endpoints. Account identity does not change those API contracts.</p></div></Card>
-    </div>
-  </div>;
-}
+export {SettingsPanel as SettingsPage} from '../components/SettingsPanel';

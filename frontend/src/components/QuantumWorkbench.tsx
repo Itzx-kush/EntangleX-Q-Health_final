@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {Button,Card,Select,Badge} from './ui';
 import {ErrorBanner,MetricCard,ModelSelect,Notice,PageHeader,StatusBadge} from './Shared';
-import {StageNav} from '../pages/ResearchPagesCore';
+import {StageNav} from './StageNav';
 import {qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {modelLabels,shortId} from '../utils/format';

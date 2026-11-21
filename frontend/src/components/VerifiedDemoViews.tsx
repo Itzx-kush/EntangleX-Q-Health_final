@@ -1,3 +1,5 @@
+import {modelFamily as family} from '../lib/modelFamily';
+import {PipelineEvidence} from './PipelineEvidence';
 import {useEffect} from 'react';
 import {Link} from 'react-router-dom';
 import {ArrowRight,Atom,CheckCircle2,Database,FlaskConical,ShieldCheck,Sparkles} from 'lucide-react';
@@ -6,7 +8,7 @@ import {EmptyState,ErrorBanner,JsonDisclosure,Loading,MetricCard,Notice,PageHead
 import {ProbabilityBand,PipelineFlow,StatusStrip,WorkbenchRail} from './TremorWorkbench';
 import {TremorBarChart} from './TremorUI';
 import {InfluenceBars,MetricBars,RocChart,ThresholdTradeoffChart,ValueBars} from './Charts';
-import {StageNav} from '../pages/ResearchPagesCore';
+import {StageNav} from './StageNav';
 import {metric,modelLabels,seconds} from '../utils/format';
 import {useFlagshipData} from '../hooks/useVerifiedDemo';
 import {ResearchResultsCenter} from './ResearchResultsCenter';
@@ -22,7 +24,6 @@ import {ResearchBasisExperience} from './ResearchBasisExperience';
 import {LiveHybridVerification} from './LiveHybridVerification';
 import type {AlignmentContract,MetricName,ModelKind,ModelRecord,VerifiedPredictionCase} from '../types/qhealth';
 
-const family=(kind:ModelKind)=>kind==='hybrid_pennylane_torch'?'Hybrid':(['vqc','qsvc','qnn'] as string[]).includes(kind)?'Quantum':'Classical';
 const toneFor=(kind:ModelKind)=>family(kind)==='Hybrid'?'purple':family(kind)==='Quantum'?'blue':'green';
 
 function EvidenceStrip({source='Verified artifact package',scope='Early Stage Diabetes',limitation='Research benchmark only'}:{source?:string;scope?:string;limitation?:string}){
@@ -37,21 +38,9 @@ function EvidenceStrip({source='Verified artifact package',scope='Early Stage Di
 function DemoBoundary({children}:{children:(data:NonNullable<ReturnType<typeof useFlagshipData>['payload']>,alignment:AlignmentContract|undefined)=>React.ReactNode}){
   const data=useFlagshipData(true);
   if(data.verified.isLoading)return <Loading/>;
-  if(data.verified.error)return <><ErrorBanner error={(data.verified.error as Error).message}/><EmptyState title="Verified demo unavailable">The verified package could not be loaded. Continue with the normal dataset and training workflow.</EmptyState></>;
+  if(!data.payload&&data.verified.error)return <><ErrorBanner error={(data.verified.error as Error).message}/><EmptyState title="Verified demo unavailable">The verified package could not be loaded. Continue with the normal dataset and training workflow.</EmptyState></>;
   if(!data.payload)return <EmptyState title="Verified demo unavailable">No validated precomputed artifact is available. Continue with the normal research workflow.</EmptyState>;
   return <>{children(data.payload,data.alignment.data)}</>;
-}
-
-export function VerifiedContextBar(){
-  const {context,item,payload}=useFlagshipData(true);
-  if(!context.active)return null;
-  return <div className="verified-context-bar" role="status" aria-label="Active verified demonstration context">
-    <div><span>ACTIVE DATASET</span><strong>{payload?.dataset.name||item?.name||'Loading…'}</strong></div>
-    <div><span>EXPERIMENT</span><strong>Verified SIH Demonstration</strong></div>
-    <div><span>MODE</span><strong>Precomputed / Verified</strong></div>
-    <div><span>MODEL SET</span><strong>{payload?.models.length??item?.demo_readiness.model_ids.length??'—'} models</strong></div>
-    <button onClick={context.deactivate}>Exit demo</button>
-  </div>;
 }
 
 export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
@@ -59,18 +48,18 @@ export function VerifiedDemoLanding({current='/demo'}:{current?:string}){
   useEffect(()=>{
     if(data.available&&data.experimentId&&data.payload?.dataset.id)data.context.activate(data.experimentId,data.payload.dataset.id);
   },[data.available,data.experimentId,data.payload?.dataset.id]);
-  if(data.library.isLoading||data.verified.isLoading)return <Loading/>;
+  if(!data.payload&&(data.library.isLoading||data.verified.isLoading))return <Loading/>;
   if(!data.available||!data.payload)return <div><PageHeader eyebrow="Featured SIH demonstration" title="Verified demo unavailable" description="The backend did not validate an instant research package. No placeholder scientific values are shown."/><ErrorBanner error={data.verified.error instanceof Error?data.verified.error.message:undefined}/><Link className="btn btn-primary" to="/datasets">Open normal research workflow</Link></div>;
   const {dataset,models,evidence,artifact_version}=data.payload;
   return <div className="tremor-dashboard">
-    <PageHeader eyebrow="SIH26139 FLAGSHIP · verified precomputed result" title={dataset.name} description="Launch the primary Early Stage Diabetes demonstration, inspect the hybrid quantum-classical path, review the controlled seven-model evidence, and then explore the full research platform." actions={<Link className="btn btn-primary" to="/comparison">Explore model evidence <ArrowRight size={14}/></Link>}/>
-    <StatusStrip items={[{label:'Flagship',value:'SIH26139',status:'good'},{label:'Dataset',value:dataset.name,status:'good'},{label:'Computation',value:'Precomputed',status:'good'},{label:'Models',value:`${models.length} registered`,status:'good'},{label:'Artifact',value:artifact_version,status:'neutral'}]}/>
+    <PageHeader eyebrow="SIH26139 FLAGSHIP · verified precomputed result" title={dataset.name} description="Inspect seven models trained under one protocol. This package contains their precomputed test scores, circuit structure and interpretation evidence." actions={<Link className="btn btn-primary" to="/comparison">Explore model evidence <ArrowRight size={14}/></Link>}/>
     <WorkbenchRail items={[
       {label:'Samples',value:dataset.provenance.row_count.toLocaleString(),detail:'Packaged source rows',tone:'blue'},
       {label:'Features',value:dataset.provenance.feature_count,detail:dataset.provenance.target,tone:'purple'},
       {label:'Models',value:models.length,detail:'3 classical · 3 quantum · 1 hybrid',tone:'green'},
       {label:'Evidence',value:Object.keys(evidence).length,detail:'Validated evidence artifacts',tone:'amber'},
     ]}/>
+    <nav className="demo-route-links" aria-label="Explore verified evidence"><Link to="/comparison">Compare seven models <ArrowRight size={15}/></Link><Link to="/quantum">Inspect the quantum circuit <ArrowRight size={15}/></Link><Link to={'/experiments/'+data.experimentId}>Read the experiment report <ArrowRight size={15}/></Link></nav>
     <ResearchGapSolutionExperience datasetName={dataset.name} hybridDetailPath={`/experiments/${data.experimentId}`}/>
     <div id="hybrid-architecture" className="scroll-mt-24">
       <HybridArchitectureVisualization alignment={data.alignment.data} dataset={dataset} experiment={data.payload.experiment} models={models} evidence={evidence}/>
@@ -121,6 +110,7 @@ export function VerifiedPipeline({stage}:{stage:'preprocessing'|'features'|'pca'
     <StageNav current={stage==='preprocessing'?'/preprocessing':stage==='features'?'/features':'/pca'}/>
     <PipelineFlow items={[{label:'Input',detail:`${r.raw_input_features?.length??data.dataset.provenance.feature_count} source features`,status:'complete'},{label:'Transform',detail:`${c.imputer} imputation · ${c.scaler} scaling`,status:'complete'},{label:'Select',detail:`${c.selection} · ${r.selected_feature_count??'—'} retained`,status:'complete'},{label:'Reduce',detail:`${c.pca_components??'No'} PCA components`,status:'complete'},{label:'Angles',detail:c.angle_scaling?'Angle scaling enabled':'Disabled',status:'complete'}]}/>
     <WorkbenchRail items={[{label:'Imputer',value:c.imputer,detail:'Missing-value policy',tone:'blue'},{label:'Scaler',value:c.scaler,detail:'Shared scaling',tone:'purple'},{label:'PCA',value:c.pca_components??'Off',detail:'Components',tone:'green'},{label:'Final dimension',value:r.final_representation_dimension??'—',detail:'Shared comparison space',tone:'amber'}]}/>
+    <PipelineEvidence stage={stage} fitted={f}/>
     <div className="two-grid mt-5"><Card title="Verified configuration"><dl className="demo-dl"><dt>Feature selection</dt><dd>{c.selection}</dd><dt>Maximum features</dt><dd>{c.k_features}</dd><dt>PCA components</dt><dd>{c.pca_components??'Disabled'}</dd><dt>PCA whitening</dt><dd>{c.pca_whiten?'Yes':'No'}</dd><dt>Angle scaling</dt><dd>{c.angle_scaling?'Enabled':'Disabled'}</dd><dt>Duplicate policy</dt><dd>{p.configuration.duplicate_policy}</dd><dt>Seed</dt><dd>{p.configuration.seed}</dd></dl></Card><Card title="Fitted pipeline evidence"><JsonDisclosure label="Fitted preprocessing" value={f}/><JsonDisclosure label="Shared representation" value={r}/><JsonDisclosure label="Controlled split" value={p.split}/></Card></div>
   </div>}}</DemoBoundary>;
 }
@@ -130,7 +120,7 @@ export function VerifiedTraining(){
 }
 
 function ModelTable({models}:{models:ModelRecord[]}){
-  return <Card className="mt-5" title="Measured held-out results" description="Descriptive evidence only; no winner or quantum-advantage claim."><div className="table-wrap"><table className="data-table min-w-[980px]"><thead><tr><th>Family</th><th>Model</th><th>Status</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>Training</th><th>Execution</th></tr></thead><tbody>{models.map(model=>{const m=model.metrics.test;const q=model.details.quantum as Record<string,any>|undefined;return <tr key={model.id}><td><Badge tone={toneFor(model.model_type)}>{family(model.model_type)}</Badge></td><td><strong>{modelLabels[model.model_type]}</strong></td><td><Badge tone="green">{model.status}</Badge></td><td>{metric(m?.accuracy)}</td><td>{metric(m?.precision)}</td><td>{metric(m?.recall)}</td><td>{metric(m?.f1)}</td><td>{metric(m?.roc_auc)}</td><td>{seconds(model.metrics.timing?.final_training_seconds)}</td><td>{q?.execution_kind||'Classical CPU execution'}</td></tr>})}</tbody></table></div></Card>;
+  return <Card className="mt-5" title="Measured held-out results" description="Descriptive evidence only; no winner or quantum-advantage claim."><div tabIndex={0} className="table-wrap"><table className="data-table min-w-[980px]"><thead><tr><th>Family</th><th>Model</th><th>Status</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>Training</th><th>Execution</th></tr></thead><tbody>{models.map(model=>{const m=model.metrics.test;const q=model.details.quantum as Record<string,any>|undefined;return <tr key={model.id}><td><Badge tone={toneFor(model.model_type)}>{family(model.model_type)}</Badge></td><td><strong>{modelLabels[model.model_type]}</strong></td><td><Badge tone="green">{model.status}</Badge></td><td>{metric(m?.accuracy)}</td><td>{metric(m?.precision)}</td><td>{metric(m?.recall)}</td><td>{metric(m?.f1)}</td><td>{metric(m?.roc_auc)}</td><td>{seconds(model.metrics.timing?.final_training_seconds)}</td><td>{q?.execution_kind||'Classical CPU execution'}</td></tr>})}</tbody></table></div></Card>;
 }
 
 export function VerifiedComparison(){
@@ -161,6 +151,7 @@ export function VerifiedComparison(){
       <PageHeader eyebrow="Verified result view · no live computation" title="Research Results Center" description="A complete, read-only interpretation of the packaged experiment, its measured model evidence, variability, conditions, and next investigation paths."/>
       <EvidenceStrip source="Controlled benchmark record" scope={`${models.length} models · one verified experiment`}/>
       <StageNav current="/comparison"/>
+      <div className="mt-5"><ResearchResultsCenter experiment={{...data.experiment,summary:{...data.experiment.summary,sample_count:(data.evidence.benchmark.comparison_contract as Record<string,unknown>).evaluated_row_count}}} dataset={data.dataset} models={models} comparison={comparison} mode="verified"/></div>
       <div className="mt-5">
         <ControlledSevenModelComparison
           dataset={data.dataset}
@@ -170,9 +161,6 @@ export function VerifiedComparison(){
           comparisonContract={data.evidence.benchmark.comparison_contract as Record<string,unknown>}
           alignment={alignment}
         />
-      </div>
-      <div className="mt-5">
-        <ResearchResultsCenter experiment={{...data.experiment,summary:{...data.experiment.summary,sample_count:(data.evidence.benchmark.comparison_contract as Record<string,unknown>).evaluated_row_count}}} dataset={data.dataset} models={models} comparison={comparison} mode="verified"/>
       </div>
     </div>;
   }}</DemoBoundary>;

@@ -2,14 +2,32 @@ import {lazy,Suspense,useEffect,useRef} from 'react';
 import {Navigate,Route,Routes,useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {ResearchShell} from './components/ResearchShell';
-import {ThemeToggle} from './components/ThemeToggle';
+import './tokens.css';
+import './styles/reference-theme.css';
+import './styles/logo-system.css';
+import './sidebar-layout-fix.css';
+import './responsive-adaptation.css';
+import './styles/tremor.css';
+import './styles/tremor-v2.css';
+import './styles/product-polish.css';
+import './styles/account-workspace.css';
+import './styles/research-history.css';
+import './styles/guest-migration.css';
+import './styles/workspace-premium.css';
+import './styles/quantum-lab.css';
+import './styles/layer3-final-polish.css';
+import './styles/dark-theme-consistency.css';
+
+import './styles/workspace.css';
 import {Loading} from './components/Shared';
-import {VerifiedPipeline,VerifiedQuality} from './components/VerifiedDemoViews';
 import {AiProvider} from './contexts/AiContext';
 import {AiPopup} from './components/AiPopup';
 import {qh} from './lib/api';
 import {useDraft} from './hooks/useDraft';
 import {useVerifiedDemo} from './hooks/useVerifiedDemo';
+
+const VerifiedPipeline=lazy(()=>import('./components/VerifiedDemoViews').then(m=>({default:m.VerifiedPipeline})));
+const VerifiedQuality=lazy(()=>import('./components/VerifiedDemoViews').then(m=>({default:m.VerifiedQuality})));
 
 const Overview=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Overview})));
 const Datasets=lazy(()=>import('./pages/ResearchPagesCore').then(m=>({default:m.Datasets})));
@@ -35,7 +53,6 @@ const RedisLab=lazy(()=>import('./pages/RedisLab').then(m=>({default:m.RedisLab}
 export default function App(){
   return <AiProvider>
     <ResearchShell>
-      <ThemeToggle/>
       <WorkspaceRoutes/>
     </ResearchShell>
     <AiPopup/>
@@ -48,7 +65,9 @@ function WorkspaceRoutes(){
 
   useEffect(()=>{
     const workspace=document.querySelector<HTMLElement>('.research-workspace');
+    if (location.hash) return;
     workspace?.scrollTo?.({top:0,behavior:'auto'});
+    window.scrollTo?.(0,0);
     frameRef.current?.focus({preventScroll:true});
   },[location.pathname]);
 

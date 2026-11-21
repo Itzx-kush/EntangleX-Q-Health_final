@@ -220,7 +220,7 @@ export function BiomedicalSubgroupAnalysisPanel({ experimentId }: { experimentId
           </div>
 
           {/* Stratified Cohorts Table */}
-          <div className="table-wrap">
+          <div tabIndex={0} className="table-wrap">
             <table className="data-table text-xs">
               <thead>
                 <tr>

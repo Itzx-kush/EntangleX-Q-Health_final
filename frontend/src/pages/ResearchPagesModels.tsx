@@ -5,7 +5,7 @@ import {ArrowRight,FileText,Play,ShieldAlert,SlidersHorizontal} from 'lucide-rea
 import {Button,Card,Badge,Input,Select} from '../components/ui';
 import {ErrorBanner,EmptyState,Loading,MetricCard,ModelSelect,Notice,PageHeader,StatusBadge,JsonDisclosure,metricNames} from '../components/Shared';
 import {InfluenceBars} from '../components/Charts';
-import {StageNav} from './ResearchPagesCore';
+import {StageNav} from '../components/StageNav';
 import {qh} from '../lib/api';
 import {useDraft} from '../hooks/useDraft';
 import {dateTime,metric,modelLabels,seconds,shortId,isHybridModel,isQiskitQuantumModel,isQuantumFamilyModel} from '../utils/format';
@@ -162,7 +162,7 @@ function LiveComparison(){
    <Card className="mt-5" title="Controlled comparison protocol" description="Persisted scientific matching evidence; never a model ranking.">
     <div className="flex flex-wrap items-center justify-between gap-3"><div>{data.controlled_protocol?<><StatusBadge value={data.controlled_protocol.status}/><span className="ml-2 mono text-[10px] muted">{data.controlled_protocol.protocol_fingerprint}</span></>:<Badge tone="amber">INCOMPLETE EVIDENCE · LEGACY / NOT PERSISTED</Badge>}</div><Button variant="outline" disabled={protocol.isPending||!data.pairs.length} onClick={()=>protocol.mutate()}><ShieldAlert size={13}/>{protocol.isPending?'Verifying…':'Verify and persist protocol'}</Button></div>
     <ErrorBanner error={(protocol.error as Error)?.message}/>
-    {pair?.controlled_protocol_pair?<div className="mt-4"><Notice tone={pair.controlled_protocol_pair.status.startsWith('CONTROLLED')?'blue':'amber'}><strong>{pair.controlled_protocol_pair.status.replaceAll('_',' ')}</strong> — status describes experimental control, not model quality.</Notice><div className="table-wrap mt-3"><table className="data-table"><thead><tr><th>Control</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{pair.controlled_protocol_pair.control_checks.map(check=><tr key={check.name}><td>{check.name.replaceAll('_',' ')}</td><td><StatusBadge value={check.status}/></td><td className="text-xs muted">{check.reason}</td></tr>)}</tbody></table></div></div>:<Notice tone="amber">No persisted protocol exists for this selected pair. Historical fairness fields are not promoted to controlled status.</Notice>}
+    {pair?.controlled_protocol_pair?<div className="mt-4"><Notice tone={pair.controlled_protocol_pair.status.startsWith('CONTROLLED')?'blue':'amber'}><strong>{pair.controlled_protocol_pair.status.replaceAll('_',' ')}</strong> — status describes experimental control, not model quality.</Notice><div tabIndex={0} className="table-wrap mt-3"><table className="data-table"><thead><tr><th>Control</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{pair.controlled_protocol_pair.control_checks.map(check=><tr key={check.name}><td>{check.name.replaceAll('_',' ')}</td><td><StatusBadge value={check.status}/></td><td className="text-xs muted">{check.reason}</td></tr>)}</tbody></table></div></div>:<Notice tone="amber">No persisted protocol exists for this selected pair. Historical fairness fields are not promoted to controlled status.</Notice>}
    </Card>
    <Card className="mt-5" title="Controlled classical vs hybrid evidence" description="Persisted backend evidence reports observed differences without ranking.">
     {data.pairs.length?<><label className="field"><span>Evidence pair</span><Select aria-label="Evidence pair" value={pair?`${pair.quantum_model}:${pair.classical_model}`:''} onChange={e=>setPairKey(e.target.value)}>{data.pairs.map(item=><option key={`${item.quantum_model}:${item.classical_model}`} value={`${item.quantum_model}:${item.classical_model}`}>{modelLabels[item.quantum_type]} vs {modelLabels[item.classical_type]}</option>)}</Select></label>{pair&&<EvidencePanel pair={pair}/>}</>:<EmptyState title="No classical / quantum pair">Complete at least one classical and one quantum model in the same experiment.</EmptyState>}
@@ -193,12 +193,12 @@ function EvidencePanel({pair}:{pair:EvidencePair}){
     <MetricCard label="THRESHOLD STRATEGY" value={fairness.threshold_strategy} detail={`Target sensitivity ${fairness.target_sensitivity??'—'}`}/>
    </div>
   </div>}
-  <div><div className="metric-label mb-2">SHARED HELD-OUT BENCHMARK</div><div className="table-wrap"><table className="data-table"><thead><tr><th>Metric</th><th>Random Forest / classical</th><th>PennyLane + PyTorch hybrid</th><th>Observed difference (Hybrid − Classical)</th></tr></thead><tbody>{metrics.map(name=><tr key={name}><td>{name}</td><td>{metric(pair.performance[name].classical,name!=='roc_auc')}</td><td>{metric(pair.performance[name].quantum,name!=='roc_auc')}</td><td>{metric(pair.performance[name].delta_quantum_minus_classical,name!=='roc_auc')}</td></tr>)}</tbody></table></div></div>
+  <div><div className="metric-label mb-2">SHARED HELD-OUT BENCHMARK</div><div tabIndex={0} className="table-wrap"><table className="data-table"><thead><tr><th>Metric</th><th>Random Forest / classical</th><th>PennyLane + PyTorch hybrid</th><th>Observed difference (Hybrid − Classical)</th></tr></thead><tbody>{metrics.map(name=><tr key={name}><td>{name}</td><td>{metric(pair.performance[name].classical,name!=='roc_auc')}</td><td>{metric(pair.performance[name].quantum,name!=='roc_auc')}</td><td>{metric(pair.performance[name].delta_quantum_minus_classical,name!=='roc_auc')}</td></tr>)}</tbody></table></div></div>
   <div className="two-grid">
    <Card title="OOF validation threshold" description="Selected only from training cross-validation predictions, then frozen."><div className="space-y-2 text-xs"><div className="flex justify-between"><span>Classical threshold</span><strong>{pair.operating_points.classical.selected_threshold??'undefined'}</strong></div><div className="flex justify-between"><span>Hybrid threshold</span><strong>{pair.operating_points.quantum.selected_threshold??'undefined'}</strong></div><div className="flex justify-between"><span>Classical OOF samples</span><strong>{pair.operating_points.classical.number_of_oof_samples??'—'}</strong></div><div className="flex justify-between"><span>Hybrid OOF samples</span><strong>{pair.operating_points.quantum.number_of_oof_samples??'—'}</strong></div></div></Card>
    <Card title="Untouched holdout evaluation" description="Both models were evaluated on the identical persisted test indices."><div className="space-y-2 text-xs"><div className="flex justify-between"><span>Classical sensitivity / specificity</span><strong>{metric(pair.operating_points.classical.holdout_metrics?.sensitivity)} / {metric(pair.operating_points.classical.holdout_metrics?.specificity)}</strong></div><div className="flex justify-between"><span>Hybrid sensitivity / specificity</span><strong>{metric(pair.operating_points.quantum.holdout_metrics?.sensitivity)} / {metric(pair.operating_points.quantum.holdout_metrics?.specificity)}</strong></div></div></Card>
   </div>
-  <div><div className="metric-label mb-2">COMPUTATIONAL MEASUREMENTS</div><div className="table-wrap"><table className="data-table"><thead><tr><th>Measure</th><th>Classical baseline</th><th>PennyLane + PyTorch hybrid</th><th>Observed difference</th></tr></thead><tbody>{costs.map(([label,key])=><tr key={key}><td>{label}</td><td>{seconds(pair.computational_cost.classical[key])}</td><td>{seconds(pair.computational_cost.quantum[key])}</td><td>{seconds(pair.computational_cost.deltas_quantum_minus_classical[key])}</td></tr>)}</tbody></table></div><p className="mt-2 text-xs muted">{pair.computational_cost.semantics}</p></div>
+  <div><div className="metric-label mb-2">COMPUTATIONAL MEASUREMENTS</div><div tabIndex={0} className="table-wrap"><table className="data-table"><thead><tr><th>Measure</th><th>Classical baseline</th><th>PennyLane + PyTorch hybrid</th><th>Observed difference</th></tr></thead><tbody>{costs.map(([label,key])=><tr key={key}><td>{label}</td><td>{seconds(pair.computational_cost.classical[key])}</td><td>{seconds(pair.computational_cost.quantum[key])}</td><td>{seconds(pair.computational_cost.deltas_quantum_minus_classical[key])}</td></tr>)}</tbody></table></div><p className="mt-2 text-xs muted">{pair.computational_cost.semantics}</p></div>
   <div><div className="metric-label mb-2">HYBRID EXECUTION CONTEXT</div><div className="grid gap-3 md:grid-cols-4"><MetricCard label="BACKEND" value={resources.backend||'Not recorded'} detail={resources.execution_kind||'Execution not recorded'}/><MetricCard label="QUBITS / LAYERS" value={`${resources.qubits??'—'} / ${resources.quantum_layers??'—'}`} detail={resources.shots===null||resources.shots===undefined?'Exact expectations · no shots configured':`${resources.shots} shots`}/><MetricCard label="PARAMETERS" value={resources.trainable_parameter_count??'—'} detail={`${resources.total_parameter_count??'—'} total · ${resources.optimizer||'optimizer not recorded'}`}/><MetricCard label="REAL HARDWARE" value={resources.real_hardware?'true':'false'} detail={resources.timing_label||'Simulator execution'}/></div><p className="mt-2 text-xs muted">{resources.resource_semantics}</p></div>
   <div><div className="metric-label mb-2">PAIRED ROBUSTNESS</div><Notice tone="blue">{pair.robustness.note}</Notice></div>
   <Notice tone="blue"><strong>Neutral interpretation:</strong> {pair.conclusion}</Notice>
@@ -280,7 +280,7 @@ export function Quantum(){
  const selectedModel=models.data?.find(model=>model.id===modelId);
  const selectedExperiment=experiments.data?.find(item=>item.id===selectedModel?.experiment_id);
  const evidenceDataset=useQuery({queryKey:['dataset',selectedModel?.dataset_id],queryFn:()=>qh.dataset(selectedModel!.dataset_id),enabled:Boolean(selectedModel?.dataset_id),staleTime:300000});
- const selectedDatasetId=datasetId||selectedModel?.dataset_id||draft.dataset_id||'';
+ const selectedDatasetId=datasetId||selectedModel?.dataset_id||'';
  const dataset=useQuery({queryKey:['dataset',selectedDatasetId],queryFn:()=>qh.dataset(selectedDatasetId),enabled:Boolean(selectedDatasetId),staleTime:300000});
  const diagnostics=useQuery({queryKey:['quantum-diagnostics',modelId],queryFn:()=>qh.quantum_diagnostics_by_run(modelId),enabled:Boolean(modelId),retry:false,staleTime:30000});
  const preview=useMutation({
@@ -326,9 +326,9 @@ export function Quantum(){
  const advisor=useMutation({mutationFn:()=>{if(kind==='hybrid_pennylane_torch')throw new Error('The resource advisor supports VQC, QSVC, and QNN only.');return qh.resourceAdvisor({model_type:kind,quantum:draft.quantum,feature_dimension:draft.pipeline.pca_components??draft.quantum.qubits,sample_count:draft.max_samples??160,dataset_id:selectedDatasetId||null,experiment_id:selectedModel?.dataset_id===selectedDatasetId?selectedModel.experiment_id:null})}});
  useEffect(()=>{
   const nextDatasetId=demo.active&&demo.datasetId?demo.datasetId:draft.dataset_id;
-  if(datasetId!==nextDatasetId)setDatasetId(nextDatasetId||'');
-  if(!demo.active&&demoHydrated)setDemoHydrated(false);
- },[demo.active,demo.datasetId,draft.dataset_id,datasetId,demoHydrated]);
+  setDatasetId(nextDatasetId||'');
+  if(!demo.active)setDemoHydrated(false);
+ },[demo.active,demo.datasetId,draft.dataset_id]);
  useEffect(()=>{
   if(!demo.active||demoHydrated||!demo.datasetId||!demo.experimentId||!models.data)return;
   const candidates=models.data.filter(model=>model.dataset_id===demo.datasetId&&model.experiment_id===demo.experimentId&&isQiskitQuantumModel(model.model_type));
@@ -342,15 +342,16 @@ export function Quantum(){
  useEffect(()=>{advisor.reset()},[kind,draft.quantum,draft.pipeline.pca_components,draft.max_samples,draft.dataset_id,datasetId]);
  useEffect(()=>{
   visualizationRequestRef.current+=1;
+  preview.reset(); fitted.reset(); simulation.reset();
   setContract(null);
   setCircuit(undefined);
   setCircuitSource(null);
   setSelectedQubit(null);
   setSelectedFeatureIndex(null);
   setSelectedGateIndex(null);
- },[modelId,kind,datasetId,draft.quantum,draft.dataset_id,draft.pipeline.pca_components]);
+ },[modelId,kind,datasetId,draft.quantum,draft.hybrid,draft.dataset_id,draft.pipeline.pca_components]);
  useEffect(()=>{
-  const activeDataset=datasetId||draft.dataset_id||'';
+  const activeDataset=datasetId;
   if(!modelId)return;
   const model=models.data?.find(item=>item.id===modelId);
   const incompatible=!model
@@ -430,36 +431,26 @@ export function Quantum(){
   }
  };
  return <div className="quantum-lab-page layer3-modeling-workspace layer3-quantum-workspace">
-  <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Explore backend-derived circuit structure, dataset representation context, bounded resources, and simulator evidence without conflating structural previews with execution." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
+  <PageHeader eyebrow="04 / Quantum" title="Quantum Lab" description="Inspect recorded gates, trace feature encodings and explore states returned by the simulator." actions={<><a className="btn btn-outline" href="#quantum-evidence">{modelId?'View diagnostics & evidence':'Model evidence'}</a>{selectedExperiment&&<Link className="btn btn-outline" to={`/experiments/${selectedExperiment.id}`}><FileText size={14}/>Experiment report</Link>}<Link className="btn btn-outline" to="/training"><ArrowRight size={14}/>Configure in Model Lab</Link></>}/>
   {demo.active&&<div className="ql-verified-banner" role="status" aria-label="Verified quantum demo status"><Badge tone="green">VERIFIED DEMO</Badge><Badge tone="blue">PRECOMPUTED / REPRODUCIBLE</Badge><span>Read-only packaged quantum evidence is surfaced through the same Quantum Lab workspace.</span></div>}
-  <StageNav current="/quantum"/>
-  <WorkbenchRail items={[
-   {label:'Model family',value:kind.toUpperCase(),detail:'Backend visualization context',tone:'purple'},
-   {label:'Runtime',value:contract?.provider.availability||(kind==='hybrid_pennylane_torch'?'PennyLane path':cap.data?.available?'Available':'Unavailable'),detail:contract?.provider.display_name||(kind==='hybrid_pennylane_torch'?'Provider status loads with preview':cap.data?.execution||'Capability loading'),tone:contract?'green':cap.data?.available||kind==='hybrid_pennylane_torch'?'blue':'amber'},
-   {label:'Logical qubits',value:contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits),detail:'Backend-reported logical width',tone:'blue'},
-   {label:'Circuit structure',value:contract?.circuit.gate_sequence.length??circuit?.gates.length??'Not loaded',detail:contract?'Ordered backend operations':circuit?'Persisted fitted operations':'No circuit loaded',tone:contract||circuit?'green':'slate'},
-  ]}/>
   <ErrorBanner error={(cap.error as Error)?.message||(models.error as Error)?.message||(experiments.error as Error)?.message||(dataset.error as Error)?.message||(datasets.error as Error)?.message||(evidenceDataset.error as Error)?.message||(preview.error as Error)?.message||(fitted.error as Error)?.message||(advisor.error as Error)?.message||(simulation.error as Error)?.message}/>
 
-  <QuantumContextPanel
-    contract={contract}
-    datasetName={dataset.data?.provenance.name}
-    modelType={kind}
-    capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution}
-    circuitSource={circuitSource}
-    selectedFeatureIndex={selectedFeatureIndex}
-    onFeatureSelect={setSelectedFeatureIndex}
-  />
-  <QuantumPipeline contract={contract} hasPersistedEvidence={Boolean(selectedModel)} hasDatasetContext={Boolean(dataset.data?.id)} hasCircuitStructure={Boolean(circuit?.gates.length)}/>
-  {(selectedQubit!==null||selectedFeatureIndex!==null||selectedGateIndex!==null)&&<div className="ql-linked-selection" role="status" aria-label="Quantum cross-visual selection">
-    <span className="ql-eyebrow">LINKED SELECTION</span>
-    {selectedQubit!==null&&<strong>Qubit q[{selectedQubit}]</strong>}
-    {selectedFeatureIndex!==null&&<strong>Feature {selectedFeatureIndex+1}</strong>}
-    {selectedGateIndex!==null&&<strong>Gate step {selectedGateIndex+1}</strong>}
-    <span>Selection is scoped to Quantum Lab and highlights only relationships returned or structurally supported by the backend contract.</span>
-  </div>}
-
-  <section className="ql-setup-grid" aria-label="Quantum Lab configuration">
+  <nav className="lab-jumps" aria-label="Quantum Lab sections"><a href="#lab-circuit">Circuit explorer</a><a href="#lab-config">Configure preview</a><a href="#lab-state">State and measurements</a><a href="#lab-simulators">Simulators</a><a href="#lab-jobs">Jobs</a></nav>
+  <section id="lab-circuit" className="lab-circuit-hero">
+    <Card title="Circuit explorer" description={circuit?.limitation||"Select an operation to inspect the recorded qubits and parameters."}>
+     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer
+       circuit={contract?.circuit||circuit!}
+       sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}
+       selectedQubit={selectedQubit}
+       selectedFeatureIndex={selectedFeatureIndex}
+       selectedGateIndex={selectedGateIndex}
+       featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
+       onSelectionChange={handleGateSelection}
+       showInlineInspector={false}
+      />:<EmptyState title="No circuit structure loaded" action={<a href="#lab-config" className="btn btn-outline">Configure a circuit</a>}>Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
+    </Card>
+  </section>
+  <section id="lab-config">  <section className="ql-setup-grid" aria-label="Quantum Lab configuration">
    <Card title="Quantum capability and preview" description="Generate a bounded structural contract from the current quantum configuration. Preview does not train, create jobs, or simulate a state.">
     <div className="ql-form-grid">
      <label className="field"><span>Quantum model</span><Select aria-label="Quantum advisor model" value={kind} onChange={event=>setKind(event.target.value as 'vqc'|'qsvc'|'qnn'|'hybrid_pennylane_torch')}><option value="vqc">VQC · variational classifier</option><option value="qsvc">QSVC · feature-map kernel</option><option value="qnn">QNN · quantum neural network</option><option value="hybrid_pennylane_torch">PennyLane + PyTorch hybrid</option></Select></label>
@@ -475,31 +466,12 @@ export function Quantum(){
     {circuitSource==='fitted'&&<Notice tone="blue">Fitted circuit structure is persisted model evidence. State, probability, phase, and Bloch output are not included unless the backend explicitly supplies them.</Notice>}
    </Card>
    <Card title="Quantum execution boundary" description="Provider and backend claims follow the backend contract; no hardware execution is available in this path.">
-    <div className="ql-runtime-summary"><span><small>Provider</small><strong>{contract?.provider.display_name||'Qiskit local'}</strong></span><span><small>Backend</small><strong>{contract?.provider.backend_id||draft.quantum.backend}</strong></span><span><small>Execution mode</small><strong>{contract?.provider.execution_mode||cap.data?.execution||'Local simulator'}</strong></span><span><small>Hardware availability</small><strong>{contract?.provider.hardware_available?'Reported available':'Not available in this execution path'}</strong></span></div>
+    <div className="ql-runtime-summary"><span><small>Provider</small><strong>{contract?.provider.display_name||(kind==='hybrid_pennylane_torch'?'PennyLane configuration':'Qiskit configuration')}</strong></span><span><small>Backend</small><strong>{contract?.provider.backend_id||(kind==='hybrid_pennylane_torch'?draft.hybrid.backend:draft.quantum.backend)}</strong></span><span><small>Execution mode</small><strong>{contract?.provider.execution_mode||cap.data?.execution||'Not reported'}</strong></span><span><small>Hardware availability</small><strong>{contract?.provider.hardware_available?'Reported available':'Not available in this execution path'}</strong></span></div>
     <p className="ql-boundary-note">Circuit preview describes structure only. No simulator state, measurement, or quantum advantage is inferred from gate connectivity.</p>
    </Card>
   </section>
 
-  <QuantumSimulatorCatalog
-   activeBackendId={kind==='hybrid_pennylane_torch'?draft.hybrid.backend:draft.quantum.backend}
-   activeProviderId={kind==='hybrid_pennylane_torch'?'pennylane_local':'qiskit_local'}
-   onSelectBackend={handleSelectBackend}
-  />
-
-  <section className="ql-main-grid" aria-label="Quantum visualization panels">
-   <div className="ql-main-primary">
-    <Card title="Circuit explorer" description={contract?.circuit.limitation||circuit?.limitation||'Backend-ordered gates are interactive. Structural playback highlights operations only; it does not evolve or invent a quantum state.'}>
-     {preview.isPending?<div className="ql-empty-state" role="status">Preparing backend circuit structure…</div>:contract||circuit?<QuantumCircuitExplorer
-       circuit={contract?.circuit||circuit!}
-       sourceLabel={circuitSource==='fitted'?'Persisted fitted circuit':'Quantum visualization preview'}
-       selectedQubit={selectedQubit}
-       selectedFeatureIndex={selectedFeatureIndex}
-       selectedGateIndex={selectedGateIndex}
-       featureMappings={contract?.encoding.feature_to_qubit_mapping||[]}
-       onSelectionChange={handleGateSelection}
-       showInlineInspector={false}
-      />:<EmptyState title="No circuit structure loaded">Generate a backend preview or select a persisted quantum model to retrieve its fitted circuit.</EmptyState>}
-    </Card>
+</section>
     {(contract||circuit)&&<QuantumGateInspector
       selectedGate={selectedGateIndex!==null?(activeGates[selectedGateIndex]||null):(activeGates[0]||null)}
       gateIndex={selectedGateIndex??0}
@@ -518,6 +490,40 @@ export function Quantum(){
       onRegeneratePreview={requestPreview}
       isRegenerating={preview.isPending}
      />}
+  <QuantumContextPanel
+    contract={contract}
+    datasetName={dataset.data?.provenance.name}
+    modelType={kind}
+    capabilityMessage={kind==='hybrid_pennylane_torch'?'PennyLane local path; backend preview required':cap.data?.execution}
+    circuitSource={circuitSource}
+    selectedFeatureIndex={selectedFeatureIndex}
+    onFeatureSelect={setSelectedFeatureIndex}
+  />
+  <QuantumPipeline contract={contract} hasPersistedEvidence={Boolean(selectedModel)} hasDatasetContext={Boolean(dataset.data?.id)} hasCircuitStructure={Boolean(circuit?.gates.length)}/>
+  {(selectedQubit!==null||selectedFeatureIndex!==null||selectedGateIndex!==null)&&<div className="ql-linked-selection" role="status" aria-label="Quantum cross-visual selection">
+    <span className="ql-eyebrow">LINKED SELECTION</span>
+    {selectedQubit!==null&&<strong>Qubit q[{selectedQubit}]</strong>}
+    {selectedFeatureIndex!==null&&<strong>Feature {selectedFeatureIndex+1}</strong>}
+    {selectedGateIndex!==null&&<strong>Gate step {selectedGateIndex+1}</strong>}
+    <span>Selection is scoped to Quantum Lab and highlights only relationships returned or structurally supported by the backend contract.</span>
+  </div>}
+
+  <StageNav current="/quantum"/>
+  <WorkbenchRail items={[
+   {label:'Model family',value:kind.toUpperCase(),detail:'Backend visualization context',tone:'purple'},
+   {label:'Runtime',value:contract?.provider.availability||(kind==='hybrid_pennylane_torch'?'PennyLane path':cap.data?.available?'Available':cap.data?'Unavailable':'Not reported'),detail:contract?.provider.display_name||(kind==='hybrid_pennylane_torch'?'Provider status loads with preview':cap.data?.execution||'Capability loading'),tone:contract?'green':cap.data?.available||kind==='hybrid_pennylane_torch'?'blue':'amber'},
+   {label:'Logical qubits',value:contract?.circuit.qubits??circuit?.qubits??(kind==='hybrid_pennylane_torch'?draft.hybrid.qubits:draft.quantum.qubits),detail:contract||circuit?'Backend-reported logical width':'Requested width',tone:'blue'},
+   {label:'Circuit structure',value:contract?.circuit.gate_sequence.length??circuit?.gates.length??'Not loaded',detail:contract?'Ordered backend operations':circuit?'Persisted fitted operations':'No circuit loaded',tone:contract||circuit?'green':'slate'},
+  ]}/>
+<section id="lab-simulators">  <QuantumSimulatorCatalog
+   activeBackendId={kind==='hybrid_pennylane_torch'?draft.hybrid.backend:draft.quantum.backend}
+   activeProviderId={kind==='hybrid_pennylane_torch'?'pennylane_local':'qiskit_local'}
+   onSelectBackend={handleSelectBackend}
+  />
+
+</section>
+  <section id="lab-state" className="ql-main-grid" aria-label="Quantum visualization panels">
+   <div className="ql-main-primary">
     <QuantumStatePanel
       contract={contract}
       selectedQubit={selectedQubit}
@@ -549,12 +555,12 @@ export function Quantum(){
   </Card>
   {advice&&<div className="mt-5 space-y-5">
    <Card title="Resource profile" description={advice.budget_policy.semantics}><div className="grid gap-3 md:grid-cols-3"><MetricCard label="CIRCUIT COMPLEXITY" value={advice.resource_profile.circuit_complexity.toUpperCase()} detail={`${advice.resource_profile.logical_qubits} qubits · ${advice.resource_profile.entanglement} entanglement`}/><MetricCard label="OPTIMIZATION" value={advice.resource_profile.optimization_workload.toUpperCase()} detail={`${advice.resource_profile.optimizer_iteration_budget} requested iterations`}/><MetricCard label="MEASUREMENT" value={advice.resource_profile.measurement_workload.replaceAll('_',' ').toUpperCase()} detail={advice.resource_profile.shots_per_circuit_evaluation===null?'Exact statevector; configured shots are unused':`${advice.resource_profile.shots_per_circuit_evaluation} shots`}/><MetricCard label="SAMPLE WORKLOAD" value={advice.resource_profile.sample_workload.toUpperCase()} detail={`${advice.resource_profile.sample_count} / ${advice.resource_profile.bounded_quantum_sample_cap} bounded samples`}/><MetricCard label="BUDGET STATUS" value={advice.budget_status.status.replaceAll('_',' ').toUpperCase()} detail={advice.budget_policy.version}/><MetricCard label="EXECUTION" value="SIMULATOR" detail={advice.resource_profile.execution_kind}/></div><Notice tone={advice.budget_status.status==='exceeds_budget'?'amber':'blue'}>{advice.budget_status.reasons.join(' ')}</Notice></Card>
-   <Card title="Configuration recommendation" description={advice.recommendation.rationale}>{advice.recommendation.available?<><div className="table-wrap"><table className="data-table"><thead><tr><th>Parameter</th><th>Requested</th><th>Recommended</th><th>Reason</th></tr></thead><tbody>{advice.recommendation.changes.map(change=><tr key={change.field}><td>{change.field}</td><td>{change.from}</td><td>{change.to}</td><td>{change.reason}</td></tr>)}</tbody></table></div><Button className="mt-4" onClick={applyRecommendation}>Apply recommended configuration</Button><p className="mt-2 text-xs muted">Explicit action only. Applying updates the existing draft and never starts training.</p></>:<Notice tone="blue">Configuration is within the bounded prototype resource policy. No draft changes are recommended.</Notice>}</Card>
+   <Card title="Configuration recommendation" description={advice.recommendation.rationale}>{advice.recommendation.available?<><div tabIndex={0} className="table-wrap"><table className="data-table"><thead><tr><th>Parameter</th><th>Requested</th><th>Recommended</th><th>Reason</th></tr></thead><tbody>{advice.recommendation.changes.map(change=><tr key={change.field}><td>{change.field}</td><td>{change.from}</td><td>{change.to}</td><td>{change.reason}</td></tr>)}</tbody></table></div><Button className="mt-4" onClick={applyRecommendation}>Apply recommended configuration</Button><p className="mt-2 text-xs muted">Explicit action only. Applying updates the existing draft and never starts training.</p></>:<Notice tone="blue">Configuration is within the bounded prototype resource policy. No draft changes are recommended.</Notice>}</Card>
    <Card title="Observed historical runs" description={history?.matching_policy}>{history&&history.matched_runs>0?<div className="grid gap-3 md:grid-cols-3"><MetricCard label="MATCHED RUNS" value={history.matched_runs} detail="Recorded completed models"/><MetricCard label="MEDIAN TRAINING" value={seconds(history.median_training_seconds)} detail="Observed, not estimated"/><MetricCard label="OBSERVED RANGE" value={`${seconds(history.min_training_seconds)} – ${seconds(history.max_training_seconds)}`} detail="Recorded final-fit timing"/></div>:<Notice>Insufficient historical evidence for a measured runtime comparison.</Notice>}<p className="mt-3 text-xs muted">Observed historical runtime is not a guaranteed runtime estimate for this request.</p></Card>
    <Notice tone="amber">Hardware execution is not available in the current verified configuration. Logical resources and simulator workload do not predict real-QPU performance.</Notice>
   </div>}
 
-  <QuantumJobManager />
+  <section id="lab-jobs"><QuantumJobManager /></section>
 
   <div id="quantum-evidence" className="ql-evidence-anchor">
    {modelId?<QuantumEvidenceLab mode="live" models={models.data||[]} experiment={selectedExperiment} dataset={evidenceDataset.data} selectedModelId={modelId} onModelChange={setModelId} diagnostic={diagnostics.data||null} circuit={circuit||null} onLoadCircuit={()=>fitted.mutate()} loadingCircuit={fitted.isPending}/>:<Card title="Persisted model evidence" description="Select a registered quantum model above to inspect its diagnostics and persisted model evidence."><p className="ql-evidence-prompt">Model evidence remains separate from structural previews and is never created by this visualization flow.</p></Card>}

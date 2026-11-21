@@ -1,3 +1,4 @@
+import {oauthDestination,restoreOAuthAnchor} from './returnDestination';
 import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
 import type {AuthError,Session,User} from '@supabase/supabase-js';
 import {supabase,supabaseConfigurationError} from '../lib/supabase';
@@ -128,6 +129,8 @@ export function AuthProvider({children}:{children:ReactNode}){
         if(sessionError)setError(authMessage(sessionError,'We could not restore your research session.'));
         setSession(data.session);
         if(data.session){
+          cleanOAuthUrl();
+          restoreOAuthAnchor();
           setIsGuest(false);
           try{localStorage.removeItem(GUEST_MODE_KEY)}catch{}
         }
@@ -182,13 +185,11 @@ export function AuthProvider({children}:{children:ReactNode}){
     }
     try{
       writeProviderMarker(OAUTH_PROVIDER_KEY,provider);
-      const redirectUrl=new URL(window.location.href);
-      AUTH_QUERY_KEYS.forEach(key=>redirectUrl.searchParams.delete(key));
-      redirectUrl.hash='';
+      const redirectUrl=oauthDestination(window.location.href);
       const {error:signInError}=await supabase.auth.signInWithOAuth({
         provider,
         options:{
-          redirectTo:redirectUrl.toString(),
+          redirectTo:redirectUrl,
           ...(provider==='google'?{queryParams:{prompt:'select_account'}}:{}),
         },
       });

@@ -138,7 +138,7 @@ export function ResearchGapSolutionExperience({datasetName,hybridDetailPath}:Res
 
       <div className="mt-5">
         <div className="text-[10px] font-semibold tracking-[0.14em] text-[#56657D]">WHAT WE ADD</div>
-        <div className="table-wrap mt-3 overflow-x-auto">
+        <div tabIndex={0} className="table-wrap mt-3 overflow-x-auto">
           <table className="data-table min-w-[760px]">
             <thead><tr><th>Research need</th><th>EntangleX capability</th><th>Implementation</th></tr></thead>
             <tbody>

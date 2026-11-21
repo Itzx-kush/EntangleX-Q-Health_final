@@ -41,7 +41,7 @@ export function GuestMigrationProvider({children}:{children:ReactNode}){
   const [hasMigratableState,setHasMigratableState]=useState(false);
   const activeImport=useRef<string|null>(null);
   const previousUserId=useRef<string|null>(null);
-  const destination=`${location.pathname}${location.search}`;
+  const destination=`${location.pathname}${location.search}${location.hash}`;
 
   useEffect(()=>{
     const previous=previousUserId.current;
@@ -118,7 +118,7 @@ export function GuestMigrationProvider({children}:{children:ReactNode}){
         setMigration(completed);
         void queryClient.invalidateQueries({queryKey:['research-history',user.id]});
         const target=current.destination;
-        if(`${location.pathname}${location.search}`!==target)navigate(target,{replace:true});
+        if(`${location.pathname}${location.search}${location.hash}`!==target)navigate(target,{replace:true});
       })
       .catch(error=>{
         const failed={
@@ -130,7 +130,7 @@ export function GuestMigrationProvider({children}:{children:ReactNode}){
         setMigration(failed);
       })
       .finally(()=>{activeImport.current=null});
-  },[isAuthenticated,user,isConfigured,queryClient,navigate,location.pathname,location.search,migration?.status]);
+  },[isAuthenticated,user,isConfigured,queryClient,navigate,location.pathname,location.search,location.hash,migration?.status]);
 
   const value=useMemo<GuestMigrationContextValue>(()=>({
     migration,
